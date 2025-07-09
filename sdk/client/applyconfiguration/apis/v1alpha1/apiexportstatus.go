@@ -19,18 +19,18 @@ limitations under the License.
 package v1alpha1
 
 import (
-	conditionsv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
+	v1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
 )
 
-// APIExportStatusApplyConfiguration represents a declarative configuration of the APIExportStatus type for use
+// APIExportStatusApplyConfiguration represents an declarative configuration of the APIExportStatus type for use
 // with apply.
 type APIExportStatusApplyConfiguration struct {
 	IdentityHash      *string                              `json:"identityHash,omitempty"`
-	Conditions        *conditionsv1alpha1.Conditions       `json:"conditions,omitempty"`
+	Conditions        *v1alpha1.Conditions                 `json:"conditions,omitempty"`
 	VirtualWorkspaces []VirtualWorkspaceApplyConfiguration `json:"virtualWorkspaces,omitempty"`
 }
 
-// APIExportStatusApplyConfiguration constructs a declarative configuration of the APIExportStatus type for use with
+// APIExportStatusApplyConfiguration constructs an declarative configuration of the APIExportStatus type for use with
 // apply.
 func APIExportStatus() *APIExportStatusApplyConfiguration {
 	return &APIExportStatusApplyConfiguration{}
@@ -47,7 +47,7 @@ func (b *APIExportStatusApplyConfiguration) WithIdentityHash(value string) *APIE
 // WithConditions sets the Conditions field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Conditions field is set to the value of the last call.
-func (b *APIExportStatusApplyConfiguration) WithConditions(value conditionsv1alpha1.Conditions) *APIExportStatusApplyConfiguration {
+func (b *APIExportStatusApplyConfiguration) WithConditions(value v1alpha1.Conditions) *APIExportStatusApplyConfiguration {
 	b.Conditions = &value
 	return b
 }

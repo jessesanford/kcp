@@ -18,16 +18,16 @@ limitations under the License.
 
 package v1alpha1
 
-// PermissionClaimApplyConfiguration represents a declarative configuration of the PermissionClaim type for use
+// PermissionClaimApplyConfiguration represents an declarative configuration of the PermissionClaim type for use
 // with apply.
 type PermissionClaimApplyConfiguration struct {
-	GroupResourceApplyConfiguration `json:",inline"`
-	All                             *bool                                `json:"all,omitempty"`
-	ResourceSelector                []ResourceSelectorApplyConfiguration `json:"resourceSelector,omitempty"`
-	IdentityHash                    *string                              `json:"identityHash,omitempty"`
+	*GroupResourceApplyConfiguration `json:"GroupResource,omitempty"`
+	All                              *bool                                `json:"all,omitempty"`
+	ResourceSelector                 []ResourceSelectorApplyConfiguration `json:"resourceSelector,omitempty"`
+	IdentityHash                     *string                              `json:"identityHash,omitempty"`
 }
 
-// PermissionClaimApplyConfiguration constructs a declarative configuration of the PermissionClaim type for use with
+// PermissionClaimApplyConfiguration constructs an declarative configuration of the PermissionClaim type for use with
 // apply.
 func PermissionClaim() *PermissionClaimApplyConfiguration {
 	return &PermissionClaimApplyConfiguration{}
@@ -37,7 +37,8 @@ func PermissionClaim() *PermissionClaimApplyConfiguration {
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Group field is set to the value of the last call.
 func (b *PermissionClaimApplyConfiguration) WithGroup(value string) *PermissionClaimApplyConfiguration {
-	b.GroupResourceApplyConfiguration.Group = &value
+	b.ensureGroupResourceApplyConfigurationExists()
+	b.Group = &value
 	return b
 }
 
@@ -45,8 +46,15 @@ func (b *PermissionClaimApplyConfiguration) WithGroup(value string) *PermissionC
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Resource field is set to the value of the last call.
 func (b *PermissionClaimApplyConfiguration) WithResource(value string) *PermissionClaimApplyConfiguration {
-	b.GroupResourceApplyConfiguration.Resource = &value
+	b.ensureGroupResourceApplyConfigurationExists()
+	b.Resource = &value
 	return b
+}
+
+func (b *PermissionClaimApplyConfiguration) ensureGroupResourceApplyConfigurationExists() {
+	if b.GroupResourceApplyConfiguration == nil {
+		b.GroupResourceApplyConfiguration = &GroupResourceApplyConfiguration{}
+	}
 }
 
 // WithAll sets the All field in the declarative configuration to the given value

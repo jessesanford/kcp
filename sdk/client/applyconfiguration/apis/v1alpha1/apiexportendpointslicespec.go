@@ -18,14 +18,14 @@ limitations under the License.
 
 package v1alpha1
 
-// APIExportEndpointSliceSpecApplyConfiguration represents a declarative configuration of the APIExportEndpointSliceSpec type for use
+// APIExportEndpointSliceSpecApplyConfiguration represents an declarative configuration of the APIExportEndpointSliceSpec type for use
 // with apply.
 type APIExportEndpointSliceSpecApplyConfiguration struct {
 	APIExport *ExportBindingReferenceApplyConfiguration `json:"export,omitempty"`
 	Partition *string                                   `json:"partition,omitempty"`
 }
 
-// APIExportEndpointSliceSpecApplyConfiguration constructs a declarative configuration of the APIExportEndpointSliceSpec type for use with
+// APIExportEndpointSliceSpecApplyConfiguration constructs an declarative configuration of the APIExportEndpointSliceSpec type for use with
 // apply.
 func APIExportEndpointSliceSpec() *APIExportEndpointSliceSpecApplyConfiguration {
 	return &APIExportEndpointSliceSpecApplyConfiguration{}

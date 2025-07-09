@@ -19,21 +19,21 @@ limitations under the License.
 package v1alpha1
 
 import (
-	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+
+	v1 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/apiextensions/v1"
 )
 
-// APIResourceSchemaSpecApplyConfiguration represents a declarative configuration of the APIResourceSchemaSpec type for use
+// APIResourceSchemaSpecApplyConfiguration represents an declarative configuration of the APIResourceSchemaSpec type for use
 // with apply.
 type APIResourceSchemaSpecApplyConfiguration struct {
-	Group          *string                                     `json:"group,omitempty"`
-	Names          *v1.CustomResourceDefinitionNames           `json:"names,omitempty"`
-	Scope          *v1.ResourceScope                           `json:"scope,omitempty"`
-	Versions       []APIResourceVersionApplyConfiguration      `json:"versions,omitempty"`
-	NameValidation *string                                     `json:"nameValidation,omitempty"`
-	Conversion     *CustomResourceConversionApplyConfiguration `json:"conversion,omitempty"`
+	Group    *string                                             `json:"group,omitempty"`
+	Names    *v1.CustomResourceDefinitionNamesApplyConfiguration `json:"names,omitempty"`
+	Scope    *apiextensionsv1.ResourceScope                      `json:"scope,omitempty"`
+	Versions []APIResourceVersionApplyConfiguration              `json:"versions,omitempty"`
 }
 
-// APIResourceSchemaSpecApplyConfiguration constructs a declarative configuration of the APIResourceSchemaSpec type for use with
+// APIResourceSchemaSpecApplyConfiguration constructs an declarative configuration of the APIResourceSchemaSpec type for use with
 // apply.
 func APIResourceSchemaSpec() *APIResourceSchemaSpecApplyConfiguration {
 	return &APIResourceSchemaSpecApplyConfiguration{}
@@ -50,15 +50,15 @@ func (b *APIResourceSchemaSpecApplyConfiguration) WithGroup(value string) *APIRe
 // WithNames sets the Names field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Names field is set to the value of the last call.
-func (b *APIResourceSchemaSpecApplyConfiguration) WithNames(value v1.CustomResourceDefinitionNames) *APIResourceSchemaSpecApplyConfiguration {
-	b.Names = &value
+func (b *APIResourceSchemaSpecApplyConfiguration) WithNames(value *v1.CustomResourceDefinitionNamesApplyConfiguration) *APIResourceSchemaSpecApplyConfiguration {
+	b.Names = value
 	return b
 }
 
 // WithScope sets the Scope field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Scope field is set to the value of the last call.
-func (b *APIResourceSchemaSpecApplyConfiguration) WithScope(value v1.ResourceScope) *APIResourceSchemaSpecApplyConfiguration {
+func (b *APIResourceSchemaSpecApplyConfiguration) WithScope(value apiextensionsv1.ResourceScope) *APIResourceSchemaSpecApplyConfiguration {
 	b.Scope = &value
 	return b
 }
@@ -73,21 +73,5 @@ func (b *APIResourceSchemaSpecApplyConfiguration) WithVersions(values ...*APIRes
 		}
 		b.Versions = append(b.Versions, *values[i])
 	}
-	return b
-}
-
-// WithNameValidation sets the NameValidation field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the NameValidation field is set to the value of the last call.
-func (b *APIResourceSchemaSpecApplyConfiguration) WithNameValidation(value string) *APIResourceSchemaSpecApplyConfiguration {
-	b.NameValidation = &value
-	return b
-}
-
-// WithConversion sets the Conversion field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the Conversion field is set to the value of the last call.
-func (b *APIResourceSchemaSpecApplyConfiguration) WithConversion(value *CustomResourceConversionApplyConfiguration) *APIResourceSchemaSpecApplyConfiguration {
-	b.Conversion = value
 	return b
 }
