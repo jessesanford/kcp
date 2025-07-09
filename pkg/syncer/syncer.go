@@ -98,7 +98,7 @@ func startSyncerWithModules(ctx context.Context, cfg *SyncerConfig, numSyncerThr
 	modules.ApplyDefaults()
 
 	logger := klog.FromContext(ctx)
-	logger = logger.WithValues(SyncTargetWorkspace, cfg.SyncTargetPath, SyncTargetName, cfg.SyncTargetName)
+	logger = logger.WithValues(syncerlogging.SyncTargetWorkspace, cfg.SyncTargetPath, syncerlogging.SyncTargetName, cfg.SyncTargetName)
 
 	logger.V(2).Info("starting syncer")
 
@@ -178,7 +178,7 @@ func startSyncerWithModules(ctx context.Context, cfg *SyncerConfig, numSyncerThr
 	}
 
 	syncTargetKey := workloadv1alpha1.ToSyncTargetKey(logicalcluster.From(syncTarget), cfg.SyncTargetName)
-	logger = logger.WithValues(SyncTargetKey, syncTargetKey)
+	logger = logger.WithValues(syncerlogging.SyncTargetKey, syncTargetKey)
 	ctx = klog.NewContext(ctx, logger)
 
 	syncTargetGVRSource := synctarget.NewSyncTargetGVRSource(

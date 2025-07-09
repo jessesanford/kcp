@@ -47,3 +47,5 @@ func IndexByNamespaceLocator(obj interface{}) ([]string, error) {
 		return []string{string(bs)}, nil
 	}
 }
+
+// IndexSyncTargetsBySyncTargetKey indexes SyncTargets by their InternalSyncTargetKey label.

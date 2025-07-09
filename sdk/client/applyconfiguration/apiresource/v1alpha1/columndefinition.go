@@ -18,15 +18,19 @@ limitations under the License.
 
 package v1alpha1
 
-import (
-	v1 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/meta/v1"
-)
+// No meta/v1 TableColumnDefinition apply configuration exists upstream, so we
+// inline the relevant fields directly here instead of embedding the non-
+// existent type.
 
 // ColumnDefinitionApplyConfiguration represents an declarative configuration of the ColumnDefinition type for use
 // with apply.
 type ColumnDefinitionApplyConfiguration struct {
-	v1.TableColumnDefinitionApplyConfiguration `json:",inline"`
-	JSONPath                                   *string `json:"jsonPath,omitempty"`
+	Name        *string `json:"name,omitempty"`
+	Type        *string `json:"type,omitempty"`
+	Format      *string `json:"format,omitempty"`
+	Description *string `json:"description,omitempty"`
+	Priority    *int32  `json:"priority,omitempty"`
+	JSONPath    *string `json:"jsonPath,omitempty"`
 }
 
 // ColumnDefinitionApplyConfiguration constructs an declarative configuration of the ColumnDefinition type for use with

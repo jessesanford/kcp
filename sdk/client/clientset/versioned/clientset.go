@@ -26,33 +26,47 @@ import (
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
 
+	apiresourcev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/apiresource/v1alpha1"
 	apisv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/apis/v1alpha1"
 	apisv1alpha2 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/apis/v1alpha2"
 	cachev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/cache/v1alpha1"
 	corev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/core/v1alpha1"
+	schedulingv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/scheduling/v1alpha1"
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/tenancy/v1alpha1"
 	topologyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/topology/v1alpha1"
+	workloadv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/workload/v1alpha1"
 )
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
+	ApiresourceV1alpha1() apiresourcev1alpha1.ApiresourceV1alpha1Interface
 	ApisV1alpha1() apisv1alpha1.ApisV1alpha1Interface
 	ApisV1alpha2() apisv1alpha2.ApisV1alpha2Interface
 	CacheV1alpha1() cachev1alpha1.CacheV1alpha1Interface
 	CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface
+	SchedulingV1alpha1() schedulingv1alpha1.SchedulingV1alpha1Interface
 	TenancyV1alpha1() tenancyv1alpha1.TenancyV1alpha1Interface
 	TopologyV1alpha1() topologyv1alpha1.TopologyV1alpha1Interface
+	WorkloadV1alpha1() workloadv1alpha1.WorkloadV1alpha1Interface
 }
 
 // Clientset contains the clients for groups.
 type Clientset struct {
 	*discovery.DiscoveryClient
-	apisV1alpha1     *apisv1alpha1.ApisV1alpha1Client
-	apisV1alpha2     *apisv1alpha2.ApisV1alpha2Client
-	cacheV1alpha1    *cachev1alpha1.CacheV1alpha1Client
-	coreV1alpha1     *corev1alpha1.CoreV1alpha1Client
-	tenancyV1alpha1  *tenancyv1alpha1.TenancyV1alpha1Client
-	topologyV1alpha1 *topologyv1alpha1.TopologyV1alpha1Client
+	apiresourceV1alpha1 *apiresourcev1alpha1.ApiresourceV1alpha1Client
+	apisV1alpha1        *apisv1alpha1.ApisV1alpha1Client
+	apisV1alpha2        *apisv1alpha2.ApisV1alpha2Client
+	cacheV1alpha1       *cachev1alpha1.CacheV1alpha1Client
+	coreV1alpha1        *corev1alpha1.CoreV1alpha1Client
+	schedulingV1alpha1  *schedulingv1alpha1.SchedulingV1alpha1Client
+	tenancyV1alpha1     *tenancyv1alpha1.TenancyV1alpha1Client
+	topologyV1alpha1    *topologyv1alpha1.TopologyV1alpha1Client
+	workloadV1alpha1    *workloadv1alpha1.WorkloadV1alpha1Client
+}
+
+// ApiresourceV1alpha1 retrieves the ApiresourceV1alpha1Client
+func (c *Clientset) ApiresourceV1alpha1() apiresourcev1alpha1.ApiresourceV1alpha1Interface {
+	return c.apiresourceV1alpha1
 }
 
 // ApisV1alpha1 retrieves the ApisV1alpha1Client
@@ -75,6 +89,11 @@ func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
 	return c.coreV1alpha1
 }
 
+// SchedulingV1alpha1 retrieves the SchedulingV1alpha1Client
+func (c *Clientset) SchedulingV1alpha1() schedulingv1alpha1.SchedulingV1alpha1Interface {
+	return c.schedulingV1alpha1
+}
+
 // TenancyV1alpha1 retrieves the TenancyV1alpha1Client
 func (c *Clientset) TenancyV1alpha1() tenancyv1alpha1.TenancyV1alpha1Interface {
 	return c.tenancyV1alpha1
@@ -83,6 +102,11 @@ func (c *Clientset) TenancyV1alpha1() tenancyv1alpha1.TenancyV1alpha1Interface {
 // TopologyV1alpha1 retrieves the TopologyV1alpha1Client
 func (c *Clientset) TopologyV1alpha1() topologyv1alpha1.TopologyV1alpha1Interface {
 	return c.topologyV1alpha1
+}
+
+// WorkloadV1alpha1 retrieves the WorkloadV1alpha1Client
+func (c *Clientset) WorkloadV1alpha1() workloadv1alpha1.WorkloadV1alpha1Interface {
+	return c.workloadV1alpha1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -129,6 +153,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 
 	var cs Clientset
 	var err error
+	cs.apiresourceV1alpha1, err = apiresourcev1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 	cs.apisV1alpha1, err = apisv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
@@ -145,11 +173,19 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*Clientset,
 	if err != nil {
 		return nil, err
 	}
+	cs.schedulingV1alpha1, err = schedulingv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 	cs.tenancyV1alpha1, err = tenancyv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
 	cs.topologyV1alpha1, err = topologyv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
+	cs.workloadV1alpha1, err = workloadv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
 	}
@@ -174,12 +210,15 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 // New creates a new Clientset for the given RESTClient.
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
+	cs.apiresourceV1alpha1 = apiresourcev1alpha1.New(c)
 	cs.apisV1alpha1 = apisv1alpha1.New(c)
 	cs.apisV1alpha2 = apisv1alpha2.New(c)
 	cs.cacheV1alpha1 = cachev1alpha1.New(c)
 	cs.coreV1alpha1 = corev1alpha1.New(c)
+	cs.schedulingV1alpha1 = schedulingv1alpha1.New(c)
 	cs.tenancyV1alpha1 = tenancyv1alpha1.New(c)
 	cs.topologyV1alpha1 = topologyv1alpha1.New(c)
+	cs.workloadV1alpha1 = workloadv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs
