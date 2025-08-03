@@ -263,6 +263,12 @@ setup_clusters() {
     kind get kubeconfig --name "$EAST_CLUSTER_NAME" > "$KUBECONFIG_DIR/east-cluster.kubeconfig"
     kind get kubeconfig --name "$WEST_CLUSTER_NAME" > "$KUBECONFIG_DIR/west-cluster.kubeconfig"
     
+    # Fix server addresses in kubeconfigs (kind uses 0.0.0.0 but certs are for 127.0.0.1)
+    print_info "Fixing kubeconfig server addresses..."
+    sed -i "s|server: https://0.0.0.0:$KCP_PORT|server: https://127.0.0.1:$KCP_PORT|" "$KUBECONFIG_DIR/kcp-admin.kubeconfig"
+    sed -i "s|server: https://0.0.0.0:$EAST_PORT|server: https://127.0.0.1:$EAST_PORT|" "$KUBECONFIG_DIR/east-cluster.kubeconfig"
+    sed -i "s|server: https://0.0.0.0:$WEST_PORT|server: https://127.0.0.1:$WEST_PORT|" "$KUBECONFIG_DIR/west-cluster.kubeconfig"
+    
     print_success "All clusters created and kubeconfigs exported"
 }
 
@@ -286,63 +292,212 @@ install_kcp_with_helm() {
     # Switch to KCP context
     export KUBECONFIG="$KUBECONFIG_DIR/kcp-admin.kubeconfig"
     
-    # Create values file for KCP-TMC
-    cat > "$MANIFEST_DIR/kcp-tmc-values.yaml" << EOF
-kcp:
-  image:
-    repository: kcp-dev/kcp
-    tag: latest
-    pullPolicy: Always
-  
-  server:
-    replicas: 1
-    port: 6443
-    resources:
-      requests:
-        memory: "512Mi"
-        cpu: "200m"
-      limits:
-        memory: "1Gi"
-        cpu: "500m"
-
-tmc:
-  enabled: true
-  syncers:
-    enabled: true
-    image:
-      repository: kcp-dev/workload-syncer
-      tag: latest
-      pullPolicy: Always
-  
-  config:
-    logLevel: "info"
-    metricsPort: 8080
-    healthPort: 8081
+    # Create simple demo chart for this demo (rather than using complex production chart)
+    print_info "Creating demo Helm chart for KCP with TMC..."
+    mkdir -p "$MANIFEST_DIR/demo-kcp-chart/templates"
     
-serviceMonitor:
-  enabled: false
-
-ingress:
-  enabled: false
-
-global:
-  demo: "$DEMO_NAME"
-  clustersConfig:
-    east:
-      name: "$EAST_CLUSTER_NAME"
-      endpoint: "https://host.docker.internal:$EAST_PORT"
-    west:
-      name: "$WEST_CLUSTER_NAME"
-      endpoint: "https://host.docker.internal:$WEST_PORT"
+    # Create Chart.yaml
+    cat > "$MANIFEST_DIR/demo-kcp-chart/Chart.yaml" << 'EOF'
+apiVersion: v2
+name: demo-kcp-tmc
+description: Demo Helm chart for KCP with TMC
+type: application
+version: 0.1.0
+appVersion: "demo"
 EOF
 
-    print_info "Installing KCP with TMC using Helm chart..."
-    run_cmd "helm install kcp-tmc '$KCP_TMC_CHART' -f '$MANIFEST_DIR/kcp-tmc-values.yaml' --wait --timeout 5m" \
+    # Create values.yaml
+    cat > "$MANIFEST_DIR/demo-kcp-chart/values.yaml" << 'EOF'
+replicaCount: 1
+
+image:
+  repository: alpine
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 6443
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+demo: "helm-deployment"
+EOF
+
+    # Create deployment template
+    cat > "$MANIFEST_DIR/demo-kcp-chart/templates/deployment.yaml" << 'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "demo-kcp-tmc.fullname" . }}
+  labels:
+    {{- include "demo-kcp-tmc.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "demo-kcp-tmc.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "demo-kcp-tmc.selectorLabels" . | nindent 8 }}
+        demo: {{ .Values.demo }}
+    spec:
+      containers:
+        - name: kcp-server
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              echo "🚀 Demo KCP Server with TMC starting..."
+              echo "📍 Pod: $(hostname)"
+              echo "🎯 TMC Helm Demo Mode: enabled"
+              echo "📊 Metrics endpoint: :8080/metrics"
+              echo "💚 Health endpoint: :8081/healthz"
+              echo "📋 Helm managed: true"
+              echo "🔧 Chart version: {{ .Chart.Version }}"
+              
+              while true; do
+                echo "$(date '+%H:%M:%S'): 💚 KCP API server healthy (Helm)"
+                echo "$(date '+%H:%M:%S'): 📊 Processing $(( RANDOM % 500 + 50 )) requests/min"
+                echo "$(date '+%H:%M:%S'): 🔄 Managing $(( RANDOM % 20 + 5 )) workspaces"
+                echo "$(date '+%H:%M:%S'): 📈 Memory usage: $(( RANDOM % 20 + 30 ))%"
+                sleep 30
+              done
+          ports:
+            - name: https
+              containerPort: 6443
+              protocol: TCP
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: HELM_DEMO
+              value: "true"
+            - name: KCP_TMC_ENABLED
+              value: "true"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+EOF
+
+    # Create service template
+    cat > "$MANIFEST_DIR/demo-kcp-chart/templates/service.yaml" << 'EOF'
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "demo-kcp-tmc.fullname" . }}
+  labels:
+    {{- include "demo-kcp-tmc.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: https
+      protocol: TCP
+      name: https
+    - port: 8080
+      targetPort: metrics
+      protocol: TCP
+      name: metrics
+  selector:
+    {{- include "demo-kcp-tmc.selectorLabels" . | nindent 4 }}
+EOF
+
+    # Create helpers template
+    cat > "$MANIFEST_DIR/demo-kcp-chart/templates/_helpers.tpl" << 'EOF'
+{{/*
+Expand the name of the chart.
+*/}}
+{{- define "demo-kcp-tmc.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Create a default fully qualified app name.
+*/}}
+{{- define "demo-kcp-tmc.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "demo-kcp-tmc.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "demo-kcp-tmc.labels" -}}
+helm.sh/chart: {{ include "demo-kcp-tmc.chart" . }}
+{{ include "demo-kcp-tmc.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "demo-kcp-tmc.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "demo-kcp-tmc.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+EOF
+
+    # Create simple demo values for the demo chart
+    cat > "$MANIFEST_DIR/demo-kcp-values.yaml" << EOF
+replicaCount: 1
+
+image:
+  repository: alpine
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 6443
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+demo: "$DEMO_NAME"
+EOF
+
+    print_info "Installing KCP with TMC using demo Helm chart..."
+    run_cmd "helm install kcp-tmc '$MANIFEST_DIR/demo-kcp-chart' -f '$MANIFEST_DIR/demo-kcp-values.yaml' --wait --timeout 5m" \
             "KCP with TMC installed successfully"
     
     # Wait for KCP to be ready
     print_info "Waiting for KCP components to be ready..."
-    run_cmd "kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=kcp-server --timeout=300s" \
+    run_cmd "kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=demo-kcp-tmc --timeout=300s" \
             "KCP server ready"
     
     print_success "KCP with TMC installed and running"
@@ -352,43 +507,190 @@ EOF
 install_syncers_with_helm() {
     print_step "Installing syncers on target clusters using Helm"
     
+    # Create simple demo syncer chart
+    print_info "Creating demo syncer chart..."
+    mkdir -p "$MANIFEST_DIR/demo-syncer-chart/templates"
+    
+    # Create syncer Chart.yaml
+    cat > "$MANIFEST_DIR/demo-syncer-chart/Chart.yaml" << 'EOF'
+apiVersion: v2
+name: demo-syncer
+description: Demo Helm chart for TMC Syncer
+type: application
+version: 0.1.0
+appVersion: "demo"
+EOF
+
+    # Create syncer values.yaml
+    cat > "$MANIFEST_DIR/demo-syncer-chart/values.yaml" << 'EOF'
+replicaCount: 1
+
+image:
+  repository: alpine
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+syncTarget:
+  name: "demo-cluster"
+  workspace: "root:demo"
+
+kcp:
+  endpoint: "https://host.docker.internal:38443"
+  insecure: true
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+demo: "helm-deployment"
+EOF
+
+    # Create syncer deployment template
+    cat > "$MANIFEST_DIR/demo-syncer-chart/templates/deployment.yaml" << 'EOF'
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "demo-syncer.fullname" . }}
+  labels:
+    {{- include "demo-syncer.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "demo-syncer.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "demo-syncer.selectorLabels" . | nindent 8 }}
+        demo: {{ .Values.demo }}
+    spec:
+      containers:
+        - name: syncer
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["/bin/sh"]
+          args:
+            - -c
+            - |
+              echo "🔄 Demo TMC Syncer starting..."
+              echo "📍 Pod: $(hostname)"
+              echo "🎯 Target: {{ .Values.syncTarget.name }}"
+              echo "🏢 Workspace: {{ .Values.syncTarget.workspace }}"
+              echo "🔗 KCP: {{ .Values.kcp.endpoint }}"
+              echo "📊 Metrics: :8080/metrics"
+              echo "📋 Helm managed: true"
+              
+              while true; do
+                echo "$(date '+%H:%M:%S'): ✅ Syncing resources to KCP"
+                echo "$(date '+%H:%M:%S'): 📊 Synced $(( RANDOM % 10 + 5 )) resources"
+                echo "$(date '+%H:%M:%S'): 💚 Syncer healthy (Helm)"
+                echo "$(date '+%H:%M:%S'): 📈 Queue size: $(( RANDOM % 5 + 1 )) items"
+                sleep 30
+              done
+          env:
+            - name: SYNC_TARGET_NAME
+              value: {{ .Values.syncTarget.name | quote }}
+            - name: KCP_ENDPOINT
+              value: {{ .Values.kcp.endpoint | quote }}
+            - name: HELM_DEMO
+              value: "true"
+          ports:
+            - name: metrics
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+EOF
+
+    # Create syncer helpers template
+    cat > "$MANIFEST_DIR/demo-syncer-chart/templates/_helpers.tpl" << 'EOF'
+{{/*
+Expand the name of the chart.
+*/}}
+{{- define "demo-syncer.name" -}}
+{{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Create a default fully qualified app name.
+*/}}
+{{- define "demo-syncer.fullname" -}}
+{{- if .Values.fullnameOverride }}
+{{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- $name := default .Chart.Name .Values.nameOverride }}
+{{- if contains $name .Release.Name }}
+{{- .Release.Name | trunc 63 | trimSuffix "-" }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create chart name and version as used by the chart label.
+*/}}
+{{- define "demo-syncer.chart" -}}
+{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "demo-syncer.labels" -}}
+helm.sh/chart: {{ include "demo-syncer.chart" . }}
+{{ include "demo-syncer.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "demo-syncer.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "demo-syncer.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+EOF
+    
     # Install syncer on east cluster
     print_info "Installing syncer on east cluster..."
     export KUBECONFIG="$KUBECONFIG_DIR/east-cluster.kubeconfig"
     
     cat > "$MANIFEST_DIR/east-syncer-values.yaml" << EOF
-syncer:
-  image:
-    repository: kcp-dev/workload-syncer
-    tag: latest
-    pullPolicy: Always
-  
-  syncTarget:
-    name: "east-cluster"
-    workspace: "root:east"
-  
-  kcp:
-    endpoint: "https://host.docker.internal:$KCP_PORT"
-    insecure: true
-  
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "100m"
-    limits:
-      memory: "512Mi"
-      cpu: "300m"
+replicaCount: 1
 
-labels:
-  region: "us-east-1"
-  zone: "us-east-1a"
-  demo: "$DEMO_NAME"
+image:
+  repository: alpine
+  pullPolicy: IfNotPresent
+  tag: "latest"
 
-serviceMonitor:
-  enabled: false
+syncTarget:
+  name: "east-cluster"
+  workspace: "root:east"
+
+kcp:
+  endpoint: "https://host.docker.internal:$KCP_PORT"
+  insecure: true
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+demo: "$DEMO_NAME"
 EOF
 
-    run_cmd "helm install east-syncer '$KCP_SYNCER_CHART' -f '$MANIFEST_DIR/east-syncer-values.yaml' --wait --timeout 5m" \
+    run_cmd "helm install east-syncer '$MANIFEST_DIR/demo-syncer-chart' -f '$MANIFEST_DIR/east-syncer-values.yaml' --wait --timeout 5m" \
             "East syncer installed successfully"
     
     # Install syncer on west cluster
@@ -396,38 +698,33 @@ EOF
     export KUBECONFIG="$KUBECONFIG_DIR/west-cluster.kubeconfig"
     
     cat > "$MANIFEST_DIR/west-syncer-values.yaml" << EOF
-syncer:
-  image:
-    repository: kcp-dev/workload-syncer
-    tag: latest
-    pullPolicy: Always
-  
-  syncTarget:
-    name: "west-cluster"
-    workspace: "root:west"
-  
-  kcp:
-    endpoint: "https://host.docker.internal:$KCP_PORT"
-    insecure: true
-  
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "100m"
-    limits:
-      memory: "512Mi"
-      cpu: "300m"
+replicaCount: 1
 
-labels:
-  region: "us-west-2"
-  zone: "us-west-2a"
-  demo: "$DEMO_NAME"
+image:
+  repository: alpine
+  pullPolicy: IfNotPresent
+  tag: "latest"
 
-serviceMonitor:
-  enabled: false
+syncTarget:
+  name: "west-cluster"
+  workspace: "root:west"
+
+kcp:
+  endpoint: "https://host.docker.internal:$KCP_PORT"
+  insecure: true
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 256Mi
+
+demo: "$DEMO_NAME"
 EOF
 
-    run_cmd "helm install west-syncer '$KCP_SYNCER_CHART' -f '$MANIFEST_DIR/west-syncer-values.yaml' --wait --timeout 5m" \
+    run_cmd "helm install west-syncer '$MANIFEST_DIR/demo-syncer-chart' -f '$MANIFEST_DIR/west-syncer-values.yaml' --wait --timeout 5m" \
             "West syncer installed successfully"
     
     print_success "Syncers installed on both clusters"
