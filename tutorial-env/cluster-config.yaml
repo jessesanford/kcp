@@ -1,0 +1,20 @@
+# Mock TMC Multi-Cluster Configuration
+clusters:
+  kcp-host:
+    role: control-plane
+    address: "127.0.0.1:6443"
+    region: control
+  cluster-east:
+    role: workload
+    address: "127.0.0.1:6444" 
+    region: east
+    labels:
+      region: east
+      zone: us-east-1
+  cluster-west:
+    role: workload
+    address: "127.0.0.1:6445"
+    region: west
+    labels:
+      region: west
+      zone: us-west-1

@@ -1,0 +1,19 @@
+apiVersion: scheduling.kcp.io/v1alpha1
+kind: Placement
+metadata:
+  name: hello-world-placement
+  labels:
+    app: hello-world
+spec:
+  locationSelectors:
+  - matchLabels:
+      region: east
+  - matchLabels:
+      region: west
+  numberOfClusters: 2
+  namespaceSelector:
+    matchNames:
+    - default
+  clusterSelector:
+    matchLabels:
+      workload-type: application

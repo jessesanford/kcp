@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tmc-config
+  namespace: kcp-system
+data:
+  tmc.yaml: |
+    apiVersion: tmc.kcp.io/v1alpha1
+    kind: TMCConfiguration
+    metadata:
+      name: default
+    spec:
+      virtualWorkspaceManager:
+        enabled: true
+        syncInterval: 30s
+        aggregationEnabled: true
+        projectionEnabled: true
+      
+      crossClusterAggregator:
+        enabled: true
+        aggregationInterval: 30s
+        mergeStrategy: union
+        conflictResolution: lastWriter
+        healthAggregation: majority
+      
+      workloadProjectionController:
+        enabled: true
+        projectionInterval: 60s
+        transformations:
+        - type: set
+          jsonPath: "metadata.labels['tmc.kcp.io/projected']"
+          value: "true"
+      
+      recoveryManager:
+        enabled: true
+        maxConcurrentRecoveries: 5
+        recoveryTimeout: 10m
+        strategies:
+        - clusterConnectivity
+        - resourceConflict
+        - placement
+        - sync
+        - migration
+      
+      healthMonitor:
+        enabled: true
+        checkInterval: 30s
+        healthTimeout: 10s
+        thresholds:
+          degraded: 2m
+          unhealthy: 5m
+      
+      metricsCollector:
+        enabled: true
+        prometheusEnabled: true
+        collectionInterval: 30s
+        retentionPeriod: 24h
