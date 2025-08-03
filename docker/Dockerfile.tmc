@@ -1,0 +1,216 @@
+# Multi-stage Dockerfile for KCP with TMC (Transparent Multi-Cluster) support
+# This creates a production-ready image with all TMC components enabled
+
+# Stage 1: Builder
+FROM golang:1.23-alpine AS builder
+
+# Install build dependencies
+RUN apk add --no-cache \
+    git \
+    make \
+    bash \
+    curl \
+    ca-certificates \
+    tzdata
+
+# Set up workspace
+WORKDIR /workspace
+
+# Copy go modules first for better caching
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build KCP with TMC components enabled
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
+ENV KCP_TMC_ENABLED=true
+ENV KCP_TMC_ERROR_HANDLING=true
+ENV KCP_TMC_HEALTH_MONITORING=true
+ENV KCP_TMC_METRICS=true
+ENV KCP_TMC_RECOVERY=true
+ENV KCP_TMC_VIRTUAL_WORKSPACES=true
+ENV KCP_TMC_PLACEMENT_CONTROLLER=true
+
+# Build all TMC-enabled binaries
+RUN make build \
+    && ls -la bin/ \
+    && file bin/kcp \
+    && file bin/workload-syncer
+
+# Verify TMC components are included
+RUN echo "Verifying TMC components..." \
+    && ./bin/kcp --help | grep -i "tmc\|transparent\|multi-cluster" || echo "TMC help not found" \
+    && ./bin/workload-syncer --help | grep -i "tmc\|transparent" || echo "Syncer TMC help not found"
+
+# Stage 2: KCP Server Image
+FROM alpine:3.18 AS kcp-server
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    tzdata \
+    curl \
+    jq \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1000 kcp \
+    && adduser -u 1000 -G kcp -s /bin/sh -D kcp
+
+# Create necessary directories
+RUN mkdir -p /etc/kcp /var/lib/kcp /var/log/kcp \
+    && chown -R kcp:kcp /etc/kcp /var/lib/kcp /var/log/kcp
+
+# Copy KCP binary and plugins
+COPY --from=builder /workspace/bin/kcp /usr/local/bin/kcp
+COPY --from=builder /workspace/bin/kubectl-kcp /usr/local/bin/kubectl-kcp
+COPY --from=builder /workspace/bin/kubectl-workspaces /usr/local/bin/kubectl-workspaces
+
+# Make binaries executable
+RUN chmod +x /usr/local/bin/kcp \
+    && chmod +x /usr/local/bin/kubectl-kcp \
+    && chmod +x /usr/local/bin/kubectl-workspaces
+
+# Health check script
+COPY docker/health-check.sh /usr/local/bin/health-check.sh
+RUN chmod +x /usr/local/bin/health-check.sh
+
+# Switch to non-root user
+USER kcp
+
+# Set working directory
+WORKDIR /var/lib/kcp
+
+# Expose ports
+EXPOSE 6443 8080 8081
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD /usr/local/bin/health-check.sh
+
+# Default command
+CMD ["/usr/local/bin/kcp", "start", \
+     "--root-directory=/var/lib/kcp", \
+     "--enable-tmc", \
+     "--tmc-error-handling=true", \
+     "--tmc-health-monitoring=true", \
+     "--tmc-metrics=true", \
+     "--tmc-recovery=true", \
+     "--bind-address=0.0.0.0", \
+     "--secure-port=6443", \
+     "--v=2"]
+
+# Stage 3: Workload Syncer Image  
+FROM alpine:3.18 AS workload-syncer
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    tzdata \
+    curl \
+    jq \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1001 syncer \
+    && adduser -u 1001 -G syncer -s /bin/sh -D syncer
+
+# Create necessary directories
+RUN mkdir -p /etc/syncer /var/lib/syncer /var/log/syncer \
+    && chown -R syncer:syncer /etc/syncer /var/lib/syncer /var/log/syncer
+
+# Copy syncer binary
+COPY --from=builder /workspace/bin/workload-syncer /usr/local/bin/workload-syncer
+RUN chmod +x /usr/local/bin/workload-syncer
+
+# Health check script for syncer
+COPY docker/syncer-health-check.sh /usr/local/bin/syncer-health-check.sh
+RUN chmod +x /usr/local/bin/syncer-health-check.sh
+
+# Switch to non-root user
+USER syncer
+
+# Set working directory
+WORKDIR /var/lib/syncer
+
+# Expose metrics port
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD /usr/local/bin/syncer-health-check.sh
+
+# Default command (requires configuration via environment variables or args)
+CMD ["/usr/local/bin/workload-syncer", \
+     "--metrics-bind-address=0.0.0.0:8080", \
+     "--v=2"]
+
+# Stage 4: All-in-One TMC Image (for development/testing)
+FROM alpine:3.18 AS tmc-all-in-one
+
+# Install runtime dependencies
+RUN apk add --no-cache \
+    ca-certificates \
+    tzdata \
+    curl \
+    jq \
+    bash \
+    kubectl \
+    && rm -rf /var/cache/apk/*
+
+# Create non-root user
+RUN addgroup -g 1000 tmc \
+    && adduser -u 1000 -G tmc -s /bin/bash -D tmc
+
+# Create necessary directories
+RUN mkdir -p /etc/tmc /var/lib/tmc /var/log/tmc \
+    && chown -R tmc:tmc /etc/tmc /var/lib/tmc /var/log/tmc
+
+# Copy all binaries
+COPY --from=builder /workspace/bin/kcp /usr/local/bin/kcp
+COPY --from=builder /workspace/bin/workload-syncer /usr/local/bin/workload-syncer
+COPY --from=builder /workspace/bin/kubectl-kcp /usr/local/bin/kubectl-kcp
+COPY --from=builder /workspace/bin/kubectl-workspaces /usr/local/bin/kubectl-workspaces
+
+# Make all binaries executable
+RUN chmod +x /usr/local/bin/kcp \
+    && chmod +x /usr/local/bin/workload-syncer \
+    && chmod +x /usr/local/bin/kubectl-kcp \
+    && chmod +x /usr/local/bin/kubectl-workspaces
+
+# Copy health check scripts
+COPY docker/health-check.sh /usr/local/bin/health-check.sh
+COPY docker/syncer-health-check.sh /usr/local/bin/syncer-health-check.sh
+COPY docker/tmc-startup.sh /usr/local/bin/tmc-startup.sh
+RUN chmod +x /usr/local/bin/health-check.sh \
+    && chmod +x /usr/local/bin/syncer-health-check.sh \
+    && chmod +x /usr/local/bin/tmc-startup.sh
+
+# Add labels for image metadata
+LABEL org.opencontainers.image.title="KCP with TMC" \
+      org.opencontainers.image.description="Kubernetes Control Plane with Transparent Multi-Cluster support" \
+      org.opencontainers.image.vendor="KCP Project" \
+      org.opencontainers.image.licenses="Apache-2.0" \
+      org.opencontainers.image.source="https://github.com/kcp-dev/kcp" \
+      tmc.version="v0.11.0" \
+      tmc.components="error-handling,health-monitoring,metrics,recovery,virtual-workspaces,placement-controller"
+
+# Switch to non-root user
+USER tmc
+
+# Set working directory
+WORKDIR /var/lib/tmc
+
+# Expose all ports
+EXPOSE 6443 8080 8081
+
+# Health check for all-in-one
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD /usr/local/bin/health-check.sh
+
+# Default startup script
+CMD ["/usr/local/bin/tmc-startup.sh"]
