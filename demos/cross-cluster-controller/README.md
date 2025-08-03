@@ -69,12 +69,11 @@ cross-cluster-controller/
 │   ├── east-taskqueue.yaml
 │   ├── west-taskqueue.yaml
 │   └── global-taskqueue.yaml
-└── scripts/                    # Helper scripts
-    ├── setup-clusters.sh
-    ├── install-crds.sh
-    ├── deploy-controller.sh
-    ├── create-taskqueues.sh
-    └── monitor-processing.sh
+├── scripts/                    # Helper scripts
+│   ├── monitor-processing.sh   # Real-time TaskQueue monitoring
+│   └── create-demo-taskqueues.sh # Create sample TaskQueues
+├── kubeconfigs/             # Generated kubeconfig files
+└── logs/                    # Demo execution logs
 ```
 
 ## 🔄 Demo Flow
@@ -112,17 +111,32 @@ cross-cluster-controller/
 ## 🎮 Interactive Features
 
 ### Real-Time Status Dashboard
-```bash
-=== TaskQueue Processing Status ===
-┌─────────────────┬────────────┬─────────┬─────────────┬─────────────────┐
-│ TaskQueue       │ Origin     │ Status  │ Tasks       │ Controller      │
-├─────────────────┼────────────┼─────────┼─────────────┼─────────────────┤
-│ east-data       │ East       │ Running │ 3/5         │ west-controller │
-│ west-ml         │ West       │ Running │ 1/4         │ west-controller │
-│ global-monitor  │ Global     │ Complete│ 4/4         │ west-controller │
-└─────────────────┴────────────┴─────────┴─────────────┴─────────────────┘
 
-🔄 Updates every 5 seconds • Press Ctrl+C to stop monitoring
+**Use the dedicated monitoring script for the best experience:**
+```bash
+./scripts/monitor-processing.sh
+```
+
+This provides a live dashboard showing:
+```bash
+=== TMC Cross-Cluster Controller Monitor ===
+┌─────────────────┬─────────────┬─────────────┬─────────────────┐
+│ Cluster         │ Status      │ Nodes       │ Controller      │
+├─────────────────┼─────────────┼─────────────┼─────────────────┤
+│ KCP Host        │ ✅ Running  │ 1 nodes     │ None            │
+│ East Cluster    │ ✅ Running  │ 1 nodes     │ None            │
+│ West Cluster    │ ✅ Running  │ 1 nodes     │ ✅ Active       │
+└─────────────────┴─────────────┴─────────────┴─────────────────┘
+
+┌────────────────────┬──────────────┬─────────────┬─────────┬─────────────────┐
+│ TaskQueue Name     │ Status       │ Origin      │ Tasks   │ Controller      │
+├────────────────────┼──────────────┼─────────────┼─────────┼─────────────────┤
+│ east-data          │ 🔄 Running   │ [from east] │ 3/5     │ 🎮 west         │
+│ west-ml            │ 🔄 Running   │ [LOCAL]     │ 1/4     │ 🎮 west         │
+│ global-monitor     │ ✅ Complete  │ [from kcp]  │ 4/4     │ 🎮 west         │
+└────────────────────┴──────────────┴─────────────┴─────────┴─────────────────┘
+
+🔄 Updates every 5s • Press 'h' for help • Ctrl+C to stop
 ```
 
 ### Cross-Cluster Verification
@@ -242,9 +256,35 @@ spec:
 
 ## 📊 Monitoring and Observability
 
+### Interactive Monitoring Scripts
+
+The demo includes powerful scripts to visualize cross-cluster operations:
+
+#### 1. Create Demo TaskQueues
+```bash
+./scripts/create-demo-taskqueues.sh
+```
+Creates sample TaskQueues on different clusters:
+- **east-data-processing**: Data pipeline tasks (created on East cluster)
+- **west-ml-training**: ML model training tasks (created on West cluster)  
+- **global-health-monitor**: Health check tasks (created on KCP cluster)
+
+#### 2. Real-Time Monitoring Dashboard
+```bash
+./scripts/monitor-processing.sh
+```
+Provides live visualization of:
+- Cross-cluster TaskQueue synchronization
+- Controller processing activity
+- Task completion progress
+- TMC syncer health status
+
 ### Real-Time Monitoring
 ```bash
-# Watch TaskQueue status across all clusters
+# Create sample TaskQueues for demonstration
+./scripts/create-demo-taskqueues.sh
+
+# Watch TaskQueue status across all clusters (RECOMMENDED)
 ./scripts/monitor-processing.sh
 
 # Watch controller logs

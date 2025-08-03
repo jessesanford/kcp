@@ -48,11 +48,8 @@ hello-world/
 │   ├── hello-east.yaml
 │   ├── hello-west.yaml
 │   └── sync-targets.yaml
-└── scripts/                 # Helper scripts
-    ├── setup-clusters.sh
-    ├── install-syncers.sh
-    ├── deploy-workloads.sh
-    └── check-status.sh
+├── kubeconfigs/             # Generated kubeconfig files
+└── logs/                    # Demo execution logs
 ```
 
 ## 🔄 Demo Flow
@@ -196,10 +193,10 @@ spec:
 # Check overall demo health
 ./validate-demo.sh
 
-# Check specific components
-./scripts/check-status.sh --component=kcp
-./scripts/check-status.sh --component=syncers
-./scripts/check-status.sh --component=workloads
+# Check specific components with kubectl
+kubectl --context kind-hello-kcp get pods
+kubectl --context kind-hello-east get pods
+kubectl --context kind-hello-west get pods
 ```
 
 ### Logs and Debugging

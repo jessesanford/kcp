@@ -77,11 +77,8 @@ production-setup/
 │   └── grafana.yaml                 # Dashboard stack
 ├── monitoring/                 # Monitoring configurations
 │   └── prometheus-config.yaml      # Metrics collection config
-└── scripts/                    # Production scripts
-    ├── setup-ha-clusters.sh
-    ├── install-monitoring.sh
-    ├── deploy-production.sh
-    └── validate-production.sh
+├── kubeconfigs/             # Generated kubeconfig files
+└── logs/                    # Demo execution logs
 ```
 
 ## 🔄 Demo Flow

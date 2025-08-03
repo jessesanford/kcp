@@ -66,17 +66,15 @@ helm-deployment/
 │   ├── east-cluster-config.yaml
 │   └── west-cluster-config.yaml
 ├── manifests/                  # Helm values and charts
-│   ├── kcp-tmc-values.yaml
+│   ├── demo-kcp-chart/         # Demo KCP chart
+│   ├── demo-syncer-chart/      # Demo syncer chart
+│   ├── demo-workload/          # Demo workload chart
+│   ├── demo-kcp-values.yaml
 │   ├── east-syncer-values.yaml
 │   ├── west-syncer-values.yaml
 │   ├── east-workload-values.yaml
-│   ├── west-workload-values.yaml
-│   └── demo-workload/          # Demo chart templates
-└── scripts/                    # Helper scripts
-    ├── setup-clusters.sh
-    ├── install-helm-charts.sh
-    ├── deploy-workloads.sh
-    └── monitor-releases.sh
+│   └── west-workload-values.yaml
+└── logs/                       # Demo execution logs
 ```
 
 ## 🔄 Demo Flow
@@ -277,9 +275,6 @@ security:
 
 ### Helm Release Monitoring
 ```bash
-# Watch all releases across clusters
-./scripts/monitor-releases.sh
-
 # Check release status
 helm status kcp-tmc
 helm status east-syncer
