@@ -4,6 +4,156 @@
 
 The KCP Workload Syncer is a critical component of the Transparent Multi-Cluster (TMC) system that handles bidirectional synchronization of workload resources between KCP logical clusters and physical Kubernetes clusters. This PRD addresses the compilation issues identified during the TMC integration and provides a comprehensive specification for implementing a robust, production-ready syncer.
 
+## Implementation Guidelines for Claude Code
+
+### Overview
+This section provides specific instructions for AI-assisted development (claude code) to ensure a systematic, test-driven approach to implementing the KCP Workload Syncer based on this PRD.
+
+### Implementation Strategy
+
+#### 1. Planning Phase
+- **Read and Understand**: Thoroughly analyze this entire PRD before beginning any implementation
+- **Create Implementation Plan**: Break down the work into logical, testable phases based on the "Implementation Phases" section below
+- **Identify Dependencies**: Map out all dependencies between components and phases
+- **Plan Feature Branches**: Design a branching strategy that isolates changes for safe testing
+
+#### 2. Feature Branch Strategy
+- **Branch Naming Convention**: Use descriptive names like `feature/fix-logging-interfaces`, `feature/tmc-integration`, `feature/status-reporter-fixes`
+- **Scope Isolation**: Each branch should focus on a single, well-defined set of changes that can be independently tested
+- **Small, Focused Changes**: Prefer many small branches over large, complex ones
+- **Feature Branch Lifecycle**:
+  1. Create feature branch from `main`
+  2. Implement changes for specific scope
+  3. Run all tests and ensure they pass
+  4. Commit frequently with descriptive messages
+  5. Merge back to `main` only when all tests pass
+
+#### 3. Testing Requirements (CRITICAL)
+- **Before ANY Implementation**: Run existing tests to establish baseline: `make test`
+- **Before Starting New Phase**: Ensure all tests pass before proceeding to next implementation phase
+- **After Each Change**: Run relevant tests immediately after making code changes
+- **Before Each Commit**: All tests must pass - if tests fail, fix them before committing
+- **Before Merging**: Complete test suite must pass, including:
+  - Unit tests: `go test ./pkg/reconciler/workload/syncer/...`
+  - Integration tests: `make test-integration`
+  - Build verification: `make build`
+  - Lint checks: `make lint`
+
+#### 4. Development Workflow
+```bash
+# Example workflow for each feature branch
+git checkout main
+git pull origin main
+git checkout -b feature/fix-logging-interfaces
+
+# Implement changes
+# ... make code changes ...
+
+# Test after each logical change
+make test
+go test ./pkg/reconciler/workload/syncer/... -v
+
+# Commit only when tests pass
+git add .
+git commit -m "fix: replace logging.WithValues with proper klog context patterns"
+
+# Before proceeding to next change, verify tests still pass
+make test
+
+# When feature is complete and all tests pass
+git checkout main
+git merge feature/fix-logging-interfaces
+git branch -d feature/fix-logging-interfaces
+```
+
+#### 5. Implementation Order (Mandatory Sequence)
+Follow this exact order - do not skip ahead:
+
+1. **Phase 1a: Fix Compilation Issues - Logging**
+   - Branch: `feature/fix-logging-interfaces`
+   - Fix all `logging.WithValues` usage in engine.go and resource_controller.go
+   - Test: Ensure code compiles and existing tests pass
+
+2. **Phase 1b: Fix Compilation Issues - Types**
+   - Branch: `feature/fix-type-mismatches`  
+   - Fix condition type issues in status_reporter.go
+   - Test: Verify type compatibility and compilation
+
+3. **Phase 1c: Fix Compilation Issues - Imports**
+   - Branch: `feature/fix-missing-imports`
+   - Add missing prometheus imports in metrics.go
+   - Test: Ensure all packages import correctly
+
+4. **Phase 1d: Verify Full Compilation**
+   - Branch: `feature/compilation-verification`
+   - Run complete build and address any remaining issues
+   - Test: `make build` must succeed without errors
+
+5. **Phase 2: TMC Integration** (only after Phase 1 complete)
+   - Multiple feature branches for each TMC system integration
+   - Each integration must be tested independently
+
+#### 6. Testing Commands Reference
+Always use these commands before proceeding:
+
+```bash
+# Compilation check
+make build
+go build ./cmd/workload-syncer/...
+
+# Unit tests
+go test ./pkg/reconciler/workload/syncer/... -v
+
+# Integration tests  
+make test-integration
+
+# Full test suite
+make test
+
+# Linting
+make lint
+
+# Code generation (if needed)
+make codegen
+```
+
+#### 7. Commit and Merge Guidelines
+- **Commit Frequency**: Commit after each logical, tested change
+- **Commit Messages**: Use conventional commits format: `fix:`, `feat:`, `test:`, etc.
+- **Merge Requirements**: 
+  - All tests must pass
+  - Code must compile without errors
+  - No new linter warnings
+  - Changes must align with PRD specifications
+- **Merge Strategy**: Use fast-forward merges to maintain clean history
+
+#### 8. Critical Rules (NEVER VIOLATE)
+- ❌ **NEVER DELETE PRD DOCUMENTS**: This file and any other `.md` documentation files must be preserved
+- ❌ **NEVER PROCEED WITH FAILING TESTS**: If any test fails, stop immediately and fix before continuing
+- ❌ **NEVER SKIP PHASES**: Follow the implementation order exactly as specified
+- ❌ **NEVER COMMIT BROKEN CODE**: Every commit must maintain a working, testable state
+- ❌ **NEVER MERGE WITHOUT TESTING**: All tests must pass before any merge to main
+
+#### 9. Success Criteria for Each Phase
+Each phase must meet these criteria before proceeding:
+- ✅ All existing tests continue to pass
+- ✅ New functionality has corresponding tests
+- ✅ Code compiles without errors or warnings
+- ✅ Linting passes
+- ✅ Changes are properly documented in commit messages
+- ✅ Integration with existing TMC components verified
+
+#### 10. Error Handling
+If any step fails:
+1. **Stop immediately** - do not proceed to next step
+2. **Analyze the failure** - understand root cause
+3. **Fix the issue** - address the specific problem
+4. **Re-test** - verify fix works and doesn't break other functionality
+5. **Document** - update commit message with what was fixed
+6. **Only then proceed** - continue with next step
+
+This systematic approach ensures robust, tested implementation that integrates properly with the existing TMC infrastructure while maintaining code quality and system stability.
+
 ## Background
 
 ### Current State
