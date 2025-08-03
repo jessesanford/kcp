@@ -5,7 +5,19 @@ description: >
 
 # Transparent multi-cluster
 
-## NOTE: This was a prototype that was not continued. The ideas here are still valid and could be picked up by a future project. 
+## UPDATE: The TMC (Transparent Multi-Cluster) system has been implemented!
+
+**See the [complete TMC implementation documentation](../tmc/README.md) for the production-ready system.**
+
+The TMC system includes:
+- **Workload Syncer**: Bidirectional resource synchronization between KCP and physical clusters
+- **Virtual Workspace Manager**: Cross-cluster resource aggregation and projection  
+- **TMC Health System**: Component health monitoring and aggregation
+- **TMC Metrics & Observability**: Comprehensive metrics collection and reporting
+- **TMC Error Handling**: Categorized error types with recovery strategies
+- **TMC Recovery Manager**: Automated failure recovery and healing
+
+The original investigation below provided the foundation for this implementation. 
 
 A key tenet of Kubernetes is that workload placement is node-agnostic until the user needs it to be - Kube offers a homogeneous compute surface that admins or app devs can "break-glass" and set constraints all the way down to writing software that deeply integrates with nodes. But for the majority of workloads a cluster is no more important than a node - it's a detail determined by some human or automated process.
 
