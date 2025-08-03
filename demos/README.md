@@ -60,6 +60,76 @@ This directory contains independent, atomic demonstrations of KCP with TMC (Tran
 
 **Run**: `cd production-setup && ./run-demo.sh`
 
+### 5. Disaster Recovery Demo (`disaster-recovery/`)
+**Purpose**: Automated failover and recovery across regions
+**Duration**: 15-20 minutes
+**Prerequisites**: Docker, kind, kubectl
+
+**What it demonstrates**:
+- Multi-region cluster setup with primary/backup regions
+- Automatic failover detection and triggering
+- Application migration between regions
+- Data synchronization and consistency
+- Complete disaster recovery workflows
+
+**Run**: `cd disaster-recovery && ./run-demo.sh`
+
+### 6. GitOps Integration Demo (`gitops-integration/`)
+**Purpose**: GitOps workflows with ArgoCD across multiple clusters
+**Duration**: 20-25 minutes
+**Prerequisites**: Docker, kind, kubectl
+
+**What it demonstrates**:
+- ArgoCD deployment and multi-cluster configuration
+- Git-driven application lifecycle management
+- Environment-specific deployment pipelines (dev → staging → prod)
+- GitOps synchronization across clusters
+- Real-time deployment monitoring and management
+
+**Run**: `cd gitops-integration && ./run-demo.sh`
+
+### 7. Multi-Tenant Demo (`multi-tenant/`)
+**Purpose**: Isolated tenant workspaces across multiple clusters
+**Duration**: 15-20 minutes
+**Prerequisites**: Docker, kind, kubectl
+
+**What it demonstrates**:
+- Multi-tenant architecture with shared and isolated clusters
+- Tenant resource isolation (network, compute, storage)
+- Per-tenant quotas and security boundaries
+- Cross-cluster tenant coordination
+- Tenant lifecycle management and monitoring
+
+**Run**: `cd multi-tenant && ./run-demo.sh`
+
+### 8. Policy Enforcement Demo (`policy-enforcement/`)
+**Purpose**: Global policy enforcement across multiple clusters
+**Duration**: 18-22 minutes
+**Prerequisites**: Docker, kind, kubectl
+
+**What it demonstrates**:
+- Centralized policy management with distributed enforcement
+- Security, resource, compliance, and network policies
+- Environment-specific policy tiers (relaxed, moderate, strict)
+- Real-time policy violation detection and blocking
+- Dynamic policy updates with automatic synchronization
+
+**Run**: `cd policy-enforcement && ./run-demo.sh`
+
+### 9. Progressive Rollout Demo (`progressive-rollout/`)
+**Purpose**: Canary deployments and safe rollouts across clusters
+**Duration**: 20-25 minutes
+**Prerequisites**: Docker, kind, kubectl
+
+**What it demonstrates**:
+- Canary deployments with automated health monitoring
+- Progressive promotion through environment tiers
+- Blue-green production deployments with zero downtime
+- Automatic rollback on detection of critical issues
+- Multi-environment rollout coordination
+
+**Run**: `cd progressive-rollout && ./run-demo.sh`
+
 ## 🚀 Quick Start
 
 ### Use the Master Launcher (Recommended)
@@ -120,6 +190,11 @@ make --version      # Any recent version
 | Cross-Cluster Controller | Intermediate | 10-15 min | Docker, kind | CRD sync |
 | Helm Deployment | Advanced | 15-20 min | + Helm | Production |
 | Production Setup | Expert | 20-30 min | + Helm | Enterprise |
+| Disaster Recovery | Intermediate | 15-20 min | Docker, kind | Failover |
+| GitOps Integration | Advanced | 20-25 min | Docker, kind | GitOps |
+| Multi-Tenant | Intermediate | 15-20 min | Docker, kind | Tenancy |
+| Policy Enforcement | Advanced | 18-22 min | Docker, kind | Governance |
+| Progressive Rollout | Advanced | 20-25 min | Docker, kind | Deployments |
 
 ## 🎮 Interactive Features
 
@@ -185,14 +260,26 @@ Each demo uses unique:
 **Recommended order for learning**:
 1. **Hello World** - Understand TMC fundamentals
 2. **Cross-Cluster Controller** - See advanced CRD capabilities  
-3. **Helm Deployment** - Learn production deployment
-4. **Production Setup** - Master enterprise patterns
+3. **Disaster Recovery** - Learn failover and resilience
+4. **Multi-Tenant** - Understand isolation and resource management
+5. **Policy Enforcement** - Master governance and compliance
+6. **GitOps Integration** - Learn modern deployment workflows
+7. **Progressive Rollout** - Master advanced deployment strategies
+8. **Helm Deployment** - Learn production deployment
+9. **Production Setup** - Master enterprise patterns
 
 **For specific use cases**:
-- **Developers**: Hello World → Cross-Cluster Controller
-- **DevOps Engineers**: Helm Deployment → Production Setup
+- **Developers**: Hello World → Cross-Cluster Controller → GitOps Integration
+- **DevOps Engineers**: Disaster Recovery → Progressive Rollout → Policy Enforcement
 - **Platform Engineers**: All demos in sequence
-- **Decision Makers**: Hello World → Production Setup
+- **Security Engineers**: Multi-Tenant → Policy Enforcement
+- **Decision Makers**: Hello World → Production Setup → Policy Enforcement
+
+**By complexity level**:
+- **Beginner**: Hello World
+- **Intermediate**: Cross-Cluster Controller, Disaster Recovery, Multi-Tenant
+- **Advanced**: GitOps Integration, Policy Enforcement, Progressive Rollout, Helm Deployment
+- **Expert**: Production Setup
 
 ## 🔄 Demo Lifecycle
 
