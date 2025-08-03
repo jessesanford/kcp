@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mock-kcp-tmc
+  namespace: tmc-system
+  labels:
+    app: kcp-tmc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kcp-tmc
+  template:
+    metadata:
+      labels:
+        app: kcp-tmc
+    spec:
+      containers:
+      - name: kcp-tmc
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        env:
+        - name: TMC_MODE
+          value: "demo"
+        - name: CLUSTERS
+          value: "east,west"
+        volumeMounts:
+        - name: tmc-info
+          mountPath: /usr/share/nginx/html
+      initContainers:
+      - name: setup-tmc-info
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          cat > /html/index.html << 'HTML'
+          <!DOCTYPE html>
+          <html>
+          <head><title>TMC Control Plane</title></head>
+          <body>
+            <h1>🚀 TMC (Transparent Multi-Cluster) Control Plane</h1>
+            <h2>System Status: ✅ Running</h2>
+            <h3>Connected Clusters:</h3>
+            <ul>
+              <li>🏢 KCP Host: sanforj-Virtual-Machine (Control Plane)</li>
+              <li>🌐 East Cluster: Ready for workloads</li>
+              <li>🌐 West Cluster: Ready for workloads</li>
+            </ul>
+            <h3>TMC Features Active:</h3>
+            <ul>
+              <li>✅ Multi-cluster placement</li>
+              <li>✅ Cross-cluster aggregation</li>
+              <li>✅ Virtual workspace management</li>
+              <li>✅ Health monitoring</li>
+              <li>✅ Recovery management</li>
+              <li>✅ Metrics collection</li>
+            </ul>
+            <p>Tutorial running at: Sun Aug  3 02:39:07 AM EDT 2025</p>
+          </body>
+          </html>
+          HTML
+        volumeMounts:
+        - name: tmc-info
+          mountPath: /html
+      volumes:
+      - name: tmc-info
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tmc-control-plane
+  namespace: tmc-system
+spec:
+  selector:
+    app: kcp-tmc
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080
+  type: NodePort

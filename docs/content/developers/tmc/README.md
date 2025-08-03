@@ -44,14 +44,14 @@ The TMC system is built around the following core components:
 
 - **[TMC Error Handling](./error-handling.md)**: Categorized error types with recovery strategies
 - **[TMC Health System](./health-monitoring.md)**: Component health monitoring and aggregation
-- **[TMC Metrics & Observability](./metrics.md)**: Comprehensive metrics collection and reporting
-- **[TMC Recovery Manager](./recovery.md)**: Automated failure recovery and healing
+- **[TMC Metrics & Observability](./metrics-observability.md)**: Comprehensive metrics collection and reporting
+- **[TMC Recovery Manager](./recovery-manager.md)**: Automated failure recovery and healing
 
 ### Workload Management
 
 - **[Workload Syncer](./syncer.md)**: Bidirectional resource synchronization between KCP and clusters
-- **[Virtual Workspace Manager](./virtual-workspaces.md)**: Cross-cluster resource aggregation and projection
-- **[Placement Controller](./placement.md)**: Intelligent workload placement decisions
+- **[Virtual Workspace Manager](./virtual-workspace-manager.md)**: Cross-cluster resource aggregation and projection
+- **[Placement Controller](./placement-controller.md)**: Intelligent workload placement decisions
 
 ## Quick Start
 
@@ -168,12 +168,19 @@ See the [examples directory](./examples/) for comprehensive examples including:
 - [Health Check APIs](./health-api.md)
 - [Metrics APIs](./metrics-api.md)
 
+## Architecture
+
+- **[TMC Architecture Overview](./architecture.md)**: Complete system architecture with component relationships and design principles
+
+## Tutorials
+
+- **[TMC Hello World Tutorial](../../tutorials/tmc-hello-world.md)**: Step-by-step tutorial showing TMC features with kind clusters
+
 ## Development
 
 - [Contributing to TMC](./CONTRIBUTING.md)
 - [Development Setup](./development.md)
 - [Testing Guide](./testing.md)
-- [Architecture Deep Dive](./architecture.md)
 
 ## Troubleshooting
 

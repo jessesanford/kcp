@@ -168,14 +168,14 @@ nodes:
         node-labels: "region=control"
   extraPortMappings:
   - containerPort: 6443
-    hostPort: 6443
+    hostPort: 16443
     protocol: TCP
   - containerPort: 30080
     hostPort: 30080
     protocol: TCP
 networking:
   apiServerAddress: "127.0.0.1"
-  apiServerPort: 6443
+  apiServerPort: 16443
 EOF
     
     kind create cluster --config="${TUTORIAL_DIR}/kcp-host-config.yaml"
@@ -196,11 +196,11 @@ nodes:
         node-labels: "region=east"
   extraPortMappings:
   - containerPort: 6443
-    hostPort: 6444
+    hostPort: 16444
     protocol: TCP
 networking:
   apiServerAddress: "127.0.0.1"
-  apiServerPort: 6444
+  apiServerPort: 16444
 EOF
     
     kind create cluster --config="${TUTORIAL_DIR}/east-cluster-config.yaml"
@@ -221,11 +221,11 @@ nodes:
         node-labels: "region=west"
   extraPortMappings:
   - containerPort: 6443
-    hostPort: 6445
+    hostPort: 16445
     protocol: TCP
 networking:
   apiServerAddress: "127.0.0.1"
-  apiServerPort: 6445
+  apiServerPort: 16445
 EOF
     
     kind create cluster --config="${TUTORIAL_DIR}/west-cluster-config.yaml"
@@ -406,7 +406,7 @@ apiVersion: v1
 kind: Config
 clusters:
 - cluster:
-    server: https://127.0.0.1:30443
+    server: https://127.0.0.1:30080
     insecure-skip-tls-verify: true
   name: kcp
 contexts:

@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-world
+  labels:
+    app: hello-world
+    tmc.cluster: east
+    tmc.placement: multi-cluster
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hello-world
+  template:
+    metadata:
+      labels:
+        app: hello-world
+        tmc.cluster: east
+    spec:
+      containers:
+      - name: hello-world
+        image: nginx:1.21
+        ports:
+        - containerPort: 80
+        env:
+        - name: CLUSTER_NAME
+          value: "east"
+        - name: TMC_ENABLED
+          value: "true"
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+      initContainers:
+      - name: setup
+        image: busybox:1.35
+        command:
+        - sh
+        - -c
+        - |
+          cat > /html/index.html << 'HTML'
+          <!DOCTYPE html>
+          <html>
+          <head>
+              <title>TMC Hello World - East Cluster</title>
+              <style>
+                  body { font-family: Arial, sans-serif; margin: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+                  .container { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 10px; }
+                  .cluster { color: #ffd700; font-weight: bold; }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>🚀 Hello from TMC!</h1>
+                  <h2>Cluster: <span class="cluster">East</span></h2>
+                  <p><strong>Pod:</strong> sanforj-Virtual-Machine</p>
+                  <p><strong>Time:</strong> Sun Aug  3 02:39:16 AM EDT 2025</p>
+                  <p><strong>TMC Features:</strong> This workload was deployed using TMC multi-cluster placement</p>
+                  <h3>TMC Capabilities:</h3>
+                  <ul>
+                      <li>✅ Cross-cluster workload distribution</li>
+                      <li>✅ Unified resource management</li>
+                      <li>✅ Automated health monitoring</li>
+                      <li>✅ Intelligent recovery strategies</li>
+                  </ul>
+              </div>
+          </body>
+          </html>
+          HTML
+        volumeMounts:
+        - name: html
+          mountPath: /html
+      volumes:
+      - name: html
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-world
+  labels:
+    app: hello-world
+spec:
+  selector:
+    app: hello-world
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
