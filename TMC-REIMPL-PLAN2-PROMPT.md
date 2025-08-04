@@ -19,10 +19,9 @@ You are tasked with implementing the TMC Reimplementation Plan 2 through a serie
 ### **If PR Exceeds Size Limit**
 When a PR would exceed 800 lines to achieve atomic functionality:
 1. **First, try to split functionality** into smaller atomic pieces
-2. **If impossible to split**, document why the larger size is necessary
+2. **If impossible to split**, create a design document and consider alternate approaches. Choose an approach that allows you to decompose the problem into smaller atomic PRs that can meet the requirements above.
 3. **Add extra documentation and tests** to compensate for size
 4. **Create detailed commit messages** explaining each logical change
-5. **Consider creating a design document** for complex features
 
 ## 🌳 **Branch Management Strategy**
 
@@ -434,7 +433,9 @@ Each PR must include:
 
 - **NEVER shortcuts tests** - every feature must be tested
 - **NEVER merge branches** - maintainers control main
-- **NEVER exceed 800 lines** without justification
+- **NEVER exceed 800 lines per file** - You are not allowed
+- **NEVER exceed 800 lines per commit** - You are not allowed
+- **NEVER exceed 800 lines per PR** - You are not allowed
 - **NEVER break workspace isolation** - security is paramount
 - **NEVER violate KCP patterns** - follow established conventions exactly
 
