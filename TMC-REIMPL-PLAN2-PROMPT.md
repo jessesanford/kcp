@@ -6,6 +6,10 @@ You are tasked with implementing the TMC Reimplementation Plan 2 through a serie
 
 ## 📋 **Critical Implementation Requirements**
 
+### **Generated Code**
+- Make sure to run code generation tooling when appropriate. This includes deepcopy and crd generation.
+- Commit all generated code. It will not count against your total lines of code rules.
+
 ### **FEATURE FLAG USAGE**
 - Always implement features behind feature flags.
 - There should be one maste feature flag for all TMC functionality that will disable any sub-feature flags as well
@@ -14,8 +18,8 @@ You are tasked with implementing the TMC Reimplementation Plan 2 through a serie
 - If you need to use a version for the features use 0.1
 
 ### **PR Size & Quality Standards**
-- **Target PR Size**: 400-700 lines of code per PR
-- **Maximum PR Size**: 800 lines of code per PR
+- **Target PR Size**: 400-700 lines of code per PR  (however generated files do not count, this applies to both deepcopy and crd code)
+- **Maximum PR Size**: 800 lines of code per PR (however generated files do not count, this applies to both deepcopy and crd code)
 - **Quality Requirements**: Each PR must be:
   - ✅ **Atomic**: Complete, self-contained functionality
   - ✅ **Tested**: Comprehensive unit and integration tests
@@ -440,9 +444,9 @@ Each PR must include:
 
 - **NEVER shortcuts tests** - every feature must be tested
 - **NEVER merge branches** - maintainers control main
-- **NEVER exceed 800 lines per file** - You are not allowed
-- **NEVER exceed 800 lines per commit** - You are not allowed
-- **NEVER exceed 800 lines per PR** - You are not allowed
+- **NEVER exceed 800 lines per file (generated files do not count, this applies to both deepcopy and crd code)** - Re-architect/refactor to allow for smaller file sizes with better encapsulation/isolation between objects.
+- **NEVER exceed 800 lines per commit (generated files do not count, this applies to both deepcopy and crd code)** - Break up commits into smaller atomic commits that still tell the appropriate story of the intent of the changes. Make sure tests continue to pass.
+- **NEVER exceed 800 lines per PR (generated files do not count, this applies to both deepcopy and crd code)** - Break up PRs into smaller atomic PRs at logical breaking points. Make sure tests continue to pass in the smaller PRs before continuing.
 - **NEVER break workspace isolation** - security is paramount
 - **NEVER violate KCP patterns** - follow established conventions exactly
 
