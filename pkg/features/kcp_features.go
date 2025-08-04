@@ -38,17 +38,17 @@ const (
 	// // alpha: v1.4
 	// MyFeature() bool.
 
-	// owner: @mjudeikis
+	// owner: @jessesanford
 	// alpha: v0.1
 	// Enables workspace mounts via frontProxy.
 	WorkspaceMounts featuregate.Feature = "WorkspaceMounts"
 
-	// owner: @mjudeikis
+	// owner: @jessesanford
 	// alpha: v0.1
 	// Enables cache apis and controllers.
 	CacheAPIs featuregate.Feature = "CacheAPIs"
 
-	// owner: @mjudeikis
+	// owner: @jessesanford
 	// alpha: v0.1
 	// Enables VirtualWorkspace urls on APIExport. This enables to use Deprecated APIExport VirtualWorkspace urls.
 	// This is a temporary feature to ease the migration to the new VirtualWorkspace urls.
