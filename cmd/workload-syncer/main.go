@@ -30,10 +30,12 @@ import (
 
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/component-base/featuregate"
 	"k8s.io/component-base/logs"
 	"k8s.io/klog/v2"
 
 	"github.com/kcp-dev/kcp/cmd/workload-syncer/options"
+	kcpfeatures "github.com/kcp-dev/kcp/pkg/features"
 	"github.com/kcp-dev/kcp/pkg/reconciler/workload/syncer"
 )
 
@@ -89,6 +91,19 @@ and health monitoring.`,
 func runSyncer(ctx context.Context, opts *options.SyncerOptions) error {
 	klog.Infof("Starting KCP Workload Syncer with options: %+v", opts)
 
+	// Validate TMC feature flag dependencies
+	if err := kcpfeatures.ValidateTMCFeatureFlags(); err != nil {
+		return fmt.Errorf("TMC feature flag validation failed: %w", err)
+	}
+
+	// Check if TMC is enabled - if not, run in disabled mode
+	tmcEnabled := kcpfeatures.DefaultFeatureGate.Enabled(kcpfeatures.TransparentMultiCluster)
+	if !tmcEnabled {
+		klog.Warning("TMC (Transparent Multi-Cluster) is DISABLED - syncer will run in legacy mode")
+		klog.Warning("To enable TMC features, start KCP with --feature-gates=TransparentMultiCluster=true")
+		return runLegacySyncer(ctx, opts)
+	}
+
 	// Build KCP client config
 	kcpConfig, err := buildConfig(opts.KCPKubeconfig, opts.KCPContext)
 	if err != nil {
@@ -106,6 +121,9 @@ func runSyncer(ctx context.Context, opts *options.SyncerOptions) error {
 		return fmt.Errorf("invalid options: %w", err)
 	}
 
+	// Log enabled TMC features
+	logEnabledTMCFeatures()
+
 	// Create syncer
 	syncerOpts := syncer.SyncerOptions{
 		KCPConfig:     kcpConfig,
@@ -119,7 +137,7 @@ func runSyncer(ctx context.Context, opts *options.SyncerOptions) error {
 	}
 
 	// Start the syncer
-	klog.Info("Starting syncer...")
+	klog.Info("Starting TMC-enabled syncer...")
 	if err := syncerInstance.Start(ctx); err != nil {
 		return fmt.Errorf("failed to start syncer: %w", err)
 	}
@@ -132,6 +150,34 @@ func runSyncer(ctx context.Context, opts *options.SyncerOptions) error {
 	defer cancel()
 	
 	return syncerInstance.Stop(shutdownCtx)
+}
+
+// runLegacySyncer runs the syncer in disabled/legacy mode when TMC is not enabled
+func runLegacySyncer(ctx context.Context, opts *options.SyncerOptions) error {
+	klog.Info("Running syncer in legacy mode - TMC features disabled")
+	
+	// In legacy mode, we still want to provide basic functionality but without TMC enhancements
+	// This maintains operational visibility while clearly indicating the disabled state
+	
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+	
+	klog.Info("Syncer started in DISABLED mode - monitoring for TMC feature flag changes")
+	
+	for {
+		select {
+		case <-ctx.Done():
+			klog.Info("Legacy syncer shutting down")
+			return nil
+		case <-ticker.C:
+			// Check if TMC has been enabled during runtime
+			if kcpfeatures.DefaultFeatureGate.Enabled(kcpfeatures.TransparentMultiCluster) {
+				klog.Info("TMC feature flag has been enabled - restart required to activate TMC features")
+			} else {
+				klog.V(2).Info("TMC still disabled - syncer running in legacy mode (no TMC features)")
+			}
+		}
+	}
 }
 
 func buildConfig(kubeconfig, context string) (*rest.Config, error) {
@@ -154,4 +200,37 @@ func buildConfig(kubeconfig, context string) (*rest.Config, error) {
 	)
 
 	return clientConfig.ClientConfig()
+}
+
+// logEnabledTMCFeatures logs which TMC sub-features are enabled in the syncer
+func logEnabledTMCFeatures() {
+	features := []struct {
+		name    string
+		feature featuregate.Feature
+	}{
+		{"Placement", kcpfeatures.TMCPlacement},
+		{"Synchronization", kcpfeatures.TMCSynchronization},
+		{"VirtualWorkspaces", kcpfeatures.TMCVirtualWorkspaces},
+		{"Migration", kcpfeatures.TMCMigration},
+		{"StatusAggregation", kcpfeatures.TMCStatusAggregation},
+	}
+
+	enabled := []string{}
+	disabled := []string{}
+
+	for _, f := range features {
+		if kcpfeatures.DefaultFeatureGate.Enabled(f.feature) {
+			enabled = append(enabled, f.name)
+		} else {
+			disabled = append(disabled, f.name)
+		}
+	}
+
+	klog.Infof("TMC (Transparent Multi-Cluster) is ENABLED")
+	if len(enabled) > 0 {
+		klog.Infof("TMC features ENABLED: %v", enabled)
+	}
+	if len(disabled) > 0 {
+		klog.Infof("TMC features DISABLED: %v", disabled)
+	}
 }

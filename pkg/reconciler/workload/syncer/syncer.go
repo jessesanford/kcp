@@ -26,6 +26,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/kcp-dev/kcp/cmd/workload-syncer/options"
+	kcpfeatures "github.com/kcp-dev/kcp/pkg/features"
 	"github.com/kcp-dev/kcp/pkg/reconciler/workload/tmc"
 )
 
@@ -105,7 +106,14 @@ func (s *Syncer) Start(ctx context.Context) error {
 		return fmt.Errorf("syncer is already started")
 	}
 
-	klog.Info("Starting KCP Workload Syncer...")
+	// Check TMC feature flags and log status
+	tmcEnabled := kcpfeatures.DefaultFeatureGate.Enabled(kcpfeatures.TransparentMultiCluster)
+	if tmcEnabled {
+		klog.Info("Starting KCP Workload Syncer with TMC (Transparent Multi-Cluster) ENABLED")
+	} else {
+		klog.Warning("Starting KCP Workload Syncer with TMC (Transparent Multi-Cluster) DISABLED")
+		klog.Warning("TMC features will not be available - enable with --feature-gates=TransparentMultiCluster=true")
+	}
 
 	// Start health server
 	if err := s.healthServer.Start(ctx); err != nil {
@@ -117,9 +125,12 @@ func (s *Syncer) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start metrics server: %w", err)
 	}
 
-	// Start TMC health monitoring
-	if s.tmcHealth != nil {
+	// Start TMC health monitoring only if TMC is enabled
+	if s.tmcHealth != nil && tmcEnabled {
 		go s.tmcHealth.Start(ctx)
+		klog.Info("TMC health monitoring started")
+	} else if s.tmcHealth != nil {
+		klog.Info("TMC health monitoring skipped - TMC feature flags disabled")
 	}
 
 	// Start the syncer engine
@@ -129,7 +140,11 @@ func (s *Syncer) Start(ctx context.Context) error {
 
 	s.started = true
 	
-	klog.Info("KCP Workload Syncer started successfully")
+	if tmcEnabled {
+		klog.Info("KCP Workload Syncer with TMC started successfully")
+	} else {
+		klog.Info("KCP Workload Syncer started successfully (TMC disabled)")
+	}
 	return nil
 }
 
