@@ -1,0 +1,9 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/go",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22"
+    }
+  },
+  "postCreateCommand": "npm install -g @anthropic-ai/claude-code"
+}

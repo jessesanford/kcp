@@ -1,0 +1,1470 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: workloadplacements.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    categories:
+    - kcp
+    kind: WorkloadPlacement
+    listKind: WorkloadPlacementList
+    plural: workloadplacements
+    shortNames:
+    - wp
+    singular: workloadplacement
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: Placement strategy
+      jsonPath: .spec.placementPolicy.strategy
+      name: Strategy
+      type: string
+    - description: Target workspace
+      jsonPath: .spec.workspaceSelector.name
+      name: Workspace
+      type: string
+    - description: Ready condition status
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          WorkloadPlacement represents a policy for placing workloads across registered clusters.
+          It defines sophisticated placement strategies, constraints, and policies for
+          transparent multi-cluster workload distribution with workspace awareness.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired workload placement policy
+            properties:
+              placementPolicy:
+                description: PlacementPolicy defines the placement strategy and constraints
+                properties:
+                  affinity:
+                    description: Affinity specifies cluster affinity rules
+                    properties:
+                      clusterAffinity:
+                        description: ClusterAffinity specifies cluster affinity
+                        properties:
+                          preferredDuringSchedulingIgnoredDuringExecution:
+                            description: PreferredDuringSchedulingIgnoredDuringExecution
+                              specifies soft constraints
+                            items:
+                              description: WeightedClusterAffinityTerm defines a weighted
+                                cluster affinity term
+                              properties:
+                                clusterAffinityTerm:
+                                  description: ClusterAffinityTerm specifies the cluster
+                                    affinity term
+                                  properties:
+                                    clusterNames:
+                                      description: ClusterNames specifies specific
+                                        cluster names
+                                      items:
+                                        type: string
+                                      type: array
+                                    labelSelector:
+                                      description: LabelSelector selects clusters
+                                        based on labels
+                                      properties:
+                                        matchExpressions:
+                                          description: matchExpressions is a list
+                                            of label selector requirements. The requirements
+                                            are ANDed.
+                                          items:
+                                            description: |-
+                                              A label selector requirement is a selector that contains values, a key, and an operator that
+                                              relates the key and values.
+                                            properties:
+                                              key:
+                                                description: key is the label key
+                                                  that the selector applies to.
+                                                type: string
+                                              operator:
+                                                description: |-
+                                                  operator represents a key's relationship to a set of values.
+                                                  Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                type: string
+                                              values:
+                                                description: |-
+                                                  values is an array of string values. If the operator is In or NotIn,
+                                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                                  the values array must be empty. This array is replaced during a strategic
+                                                  merge patch.
+                                                items:
+                                                  type: string
+                                                type: array
+                                                x-kubernetes-list-type: atomic
+                                            required:
+                                            - key
+                                            - operator
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-type: atomic
+                                        matchLabels:
+                                          additionalProperties:
+                                            type: string
+                                          description: |-
+                                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                          type: object
+                                      type: object
+                                      x-kubernetes-map-type: atomic
+                                    locationSelector:
+                                      description: LocationSelector selects clusters
+                                        based on location
+                                      properties:
+                                        matchExpressions:
+                                          description: MatchExpressions lists location
+                                            match expressions
+                                          items:
+                                            description: LocationMatchExpression represents
+                                              a location match expression
+                                            properties:
+                                              key:
+                                                description: Key is the location key
+                                                type: string
+                                              operator:
+                                                allOf:
+                                                - enum:
+                                                  - In
+                                                  - NotIn
+                                                  - Exists
+                                                  - DoesNotExist
+                                                - enum:
+                                                  - In
+                                                  - NotIn
+                                                  - Exists
+                                                  - DoesNotExist
+                                                description: Operator represents the
+                                                  key's relationship to the values
+                                                type: string
+                                              values:
+                                                description: Values is an array of
+                                                  string values
+                                                items:
+                                                  type: string
+                                                type: array
+                                            required:
+                                            - key
+                                            - operator
+                                            type: object
+                                          type: array
+                                        regions:
+                                          description: Regions lists specific regions
+                                          items:
+                                            type: string
+                                          type: array
+                                        zones:
+                                          description: Zones lists specific availability
+                                            zones
+                                          items:
+                                            type: string
+                                          type: array
+                                      type: object
+                                  type: object
+                                weight:
+                                  description: Weight associated with the term, range
+                                    1-100
+                                  format: int32
+                                  maximum: 100
+                                  minimum: 1
+                                  type: integer
+                              required:
+                              - clusterAffinityTerm
+                              - weight
+                              type: object
+                            type: array
+                          requiredDuringSchedulingIgnoredDuringExecution:
+                            description: RequiredDuringSchedulingIgnoredDuringExecution
+                              specifies hard constraints
+                            items:
+                              description: ClusterAffinityTerm defines a cluster affinity
+                                term
+                              properties:
+                                clusterNames:
+                                  description: ClusterNames specifies specific cluster
+                                    names
+                                  items:
+                                    type: string
+                                  type: array
+                                labelSelector:
+                                  description: LabelSelector selects clusters based
+                                    on labels
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: |-
+                                          A label selector requirement is a selector that contains values, a key, and an operator that
+                                          relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: |-
+                                              operator represents a key's relationship to a set of values.
+                                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: |-
+                                              values is an array of string values. If the operator is In or NotIn,
+                                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                            x-kubernetes-list-type: atomic
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: |-
+                                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                        operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                      type: object
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                locationSelector:
+                                  description: LocationSelector selects clusters based
+                                    on location
+                                  properties:
+                                    matchExpressions:
+                                      description: MatchExpressions lists location
+                                        match expressions
+                                      items:
+                                        description: LocationMatchExpression represents
+                                          a location match expression
+                                        properties:
+                                          key:
+                                            description: Key is the location key
+                                            type: string
+                                          operator:
+                                            allOf:
+                                            - enum:
+                                              - In
+                                              - NotIn
+                                              - Exists
+                                              - DoesNotExist
+                                            - enum:
+                                              - In
+                                              - NotIn
+                                              - Exists
+                                              - DoesNotExist
+                                            description: Operator represents the key's
+                                              relationship to the values
+                                            type: string
+                                          values:
+                                            description: Values is an array of string
+                                              values
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                    regions:
+                                      description: Regions lists specific regions
+                                      items:
+                                        type: string
+                                      type: array
+                                    zones:
+                                      description: Zones lists specific availability
+                                        zones
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
+                            type: array
+                        type: object
+                      clusterAntiAffinity:
+                        description: ClusterAntiAffinity specifies cluster anti-affinity
+                        properties:
+                          preferredDuringSchedulingIgnoredDuringExecution:
+                            description: PreferredDuringSchedulingIgnoredDuringExecution
+                              specifies soft anti-affinity
+                            items:
+                              description: WeightedClusterAffinityTerm defines a weighted
+                                cluster affinity term
+                              properties:
+                                clusterAffinityTerm:
+                                  description: ClusterAffinityTerm specifies the cluster
+                                    affinity term
+                                  properties:
+                                    clusterNames:
+                                      description: ClusterNames specifies specific
+                                        cluster names
+                                      items:
+                                        type: string
+                                      type: array
+                                    labelSelector:
+                                      description: LabelSelector selects clusters
+                                        based on labels
+                                      properties:
+                                        matchExpressions:
+                                          description: matchExpressions is a list
+                                            of label selector requirements. The requirements
+                                            are ANDed.
+                                          items:
+                                            description: |-
+                                              A label selector requirement is a selector that contains values, a key, and an operator that
+                                              relates the key and values.
+                                            properties:
+                                              key:
+                                                description: key is the label key
+                                                  that the selector applies to.
+                                                type: string
+                                              operator:
+                                                description: |-
+                                                  operator represents a key's relationship to a set of values.
+                                                  Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                type: string
+                                              values:
+                                                description: |-
+                                                  values is an array of string values. If the operator is In or NotIn,
+                                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                                  the values array must be empty. This array is replaced during a strategic
+                                                  merge patch.
+                                                items:
+                                                  type: string
+                                                type: array
+                                                x-kubernetes-list-type: atomic
+                                            required:
+                                            - key
+                                            - operator
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-type: atomic
+                                        matchLabels:
+                                          additionalProperties:
+                                            type: string
+                                          description: |-
+                                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                          type: object
+                                      type: object
+                                      x-kubernetes-map-type: atomic
+                                    locationSelector:
+                                      description: LocationSelector selects clusters
+                                        based on location
+                                      properties:
+                                        matchExpressions:
+                                          description: MatchExpressions lists location
+                                            match expressions
+                                          items:
+                                            description: LocationMatchExpression represents
+                                              a location match expression
+                                            properties:
+                                              key:
+                                                description: Key is the location key
+                                                type: string
+                                              operator:
+                                                allOf:
+                                                - enum:
+                                                  - In
+                                                  - NotIn
+                                                  - Exists
+                                                  - DoesNotExist
+                                                - enum:
+                                                  - In
+                                                  - NotIn
+                                                  - Exists
+                                                  - DoesNotExist
+                                                description: Operator represents the
+                                                  key's relationship to the values
+                                                type: string
+                                              values:
+                                                description: Values is an array of
+                                                  string values
+                                                items:
+                                                  type: string
+                                                type: array
+                                            required:
+                                            - key
+                                            - operator
+                                            type: object
+                                          type: array
+                                        regions:
+                                          description: Regions lists specific regions
+                                          items:
+                                            type: string
+                                          type: array
+                                        zones:
+                                          description: Zones lists specific availability
+                                            zones
+                                          items:
+                                            type: string
+                                          type: array
+                                      type: object
+                                  type: object
+                                weight:
+                                  description: Weight associated with the term, range
+                                    1-100
+                                  format: int32
+                                  maximum: 100
+                                  minimum: 1
+                                  type: integer
+                              required:
+                              - clusterAffinityTerm
+                              - weight
+                              type: object
+                            type: array
+                          requiredDuringSchedulingIgnoredDuringExecution:
+                            description: RequiredDuringSchedulingIgnoredDuringExecution
+                              specifies hard anti-affinity
+                            items:
+                              description: ClusterAffinityTerm defines a cluster affinity
+                                term
+                              properties:
+                                clusterNames:
+                                  description: ClusterNames specifies specific cluster
+                                    names
+                                  items:
+                                    type: string
+                                  type: array
+                                labelSelector:
+                                  description: LabelSelector selects clusters based
+                                    on labels
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label
+                                        selector requirements. The requirements are
+                                        ANDed.
+                                      items:
+                                        description: |-
+                                          A label selector requirement is a selector that contains values, a key, and an operator that
+                                          relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that
+                                              the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: |-
+                                              operator represents a key's relationship to a set of values.
+                                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                                            type: string
+                                          values:
+                                            description: |-
+                                              values is an array of string values. If the operator is In or NotIn,
+                                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                              the values array must be empty. This array is replaced during a strategic
+                                              merge patch.
+                                            items:
+                                              type: string
+                                            type: array
+                                            x-kubernetes-list-type: atomic
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                      x-kubernetes-list-type: atomic
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: |-
+                                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                        operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                      type: object
+                                  type: object
+                                  x-kubernetes-map-type: atomic
+                                locationSelector:
+                                  description: LocationSelector selects clusters based
+                                    on location
+                                  properties:
+                                    matchExpressions:
+                                      description: MatchExpressions lists location
+                                        match expressions
+                                      items:
+                                        description: LocationMatchExpression represents
+                                          a location match expression
+                                        properties:
+                                          key:
+                                            description: Key is the location key
+                                            type: string
+                                          operator:
+                                            allOf:
+                                            - enum:
+                                              - In
+                                              - NotIn
+                                              - Exists
+                                              - DoesNotExist
+                                            - enum:
+                                              - In
+                                              - NotIn
+                                              - Exists
+                                              - DoesNotExist
+                                            description: Operator represents the key's
+                                              relationship to the values
+                                            type: string
+                                          values:
+                                            description: Values is an array of string
+                                              values
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                    regions:
+                                      description: Regions lists specific regions
+                                      items:
+                                        type: string
+                                      type: array
+                                    zones:
+                                      description: Zones lists specific availability
+                                        zones
+                                      items:
+                                        type: string
+                                      type: array
+                                  type: object
+                              type: object
+                            type: array
+                        type: object
+                    type: object
+                  clusterSelector:
+                    description: ClusterSelector specifies target cluster selection
+                      criteria
+                    properties:
+                      capabilityRequirements:
+                        description: CapabilityRequirements specify required cluster
+                          capabilities
+                        items:
+                          description: CapabilityRequirement specifies a required
+                            cluster capability
+                          properties:
+                            attributes:
+                              additionalProperties:
+                                type: string
+                              description: Attributes specify required capability
+                                attributes
+                              type: object
+                            required:
+                              description: Required indicates if this capability is
+                                mandatory
+                              type: boolean
+                            type:
+                              description: Type of capability required
+                              type: string
+                          required:
+                          - type
+                          type: object
+                        type: array
+                      clusterNames:
+                        description: ClusterNames lists specific cluster names
+                        items:
+                          type: string
+                        type: array
+                      labelSelector:
+                        description: LabelSelector selects clusters based on labels
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      locationSelector:
+                        description: LocationSelector selects clusters based on location
+                        properties:
+                          matchExpressions:
+                            description: MatchExpressions lists location match expressions
+                            items:
+                              description: LocationMatchExpression represents a location
+                                match expression
+                              properties:
+                                key:
+                                  description: Key is the location key
+                                  type: string
+                                operator:
+                                  allOf:
+                                  - enum:
+                                    - In
+                                    - NotIn
+                                    - Exists
+                                    - DoesNotExist
+                                  - enum:
+                                    - In
+                                    - NotIn
+                                    - Exists
+                                    - DoesNotExist
+                                  description: Operator represents the key's relationship
+                                    to the values
+                                  type: string
+                                values:
+                                  description: Values is an array of string values
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                          regions:
+                            description: Regions lists specific regions
+                            items:
+                              type: string
+                            type: array
+                          zones:
+                            description: Zones lists specific availability zones
+                            items:
+                              type: string
+                            type: array
+                        type: object
+                    type: object
+                  replicaScheduling:
+                    description: ReplicaScheduling defines how replicas should be
+                      distributed
+                    properties:
+                      maxReplicas:
+                        description: MaxReplicas specifies maximum replicas per cluster
+                        format: int32
+                        type: integer
+                      minReplicas:
+                        description: MinReplicas specifies minimum replicas per cluster
+                        format: int32
+                        type: integer
+                      type:
+                        allOf:
+                        - enum:
+                          - Duplicated
+                          - Divided
+                        - enum:
+                          - Duplicated
+                          - Divided
+                        default: Duplicated
+                        description: Type defines the replica scheduling type
+                        type: string
+                      weight:
+                        additionalProperties:
+                          format: int32
+                          type: integer
+                        description: Weight specifies cluster weights for replica
+                          distribution
+                        type: object
+                    type: object
+                  replicas:
+                    description: Replicas specifies the desired number of replicas
+                      across clusters
+                    format: int32
+                    type: integer
+                  strategy:
+                    allOf:
+                    - enum:
+                      - Spread
+                      - Binpack
+                      - Affinity
+                      - Custom
+                    - enum:
+                      - Spread
+                      - Binpack
+                      - Affinity
+                      - Custom
+                    default: Spread
+                    description: Strategy defines the placement strategy
+                    type: string
+                  tolerations:
+                    description: Tolerations specify tolerations for cluster taints
+                    items:
+                      description: PlacementToleration defines toleration for cluster
+                        taints
+                      properties:
+                        effect:
+                          description: Effect indicates which taint effect this toleration
+                            matches
+                          enum:
+                          - NoSchedule
+                          - PreferNoSchedule
+                          - NoExecute
+                          type: string
+                        key:
+                          description: Key is the taint key that the toleration applies
+                            to
+                          type: string
+                        operator:
+                          allOf:
+                          - enum:
+                            - Exists
+                            - Equal
+                          - enum:
+                            - Exists
+                            - Equal
+                          default: Equal
+                          description: Operator represents the relationship between
+                            the key and value
+                          type: string
+                        tolerationSeconds:
+                          description: TolerationSeconds specifies how long workloads
+                            can tolerate the taint
+                          format: int64
+                          type: integer
+                        value:
+                          description: Value is the taint value that the toleration
+                            matches
+                          type: string
+                      type: object
+                    type: array
+                required:
+                - clusterSelector
+                type: object
+              priority:
+                default: 100
+                description: |-
+                  Priority specifies the priority of this placement policy
+                  Higher priority policies take precedence over lower priority ones
+                format: int32
+                maximum: 1000
+                minimum: 0
+                type: integer
+              resourceSelector:
+                description: ResourceSelector defines which resources this placement
+                  applies to
+                properties:
+                  apiVersion:
+                    description: APIVersion specifies the API version of resources
+                    type: string
+                  kind:
+                    description: Kind specifies the kind of resources
+                    type: string
+                  labelSelector:
+                    description: LabelSelector selects resources based on labels
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  nameSelector:
+                    description: NameSelector specifies resource name patterns
+                    properties:
+                      matchNames:
+                        description: MatchNames lists specific resource names
+                        items:
+                          type: string
+                        type: array
+                      matchPatterns:
+                        description: MatchPatterns lists regex patterns for resource
+                          names
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  namespaceSelector:
+                    description: NamespaceSelector selects resources from specific
+                      namespaces
+                    properties:
+                      labelSelector:
+                        description: LabelSelector selects namespaces based on labels
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      matchNames:
+                        description: MatchNames lists specific namespace names
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                type: object
+              rolloutStrategy:
+                description: RolloutStrategy defines how updates should be rolled
+                  out
+                properties:
+                  blueGreen:
+                    description: BlueGreen defines blue-green deployment parameters
+                    properties:
+                      activeService:
+                        description: ActiveService specifies the active service name
+                        type: string
+                      postPromotionAnalysis:
+                        description: PostPromotionAnalysis defines analysis to run
+                          after promotion
+                        properties:
+                          args:
+                            description: Args specify analysis arguments
+                            items:
+                              description: AnalysisArg defines an analysis argument
+                              properties:
+                                name:
+                                  description: Name of the argument
+                                  type: string
+                                value:
+                                  description: Value of the argument
+                                  type: string
+                              required:
+                              - name
+                              - value
+                              type: object
+                            type: array
+                          name:
+                            description: Name of the analysis template
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      prePromotionAnalysis:
+                        description: PrePromotionAnalysis defines analysis to run
+                          before promotion
+                        properties:
+                          args:
+                            description: Args specify analysis arguments
+                            items:
+                              description: AnalysisArg defines an analysis argument
+                              properties:
+                                name:
+                                  description: Name of the argument
+                                  type: string
+                                value:
+                                  description: Value of the argument
+                                  type: string
+                              required:
+                              - name
+                              - value
+                              type: object
+                            type: array
+                          name:
+                            description: Name of the analysis template
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      previewService:
+                        description: PreviewService specifies the preview service
+                          name
+                        type: string
+                    type: object
+                  canary:
+                    description: Canary defines canary deployment parameters
+                    properties:
+                      analysis:
+                        description: Analysis defines analysis templates for canary
+                          validation
+                        properties:
+                          args:
+                            description: Args specify analysis arguments
+                            items:
+                              description: AnalysisArg defines an analysis argument
+                              properties:
+                                name:
+                                  description: Name of the argument
+                                  type: string
+                                value:
+                                  description: Value of the argument
+                                  type: string
+                              required:
+                              - name
+                              - value
+                              type: object
+                            type: array
+                          name:
+                            description: Name of the analysis template
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      steps:
+                        description: Steps define the canary deployment steps
+                        items:
+                          description: CanaryStep defines a step in canary deployment
+                          properties:
+                            duration:
+                              description: Duration specifies how long to wait before
+                                next step
+                              type: string
+                            pause:
+                              description: Pause indicates whether to pause at this
+                                step
+                              type: boolean
+                            weight:
+                              description: Weight specifies the percentage of traffic
+                                to route to canary
+                              format: int32
+                              maximum: 100
+                              minimum: 0
+                              type: integer
+                          type: object
+                        type: array
+                      trafficSplitting:
+                        description: TrafficSplitting defines traffic splitting configuration
+                        properties:
+                          istio:
+                            description: Istio indicates whether to use Istio for
+                              traffic splitting
+                            properties:
+                              destinationRule:
+                                description: DestinationRule specifies the destination
+                                  rule configuration
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
+                              enabled:
+                                description: Enabled indicates whether Istio traffic
+                                  splitting is enabled
+                                type: boolean
+                              virtualService:
+                                description: VirtualService specifies the virtual
+                                  service configuration
+                                type: object
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                            - enabled
+                            type: object
+                          nginx:
+                            description: Nginx indicates whether to use NGINX for
+                              traffic splitting
+                            properties:
+                              annotationPrefix:
+                                description: AnnotationPrefix specifies the annotation
+                                  prefix for NGINX
+                                type: string
+                              enabled:
+                                description: Enabled indicates whether NGINX traffic
+                                  splitting is enabled
+                                type: boolean
+                              ingressClass:
+                                description: IngressClass specifies the NGINX ingress
+                                  class
+                                type: string
+                            required:
+                            - enabled
+                            type: object
+                          smi:
+                            description: SMI indicates whether to use SMI for traffic
+                              splitting
+                            properties:
+                              enabled:
+                                description: Enabled indicates whether SMI traffic
+                                  splitting is enabled
+                                type: boolean
+                              rootService:
+                                description: RootService specifies the root service
+                                  name
+                                type: string
+                            required:
+                            - enabled
+                            type: object
+                        type: object
+                    type: object
+                  rollingUpdate:
+                    description: RollingUpdate defines rolling update parameters
+                    properties:
+                      maxSurge:
+                        description: MaxSurge is the maximum number of pods that can
+                          be created above the desired replica count
+                        format: int32
+                        type: integer
+                      maxUnavailable:
+                        description: MaxUnavailable is the maximum number of pods
+                          that can be unavailable during the update
+                        format: int32
+                        type: integer
+                      partition:
+                        description: Partition indicates the partition number for
+                          rolling update
+                        format: int32
+                        type: integer
+                    type: object
+                  type:
+                    allOf:
+                    - enum:
+                      - RollingUpdate
+                      - Recreate
+                      - BlueGreen
+                      - Canary
+                    - enum:
+                      - RollingUpdate
+                      - Recreate
+                      - BlueGreen
+                      - Canary
+                    default: RollingUpdate
+                    description: Type defines the rollout strategy type
+                    type: string
+                type: object
+              schedulingConstraints:
+                description: SchedulingConstraints define additional scheduling constraints
+                properties:
+                  conflictPolicy:
+                    allOf:
+                    - enum:
+                      - Fail
+                      - Override
+                      - Merge
+                    - enum:
+                      - Fail
+                      - Override
+                      - Merge
+                    default: Fail
+                    description: ConflictPolicy defines behavior when placement conflicts
+                      occur
+                    type: string
+                  resourceRequirements:
+                    description: ResourceRequirements specify resource requirements
+                    properties:
+                      cpu:
+                        description: CPU requirements in millicores
+                        format: int64
+                        type: integer
+                      gpu:
+                        description: GPU requirements
+                        format: int32
+                        type: integer
+                      memory:
+                        description: Memory requirements in bytes
+                        format: int64
+                        type: integer
+                      storage:
+                        description: Storage requirements in bytes
+                        format: int64
+                        type: integer
+                    type: object
+                  topologySpreadConstraints:
+                    description: TopologySpreadConstraints define workload distribution
+                      across topology domains
+                    items:
+                      description: TopologySpreadConstraint defines workload distribution
+                        across topology domains
+                      properties:
+                        labelSelector:
+                          description: LabelSelector selects workloads subject to
+                            this constraint
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        maxSkew:
+                          description: MaxSkew defines the maximum difference in workload
+                            distribution
+                          format: int32
+                          minimum: 1
+                          type: integer
+                        topologyKey:
+                          description: TopologyKey specifies the topology domain key
+                          type: string
+                        whenUnsatisfiable:
+                          allOf:
+                          - enum:
+                            - DoNotSchedule
+                            - ScheduleAnyway
+                          - enum:
+                            - DoNotSchedule
+                            - ScheduleAnyway
+                          description: WhenUnsatisfiable specifies behavior when constraint
+                            cannot be satisfied
+                          type: string
+                      required:
+                      - maxSkew
+                      - topologyKey
+                      - whenUnsatisfiable
+                      type: object
+                    type: array
+                type: object
+              workspaceSelector:
+                description: WorkspaceSelector specifies which workspace this placement
+                  applies to
+                properties:
+                  labelSelector:
+                    description: LabelSelector selects workspaces based on labels
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  name:
+                    description: Name of the specific workspace
+                    type: string
+                  path:
+                    description: Path specifies the workspace path pattern
+                    type: string
+                type: object
+            required:
+            - placementPolicy
+            - resourceSelector
+            - workspaceSelector
+            type: object
+          status:
+            description: Status represents the current state of the workload placement
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the placement's current state
+                items:
+                  description: Condition defines an observation of a object operational
+                    state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastScheduleTime:
+                description: LastScheduleTime is the last time placement was scheduled
+                format: date-time
+                type: string
+              observedGeneration:
+                description: ObservedGeneration reflects the generation of the most
+                  recently observed spec
+                format: int64
+                type: integer
+              phase:
+                description: Phase represents the current phase of workload placement
+                enum:
+                - Pending
+                - Scheduling
+                - Scheduled
+                - Failed
+                - Updating
+                type: string
+              placementDecisions:
+                description: PlacementDecisions lists the placement decisions made
+                items:
+                  description: PlacementDecision represents a placement decision
+                  properties:
+                    cluster:
+                      description: Cluster is the name of the selected cluster
+                      type: string
+                    reason:
+                      description: Reason explains why this cluster was selected
+                      type: string
+                    score:
+                      description: Score is the score assigned to this cluster
+                      format: int32
+                      type: integer
+                    weight:
+                      description: Weight is the weight assigned to this cluster for
+                        replica distribution
+                      format: int32
+                      type: integer
+                  required:
+                  - cluster
+                  type: object
+                type: array
+              replicaStatus:
+                description: ReplicaStatus provides replica status across clusters
+                properties:
+                  available:
+                    description: Available is the number of available replicas
+                    format: int32
+                    type: integer
+                  ready:
+                    description: Ready is the number of ready replicas
+                    format: int32
+                    type: integer
+                  total:
+                    description: Total is the total number of replicas
+                    format: int32
+                    type: integer
+                  unavailable:
+                    description: Unavailable is the number of unavailable replicas
+                    format: int32
+                    type: integer
+                  updatedReplicas:
+                    description: UpdatedReplicas is the number of updated replicas
+                    format: int32
+                    type: integer
+                type: object
+              selectedClusters:
+                description: SelectedClusters lists the clusters selected for placement
+                items:
+                  description: SelectedCluster represents a cluster selected for placement
+                  properties:
+                    name:
+                      description: Name is the cluster name
+                      type: string
+                    replicas:
+                      description: Replicas is the number of replicas scheduled to
+                        this cluster
+                      format: int32
+                      type: integer
+                    status:
+                      description: Status indicates the status of placement on this
+                        cluster
+                      enum:
+                      - Pending
+                      - Scheduled
+                      - Running
+                      - Failed
+                      - Unknown
+                      type: string
+                  required:
+                  - name
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

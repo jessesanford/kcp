@@ -1,0 +1,438 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: clusterregistrations.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    categories:
+    - kcp
+    kind: ClusterRegistration
+    listKind: ClusterRegistrationList
+    plural: clusterregistrations
+    shortNames:
+    - cr
+    singular: clusterregistration
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: Cluster location
+      jsonPath: .spec.location
+      name: Location
+      type: string
+    - description: Ready condition status
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - description: CPU capacity in millicores
+      jsonPath: .status.capacity.cpu
+      name: Capacity
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ClusterRegistration represents a physical cluster registered with the TMC for workload management.
+          It provides cluster metadata, capabilities, and connection information required for
+          transparent multi-cluster operations with full workspace isolation.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of the ClusterRegistration
+            properties:
+              capabilities:
+                description: Capabilities define the cluster's capabilities for workload
+                  placement
+                items:
+                  description: ClusterCapability defines a cluster capability
+                  properties:
+                    attributes:
+                      additionalProperties:
+                        type: string
+                      description: Attributes provide additional capability metadata
+                      type: object
+                    available:
+                      description: Available indicates if the capability is currently
+                        available
+                      type: boolean
+                    resourceTypes:
+                      description: ResourceTypes lists the resource types supported
+                        by this capability
+                      items:
+                        type: string
+                      type: array
+                    type:
+                      description: Type of capability (e.g., "storage", "compute",
+                        "networking", "gpu")
+                      type: string
+                  required:
+                  - available
+                  - type
+                  type: object
+                type: array
+              clusterEndpoint:
+                description: ClusterEndpoint defines the connection information for
+                  the cluster
+                properties:
+                  caBundle:
+                    description: CABundle contains the cluster's CA certificate bundle
+                    format: byte
+                    type: string
+                  credentials:
+                    description: Credentials specify authentication credentials for
+                      the cluster
+                    properties:
+                      secretRef:
+                        description: SecretRef references a secret containing cluster
+                          credentials
+                        properties:
+                          key:
+                            description: Key within the secret containing the credential
+                            type: string
+                          name:
+                            description: Name of the secret
+                            type: string
+                          namespace:
+                            description: Namespace of the secret
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      serviceAccountRef:
+                        description: ServiceAccountRef references a service account
+                          for cluster access
+                        properties:
+                          name:
+                            description: Name of the service account
+                            type: string
+                          namespace:
+                            description: Namespace of the service account
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      tokenRef:
+                        description: TokenRef references a token for cluster authentication
+                        properties:
+                          secretRef:
+                            description: SecretRef references a secret containing
+                              the token
+                            properties:
+                              key:
+                                description: Key within the secret containing the
+                                  credential
+                                type: string
+                              name:
+                                description: Name of the secret
+                                type: string
+                              namespace:
+                                description: Namespace of the secret
+                                type: string
+                            required:
+                            - name
+                            type: object
+                        required:
+                        - secretRef
+                        type: object
+                    type: object
+                  insecure:
+                    description: Insecure indicates whether to skip TLS verification
+                      (not recommended for production)
+                    type: boolean
+                  url:
+                    description: URL is the cluster's API server endpoint
+                    type: string
+                required:
+                - url
+                type: object
+              location:
+                description: Location specifies the logical location of this cluster
+                  for placement decisions
+                type: string
+              maintenanceWindows:
+                description: MaintenanceWindows define scheduled maintenance periods
+                items:
+                  description: MaintenanceWindow defines a scheduled maintenance period
+                  properties:
+                    duration:
+                      description: Duration of the maintenance window
+                      type: string
+                    name:
+                      description: Name of the maintenance window
+                      type: string
+                    recurrenceRule:
+                      description: RecurrenceRule defines the recurrence pattern (RFC
+                        5545 RRULE format)
+                      type: string
+                    recurring:
+                      description: Recurring indicates if this is a recurring maintenance
+                        window
+                      type: boolean
+                    start:
+                      description: Start time of the maintenance window
+                      format: date-time
+                      type: string
+                  required:
+                  - duration
+                  - name
+                  - start
+                  type: object
+                type: array
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: NodeSelector specifies node selection criteria for this
+                  cluster
+                type: object
+              resourceQuotas:
+                description: ResourceQuotas define resource limits for this cluster
+                items:
+                  description: ResourceQuota defines resource quotas for the cluster
+                  properties:
+                    hard:
+                      description: Hard limit for the resource
+                      type: string
+                    resourceType:
+                      description: ResourceType specifies the resource type (cpu,
+                        memory, storage, pods)
+                      type: string
+                    used:
+                      description: Used amount of the resource
+                      type: string
+                  required:
+                  - hard
+                  - resourceType
+                  type: object
+                type: array
+              taints:
+                description: Taints specify cluster taints that affect workload placement
+                items:
+                  description: ClusterTaint represents a cluster taint that affects
+                    workload scheduling
+                  properties:
+                    effect:
+                      allOf:
+                      - enum:
+                        - NoSchedule
+                        - PreferNoSchedule
+                        - NoExecute
+                      - enum:
+                        - NoSchedule
+                        - PreferNoSchedule
+                        - NoExecute
+                      description: Effect indicates the taint effect on workload scheduling
+                      type: string
+                    key:
+                      description: Key is the taint key
+                      type: string
+                    timeAdded:
+                      description: TimeAdded represents the time at which the taint
+                        was added
+                      format: date-time
+                      type: string
+                    value:
+                      description: Value is the taint value
+                      type: string
+                  required:
+                  - effect
+                  - key
+                  type: object
+                type: array
+            required:
+            - clusterEndpoint
+            - location
+            type: object
+          status:
+            description: Status represents the current state of the ClusterRegistration
+            properties:
+              allocated:
+                description: Allocated represents the currently allocated resources
+                  on the cluster
+                properties:
+                  cpu:
+                    description: CPU capacity in millicores
+                    format: int64
+                    type: integer
+                  gpu:
+                    description: GPU capacity
+                    format: int32
+                    type: integer
+                  memory:
+                    description: Memory capacity in bytes
+                    format: int64
+                    type: integer
+                  pods:
+                    description: Pods represents maximum pod capacity
+                    format: int32
+                    type: integer
+                  storage:
+                    description: Storage capacity in bytes
+                    format: int64
+                    type: integer
+                type: object
+              capacity:
+                description: Capacity represents the total resources available on
+                  the cluster
+                properties:
+                  cpu:
+                    description: CPU capacity in millicores
+                    format: int64
+                    type: integer
+                  gpu:
+                    description: GPU capacity
+                    format: int32
+                    type: integer
+                  memory:
+                    description: Memory capacity in bytes
+                    format: int64
+                    type: integer
+                  pods:
+                    description: Pods represents maximum pod capacity
+                    format: int32
+                    type: integer
+                  storage:
+                    description: Storage capacity in bytes
+                    format: int64
+                    type: integer
+                type: object
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the cluster's current state
+                items:
+                  description: Condition defines an observation of a object operational
+                    state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              health:
+                description: Health provides cluster health information
+                properties:
+                  componentStatuses:
+                    description: ComponentStatuses lists the status of cluster components
+                    items:
+                      description: ComponentStatus represents the status of a cluster
+                        component
+                      properties:
+                        message:
+                          description: Message provides additional information about
+                            the component status
+                          type: string
+                        name:
+                          description: Name of the component
+                          type: string
+                        status:
+                          description: Status indicates if the component is healthy
+                          type: string
+                      required:
+                      - name
+                      - status
+                      type: object
+                    type: array
+                  nodeCount:
+                    description: NodeCount is the number of ready nodes in the cluster
+                    format: int32
+                    type: integer
+                  ready:
+                    description: Ready indicates if the cluster is ready to accept
+                      workloads
+                    type: boolean
+                required:
+                - ready
+                type: object
+              lastHeartbeatTime:
+                description: LastHeartbeatTime is the last time the cluster sent a
+                  heartbeat
+                format: date-time
+                type: string
+              observedGeneration:
+                description: ObservedGeneration reflects the generation of the most
+                  recently observed spec
+                format: int64
+                type: integer
+              phase:
+                description: Phase represents the current phase of cluster registration
+                enum:
+                - Pending
+                - Registering
+                - Ready
+                - Failed
+                - Unreachable
+                type: string
+              version:
+                description: Version contains cluster version information
+                properties:
+                  kubernetes:
+                    description: Kubernetes version
+                    type: string
+                  platform:
+                    description: Platform version (e.g., OpenShift, EKS, GKE)
+                    type: string
+                  tmcAgent:
+                    description: TMC agent version running on the cluster
+                    type: string
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
