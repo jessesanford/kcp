@@ -56,37 +56,37 @@ const (
 
 	// TMC (Transparent Multi-Cluster) Feature Gates
 
-	// owner: @kcp-dev
+	// owner: @jessesanford
 	// alpha: v0.1
 	// Enables the complete TMC (Transparent Multi-Cluster) system for cross-cluster resource management.
 	// This is the master flag that must be enabled for any TMC functionality.
 	TransparentMultiCluster featuregate.Feature = "TransparentMultiCluster"
 
-	// owner: @kcp-dev
+	// owner: @jessesanford
 	// alpha: v0.1
 	// Enables TMC placement scheduling capabilities. Requires TransparentMultiCluster=true.
 	// Provides intelligent workload placement across multiple clusters based on policies and constraints.
 	TMCPlacement featuregate.Feature = "TMCPlacement"
 
-	// owner: @kcp-dev
+	// owner: @jessesanford
 	// alpha: v0.1
 	// Enables TMC bidirectional resource synchronization. Requires TransparentMultiCluster=true.
 	// Provides real-time sync of resources and status between KCP and target clusters.
 	TMCSynchronization featuregate.Feature = "TMCSynchronization"
 
-	// owner: @kcp-dev
+	// owner: @jessesanford
 	// alpha: v0.1
 	// Enables TMC virtual workspace aggregation. Requires TransparentMultiCluster=true.
 	// Provides unified views of resources across multiple clusters through virtual workspaces.
 	TMCVirtualWorkspaces featuregate.Feature = "TMCVirtualWorkspaces"
 
-	// owner: @kcp-dev
+	// owner: @jessesanford
 	// alpha: v0.1
 	// Enables TMC workload migration capabilities. Requires TransparentMultiCluster=true.
 	// Provides live migration of workloads between clusters with minimal downtime.
 	TMCMigration featuregate.Feature = "TMCMigration"
 
-	// owner: @kcp-dev
+	// owner: @jessesanford
 	// alpha: v0.1
 	// Enables TMC cross-cluster status aggregation. Requires TransparentMultiCluster=true.
 	// Provides comprehensive status reporting and health monitoring across all clusters.
@@ -194,22 +194,22 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 
 	// TMC (Transparent Multi-Cluster) Feature Gates
 	TransparentMultiCluster: {
-		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	TMCPlacement: {
-		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	TMCSynchronization: {
-		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	TMCVirtualWorkspaces: {
-		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	TMCMigration: {
-		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	TMCStatusAggregation: {
-		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
 	// unintentionally on either side:
