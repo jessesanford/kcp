@@ -55,8 +55,8 @@ const (
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls featuregate.Feature = "EnableDeprecatedAPIExportVirtualWorkspacesUrls"
 
 	// TMC (Transparent Multi-Cluster) Feature Gates
-	// owner: @mjudeikis
-	// alpha: v1.32
+	// owner: @jessesanford
+	// alpha: v0.1
 	// Master flag that enables the complete TMC system for cross-cluster resource management
 	TransparentMultiCluster featuregate.Feature = "TransparentMultiCluster"
 )
@@ -136,7 +136,7 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	TransparentMultiCluster: {
-		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
 	// unintentionally on either side:
