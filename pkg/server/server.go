@@ -382,6 +382,13 @@ func (s *Server) installControllers(ctx context.Context, controllerConfig *rest.
 		}
 	}
 
+	// Install TMC (Transparent Multi-Cluster) controller manager
+	if s.Options.Controllers.EnableAll || enabled.Has("tmc") {
+		if err := s.installTMCController(ctx, controllerConfig); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

@@ -95,6 +95,7 @@ import (
 	"github.com/kcp-dev/kcp/pkg/reconciler/tenancy/workspacemounts"
 	"github.com/kcp-dev/kcp/pkg/reconciler/tenancy/workspacetype"
 	"github.com/kcp-dev/kcp/pkg/reconciler/topology/partitionset"
+	"github.com/kcp-dev/kcp/pkg/reconciler/workload/tmc"
 	initializingworkspacesbuilder "github.com/kcp-dev/kcp/pkg/virtual/initializingworkspaces/builder"
 	corev1alpha1 "github.com/kcp-dev/kcp/sdk/apis/core/v1alpha1"
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tenancy/v1alpha1"
@@ -1740,6 +1741,43 @@ func (s *Server) installCacheController(ctx context.Context, config *rest.Config
 		},
 		Runner: func(ctx context.Context) {
 			c.Start(ctx, 2)
+		},
+	})
+}
+
+func (s *Server) installTMCController(ctx context.Context, config *rest.Config) error {
+	if !kcpfeatures.DefaultFeatureGate.Enabled(kcpfeatures.TransparentMultiCluster) {
+		logger := klog.FromContext(ctx).WithValues("controller", "tmc-manager")
+		logger.Info("TMC (Transparent Multi-Cluster) is disabled - skipping installation")
+		return nil
+	}
+
+	controllerName := "tmc-manager"
+	config = rest.AddUserAgent(rest.CopyConfig(config), controllerName)
+
+	tmcManager, err := tmc.NewManager(config)
+	if err != nil {
+		return fmt.Errorf("failed to create TMC manager: %w", err)
+	}
+
+	return s.registerController(&controllerWrapper{
+		Name: controllerName,
+		Runner: func(ctx context.Context) {
+			if err := tmcManager.Start(ctx); err != nil {
+				klog.FromContext(ctx).WithValues("controller", controllerName).Error(err, "failed to start TMC manager")
+				return
+			}
+			
+			// Wait for context cancellation
+			<-ctx.Done()
+			
+			// Stop TMC manager gracefully
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cancel()
+			
+			if err := tmcManager.Stop(shutdownCtx); err != nil {
+				klog.FromContext(ctx).WithValues("controller", controllerName).Error(err, "failed to stop TMC manager gracefully")
+			}
 		},
 	})
 }
