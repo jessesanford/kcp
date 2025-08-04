@@ -126,6 +126,11 @@ func main() {
 				return utilerrors.NewAggregate(errs)
 			}
 
+			// Validate TMC feature flag dependencies
+			if err := kcpfeatures.ValidateTMCFeatureFlags(); err != nil {
+				return fmt.Errorf("TMC feature flag validation failed: %w", err)
+			}
+
 			logger := klog.FromContext(cmd.Context())
 			logger.Info("running with selected batteries", "batteries", strings.Join(completedKcpOptions.Server.Extra.BatteriesIncluded, ","))
 

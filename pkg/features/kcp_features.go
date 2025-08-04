@@ -57,8 +57,39 @@ const (
 	// TMC (Transparent Multi-Cluster) Feature Gates
 	// owner: @jessesanford
 	// alpha: v0.1
-	// Master flag that enables the complete TMC system for cross-cluster resource management
+	// Enables the complete TMC (Transparent Multi-Cluster) system for cross-cluster resource management.
+	// This is the master flag that must be enabled for any TMC functionality.
 	TransparentMultiCluster featuregate.Feature = "TransparentMultiCluster"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables TMC placement scheduling capabilities. Requires TransparentMultiCluster=true.
+	// Provides intelligent workload placement across multiple clusters based on policies and constraints.
+	TMCPlacement featuregate.Feature = "TMCPlacement"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables TMC bidirectional resource synchronization. Requires TransparentMultiCluster=true.
+	// Provides real-time sync of resources and status between KCP and target clusters.
+	TMCSynchronization featuregate.Feature = "TMCSynchronization"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables TMC virtual workspace aggregation. Requires TransparentMultiCluster=true.
+	// Provides unified views of resources across multiple clusters through virtual workspaces.
+	TMCVirtualWorkspaces featuregate.Feature = "TMCVirtualWorkspaces"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables TMC workload migration capabilities. Requires TransparentMultiCluster=true.
+	// Provides live migration of workloads between clusters with minimal downtime.
+	TMCMigration featuregate.Feature = "TMCMigration"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables TMC cross-cluster status aggregation. Requires TransparentMultiCluster=true.
+	// Provides comprehensive status reporting and health monitoring across all clusters.
+	TMCStatusAggregation featuregate.Feature = "TMCStatusAggregation"
 )
 
 // DefaultFeatureGate exposes the upstream feature gate, but with our gate setting applied.
@@ -74,6 +105,30 @@ func KnownFeatures() []string {
 		features = append(features, string(k))
 	}
 	return features
+}
+
+// ValidateTMCFeatureFlags validates that TMC sub-features require TransparentMultiCluster
+func ValidateTMCFeatureFlags() error {
+	gate := DefaultFeatureGate
+	
+	// Check if any TMC sub-feature is enabled without the master flag
+	tmcSubFeatures := []featuregate.Feature{
+		TMCPlacement,
+		TMCSynchronization, 
+		TMCVirtualWorkspaces,
+		TMCMigration,
+		TMCStatusAggregation,
+	}
+	
+	masterEnabled := gate.Enabled(TransparentMultiCluster)
+	
+	for _, feature := range tmcSubFeatures {
+		if gate.Enabled(feature) && !masterEnabled {
+			return fmt.Errorf("feature flag %s requires TransparentMultiCluster=true", feature)
+		}
+	}
+	
+	return nil
 }
 
 // NewFlagValue returns a wrapper to be used for a pflag flag value.
@@ -135,7 +190,23 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
 	},
+	// TMC (Transparent Multi-Cluster) Feature Gates
 	TransparentMultiCluster: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCPlacement: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCSynchronization: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCVirtualWorkspaces: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCMigration: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCStatusAggregation: {
 		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
