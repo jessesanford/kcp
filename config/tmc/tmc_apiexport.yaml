@@ -1,0 +1,156 @@
+apiVersion: apis.kcp.io/v1alpha2
+kind: APIExport
+metadata:
+  name: tmc.kcp.io
+  annotations:
+    kcp.io/tmc-managed: "true"
+spec:
+  latestResourceSchemas:
+  - clusters.tmc.kcp.io
+  - workloadplacements.tmc.kcp.io
+  - workloadplacementadvanceds.tmc.kcp.io
+  permissionClaims:
+  - group: ""
+    resource: namespaces
+    all: true
+  - group: ""
+    resource: configmaps
+    all: true
+  - group: ""
+    resource: secrets
+    all: true
+  - group: apps
+    resource: deployments
+    all: true
+  - group: apps
+    resource: replicasets
+    all: true
+  - group: ""
+    resource: services
+    all: true
+  - group: ""
+    resource: pods
+    all: true
+  - group: networking.k8s.io
+    resource: ingresses
+    all: true
+---
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  name: clusters.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    kind: Cluster
+    listKind: ClusterList
+    plural: clusters
+    singular: cluster
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Cluster represents a target cluster where workloads can be placed.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object.'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents.'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ClusterSpec holds the desired state of the Cluster.
+            properties:
+              clusterName:
+                description: ClusterName is the display name of the cluster
+                type: string
+              endpoint:
+                description: Endpoint is the API server endpoint of the cluster
+                type: string
+              kubeconfig:
+                description: Kubeconfig contains the kubeconfig for accessing the cluster
+                properties:
+                  secretRef:
+                    description: SecretRef references a secret containing the kubeconfig
+                    properties:
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                type: object
+              location:
+                description: Location represents the geographic or logical location of the cluster
+                type: string
+            required:
+            - clusterName
+            - endpoint
+            - kubeconfig
+            type: object
+          status:
+            description: ClusterStatus communicates the observed state of the Cluster.
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations of the cluster's state
+                items:
+                  description: "Condition contains details for one aspect of the current state of this API Resource."
+                  properties:
+                    lastTransitionTime:
+                      description: lastTransitionTime is the last time the condition transitioned from one status to another.
+                      format: date-time
+                      type: string
+                    message:
+                      description: message is a human readable message indicating details about the transition.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: observedGeneration represents the .metadata.generation that the condition was set based upon.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              phase:
+                default: Pending
+                description: Phase indicates the current phase of the cluster
+                enum:
+                - Pending
+                - Ready
+                - NotReady
+                - Unknown
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
