@@ -1,0 +1,1301 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: workloadplacementadvanceds.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    kind: WorkloadPlacementAdvanced
+    listKind: WorkloadPlacementAdvancedList
+    plural: workloadplacementadvanceds
+    singular: workloadplacementadvanced
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: WorkloadPlacementAdvanced represents advanced placement policies with affinity, rollouts, and traffic splitting.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: WorkloadPlacementAdvancedSpec holds the desired state of the WorkloadPlacementAdvanced.
+            properties:
+              affinityRules:
+                description: AffinityRules defines advanced affinity and anti-affinity rules
+                properties:
+                  clusterAffinity:
+                    description: ClusterAffinity defines which clusters workloads should prefer
+                    properties:
+                      preferredDuringSchedulingIgnoredDuringExecution:
+                        description: PreferredDuringSchedulingIgnoredDuringExecution soft preferences
+                        items:
+                          description: WeightedClusterAffinityTerm adds weight to cluster affinity terms
+                          properties:
+                            clusterAffinityTerm:
+                              description: ClusterAffinityTerm defines the cluster affinity term
+                              properties:
+                                capabilitySelector:
+                                  description: CapabilitySelector selects clusters with specific capabilities
+                                  items:
+                                    type: string
+                                  type: array
+                                labelSelector:
+                                  description: LabelSelector selects clusters based on labels
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label selector requirements.
+                                      items:
+                                        description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: operator represents a key's relationship to a set of values.
+                                            type: string
+                                          values:
+                                            description: values is an array of string values.
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: matchLabels is a map of {key,value} pairs.
+                                      type: object
+                                  type: object
+                                locationSelector:
+                                  description: LocationSelector selects clusters from specific locations
+                                  items:
+                                    type: string
+                                  type: array
+                              type: object
+                            weight:
+                              description: Weight associated with matching the corresponding clusterAffinityTerm
+                              format: int32
+                              maximum: 100
+                              minimum: 1
+                              type: integer
+                          required:
+                          - clusterAffinityTerm
+                          - weight
+                          type: object
+                        type: array
+                      requiredDuringSchedulingIgnoredDuringExecution:
+                        description: RequiredDuringSchedulingIgnoredDuringExecution hard requirements
+                        items:
+                          description: ClusterAffinityTerm defines a single cluster affinity term
+                          properties:
+                            capabilitySelector:
+                              description: CapabilitySelector selects clusters with specific capabilities
+                              items:
+                                type: string
+                              type: array
+                            labelSelector:
+                              description: LabelSelector selects clusters based on labels
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label selector requirements.
+                                  items:
+                                    description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the selector applies to.
+                                        type: string
+                                      operator:
+                                        description: operator represents a key's relationship to a set of values.
+                                        type: string
+                                      values:
+                                        description: values is an array of string values.
+                                        items:
+                                          type: string
+                                        type: array
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: matchLabels is a map of {key,value} pairs.
+                                  type: object
+                              type: object
+                            locationSelector:
+                              description: LocationSelector selects clusters from specific locations
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        type: array
+                    type: object
+                  clusterAntiAffinity:
+                    description: ClusterAntiAffinity defines which clusters workloads should avoid
+                    properties:
+                      preferredDuringSchedulingIgnoredDuringExecution:
+                        description: PreferredDuringSchedulingIgnoredDuringExecution soft preferences
+                        items:
+                          description: WeightedClusterAffinityTerm adds weight to cluster affinity terms
+                          properties:
+                            clusterAffinityTerm:
+                              description: ClusterAffinityTerm defines the cluster affinity term
+                              properties:
+                                capabilitySelector:
+                                  description: CapabilitySelector selects clusters with specific capabilities
+                                  items:
+                                    type: string
+                                  type: array
+                                labelSelector:
+                                  description: LabelSelector selects clusters based on labels
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label selector requirements.
+                                      items:
+                                        description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: operator represents a key's relationship to a set of values.
+                                            type: string
+                                          values:
+                                            description: values is an array of string values.
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: matchLabels is a map of {key,value} pairs.
+                                      type: object
+                                  type: object
+                                locationSelector:
+                                  description: LocationSelector selects clusters from specific locations
+                                  items:
+                                    type: string
+                                  type: array
+                              type: object
+                            weight:
+                              description: Weight associated with matching the corresponding clusterAffinityTerm
+                              format: int32
+                              maximum: 100
+                              minimum: 1
+                              type: integer
+                          required:
+                          - clusterAffinityTerm
+                          - weight
+                          type: object
+                        type: array
+                      requiredDuringSchedulingIgnoredDuringExecution:
+                        description: RequiredDuringSchedulingIgnoredDuringExecution hard requirements
+                        items:
+                          description: ClusterAffinityTerm defines a single cluster affinity term
+                          properties:
+                            capabilitySelector:
+                              description: CapabilitySelector selects clusters with specific capabilities
+                              items:
+                                type: string
+                              type: array
+                            labelSelector:
+                              description: LabelSelector selects clusters based on labels
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label selector requirements.
+                                  items:
+                                    description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the selector applies to.
+                                        type: string
+                                      operator:
+                                        description: operator represents a key's relationship to a set of values.
+                                        type: string
+                                      values:
+                                        description: values is an array of string values.
+                                        items:
+                                          type: string
+                                        type: array
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: matchLabels is a map of {key,value} pairs.
+                                  type: object
+                              type: object
+                            locationSelector:
+                              description: LocationSelector selects clusters from specific locations
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        type: array
+                    type: object
+                  workloadAffinity:
+                    description: WorkloadAffinity defines co-location preferences with other workloads
+                    properties:
+                      preferredDuringSchedulingIgnoredDuringExecution:
+                        description: PreferredDuringSchedulingIgnoredDuringExecution soft preferences
+                        items:
+                          description: WeightedWorkloadAffinityTerm adds weight to workload affinity terms
+                          properties:
+                            weight:
+                              description: Weight associated with matching the corresponding workloadAffinityTerm
+                              format: int32
+                              maximum: 100
+                              minimum: 1
+                              type: integer
+                            workloadAffinityTerm:
+                              description: WorkloadAffinityTerm defines the workload affinity term
+                              properties:
+                                labelSelector:
+                                  description: LabelSelector selects workloads based on labels
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label selector requirements.
+                                      items:
+                                        description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: operator represents a key's relationship to a set of values.
+                                            type: string
+                                          values:
+                                            description: values is an array of string values.
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: matchLabels is a map of {key,value} pairs.
+                                      type: object
+                                  type: object
+                                topologyKey:
+                                  description: TopologyKey defines the scope for affinity evaluation
+                                  type: string
+                                workloadTypes:
+                                  description: WorkloadTypes specifies the types of workloads to consider
+                                  items:
+                                    description: WorkloadType represents a Kubernetes workload type
+                                    properties:
+                                      apiVersion:
+                                        description: APIVersion is the API version of the workload
+                                        type: string
+                                      kind:
+                                        description: Kind is the kind of the workload
+                                        type: string
+                                    required:
+                                    - apiVersion
+                                    - kind
+                                    type: object
+                                  type: array
+                              required:
+                              - topologyKey
+                              type: object
+                          required:
+                          - weight
+                          - workloadAffinityTerm
+                          type: object
+                        type: array
+                      requiredDuringSchedulingIgnoredDuringExecution:
+                        description: RequiredDuringSchedulingIgnoredDuringExecution hard requirements
+                        items:
+                          description: WorkloadAffinityTerm defines a single workload affinity term
+                          properties:
+                            labelSelector:
+                              description: LabelSelector selects workloads based on labels
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label selector requirements.
+                                  items:
+                                    description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the selector applies to.
+                                        type: string
+                                      operator:
+                                        description: operator represents a key's relationship to a set of values.
+                                        type: string
+                                      values:
+                                        description: values is an array of string values.
+                                        items:
+                                          type: string
+                                        type: array
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: matchLabels is a map of {key,value} pairs.
+                                  type: object
+                              type: object
+                            topologyKey:
+                              description: TopologyKey defines the scope for affinity evaluation
+                              type: string
+                            workloadTypes:
+                              description: WorkloadTypes specifies the types of workloads to consider
+                              items:
+                                description: WorkloadType represents a Kubernetes workload type
+                                properties:
+                                  apiVersion:
+                                    description: APIVersion is the API version of the workload
+                                    type: string
+                                  kind:
+                                    description: Kind is the kind of the workload
+                                    type: string
+                                required:
+                                - apiVersion
+                                - kind
+                                type: object
+                              type: array
+                          required:
+                          - topologyKey
+                          type: object
+                        type: array
+                    type: object
+                  workloadAntiAffinity:
+                    description: WorkloadAntiAffinity defines separation requirements from other workloads
+                    properties:
+                      preferredDuringSchedulingIgnoredDuringExecution:
+                        description: PreferredDuringSchedulingIgnoredDuringExecution soft preferences
+                        items:
+                          description: WeightedWorkloadAffinityTerm adds weight to workload affinity terms
+                          properties:
+                            weight:
+                              description: Weight associated with matching the corresponding workloadAffinityTerm
+                              format: int32
+                              maximum: 100
+                              minimum: 1
+                              type: integer
+                            workloadAffinityTerm:
+                              description: WorkloadAffinityTerm defines the workload affinity term
+                              properties:
+                                labelSelector:
+                                  description: LabelSelector selects workloads based on labels
+                                  properties:
+                                    matchExpressions:
+                                      description: matchExpressions is a list of label selector requirements.
+                                      items:
+                                        description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                        properties:
+                                          key:
+                                            description: key is the label key that the selector applies to.
+                                            type: string
+                                          operator:
+                                            description: operator represents a key's relationship to a set of values.
+                                            type: string
+                                          values:
+                                            description: values is an array of string values.
+                                            items:
+                                              type: string
+                                            type: array
+                                        required:
+                                        - key
+                                        - operator
+                                        type: object
+                                      type: array
+                                    matchLabels:
+                                      additionalProperties:
+                                        type: string
+                                      description: matchLabels is a map of {key,value} pairs.
+                                      type: object
+                                  type: object
+                                topologyKey:
+                                  description: TopologyKey defines the scope for affinity evaluation
+                                  type: string
+                                workloadTypes:
+                                  description: WorkloadTypes specifies the types of workloads to consider
+                                  items:
+                                    description: WorkloadType represents a Kubernetes workload type
+                                    properties:
+                                      apiVersion:
+                                        description: APIVersion is the API version of the workload
+                                        type: string
+                                      kind:
+                                        description: Kind is the kind of the workload
+                                        type: string
+                                    required:
+                                    - apiVersion
+                                    - kind
+                                    type: object
+                                  type: array
+                              required:
+                              - topologyKey
+                              type: object
+                          required:
+                          - weight
+                          - workloadAffinityTerm
+                          type: object
+                        type: array
+                      requiredDuringSchedulingIgnoredDuringExecution:
+                        description: RequiredDuringSchedulingIgnoredDuringExecution hard requirements
+                        items:
+                          description: WorkloadAffinityTerm defines a single workload affinity term
+                          properties:
+                            labelSelector:
+                              description: LabelSelector selects workloads based on labels
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label selector requirements.
+                                  items:
+                                    description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the selector applies to.
+                                        type: string
+                                      operator:
+                                        description: operator represents a key's relationship to a set of values.
+                                        type: string
+                                      values:
+                                        description: values is an array of string values.
+                                        items:
+                                          type: string
+                                        type: array
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: matchLabels is a map of {key,value} pairs.
+                                  type: object
+                              type: object
+                            topologyKey:
+                              description: TopologyKey defines the scope for affinity evaluation
+                              type: string
+                            workloadTypes:
+                              description: WorkloadTypes specifies the types of workloads to consider
+                              items:
+                                description: WorkloadType represents a Kubernetes workload type
+                                properties:
+                                  apiVersion:
+                                    description: APIVersion is the API version of the workload
+                                    type: string
+                                  kind:
+                                    description: Kind is the kind of the workload
+                                    type: string
+                                required:
+                                - apiVersion
+                                - kind
+                                type: object
+                              type: array
+                          required:
+                          - topologyKey
+                          type: object
+                        type: array
+                    type: object
+                type: object
+              clusterSelector:
+                description: ClusterSelector defines how to select target clusters
+                properties:
+                  clusterNames:
+                    description: ClusterNames explicitly lists cluster names to target
+                    items:
+                      type: string
+                    type: array
+                  labelSelector:
+                    description: LabelSelector selects clusters based on labels
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector requirements.
+                        items:
+                          description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector applies to.
+                              type: string
+                            operator:
+                              description: operator represents a key's relationship to a set of values.
+                              type: string
+                            values:
+                              description: values is an array of string values.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: matchLabels is a map of {key,value} pairs.
+                        type: object
+                    type: object
+                  locationSelector:
+                    description: LocationSelector selects clusters from specific locations
+                    items:
+                      type: string
+                    type: array
+                type: object
+              placementPolicy:
+                default: RoundRobin
+                description: PlacementPolicy defines the basic placement strategy
+                enum:
+                - RoundRobin
+                - LeastLoaded
+                - Random
+                - LocationAware
+                type: string
+              resourceQuotas:
+                description: ResourceQuotas defines resource constraints for placement
+                properties:
+                  maxClusters:
+                    description: MaxClusters defines the maximum number of clusters for placement
+                    format: int32
+                    type: integer
+                  minClusters:
+                    default: 1
+                    description: MinClusters defines the minimum number of clusters for placement
+                    format: int32
+                    type: integer
+                  resourceRequirements:
+                    description: ResourceRequirements defines resource requirements per cluster
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: Limits describes the maximum amount of compute resources allowed.
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: Requests describes the minimum amount of compute resources required.
+                        type: object
+                    type: object
+                type: object
+              rolloutStrategy:
+                description: RolloutStrategy defines how workload updates are rolled out across clusters
+                properties:
+                  blueGreen:
+                    description: BlueGreen defines blue-green deployment parameters
+                    properties:
+                      autoPromotionEnabled:
+                        default: false
+                        description: AutoPromotionEnabled enables automatic promotion
+                        type: boolean
+                      postPromotionAnalysis:
+                        description: PostPromotionAnalysis defines analysis to run after promotion
+                        properties:
+                          args:
+                            description: Args defines arguments for the analysis
+                            items:
+                              description: AnalysisRunArgument defines an analysis run argument
+                              properties:
+                                name:
+                                  description: Name is the argument name
+                                  type: string
+                                value:
+                                  description: Value is the argument value
+                                  type: string
+                                valueFrom:
+                                  description: ValueFrom defines a source for the argument value
+                                  properties:
+                                    fieldRef:
+                                      description: FieldRef defines a field reference
+                                      properties:
+                                        apiVersion:
+                                          description: Version of the schema the FieldPath is written in terms of
+                                          type: string
+                                        fieldPath:
+                                          description: Path of the field to select in the specified API version.
+                                          type: string
+                                      required:
+                                      - fieldPath
+                                      type: object
+                                    secretKeyRef:
+                                      description: SecretKeyRef defines a secret key reference
+                                      properties:
+                                        key:
+                                          description: The key of the secret to select from.
+                                          type: string
+                                        name:
+                                          description: Name of the referent.
+                                          type: string
+                                        optional:
+                                          description: Specify whether the Secret or its key must be defined
+                                          type: boolean
+                                      required:
+                                      - key
+                                      type: object
+                                  type: object
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          templates:
+                            description: Templates defines the analysis templates to use
+                            items:
+                              description: AnalysisTemplate defines an analysis template reference
+                              properties:
+                                clusterScope:
+                                  default: false
+                                  description: ClusterScope indicates if template is cluster-scoped
+                                  type: boolean
+                                templateName:
+                                  description: TemplateName is the name of the analysis template
+                                  type: string
+                              required:
+                              - templateName
+                              type: object
+                            type: array
+                        required:
+                        - templates
+                        type: object
+                      prePromotionAnalysis:
+                        description: PrePromotionAnalysis defines analysis to run before promotion
+                        properties:
+                          args:
+                            description: Args defines arguments for the analysis
+                            items:
+                              description: AnalysisRunArgument defines an analysis run argument
+                              properties:
+                                name:
+                                  description: Name is the argument name
+                                  type: string
+                                value:
+                                  description: Value is the argument value
+                                  type: string
+                                valueFrom:
+                                  description: ValueFrom defines a source for the argument value
+                                  properties:
+                                    fieldRef:
+                                      description: FieldRef defines a field reference
+                                      properties:
+                                        apiVersion:
+                                          description: Version of the schema the FieldPath is written in terms of
+                                          type: string
+                                        fieldPath:
+                                          description: Path of the field to select in the specified API version.
+                                          type: string
+                                      required:
+                                      - fieldPath
+                                      type: object
+                                    secretKeyRef:
+                                      description: SecretKeyRef defines a secret key reference
+                                      properties:
+                                        key:
+                                          description: The key of the secret to select from.
+                                          type: string
+                                        name:
+                                          description: Name of the referent.
+                                          type: string
+                                        optional:
+                                          description: Specify whether the Secret or its key must be defined
+                                          type: boolean
+                                      required:
+                                      - key
+                                      type: object
+                                  type: object
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          templates:
+                            description: Templates defines the analysis templates to use
+                            items:
+                              description: AnalysisTemplate defines an analysis template reference
+                              properties:
+                                clusterScope:
+                                  default: false
+                                  description: ClusterScope indicates if template is cluster-scoped
+                                  type: boolean
+                                templateName:
+                                  description: TemplateName is the name of the analysis template
+                                  type: string
+                              required:
+                              - templateName
+                              type: object
+                            type: array
+                        required:
+                        - templates
+                        type: object
+                      scaleDownDelaySeconds:
+                        default: 30
+                        description: ScaleDownDelaySeconds defines how long to wait before scaling down old version
+                        format: int32
+                        type: integer
+                    type: object
+                  canary:
+                    description: Canary defines canary deployment parameters
+                    properties:
+                      analysis:
+                        description: Analysis defines canary analysis configuration
+                        properties:
+                          args:
+                            description: Args defines arguments for the analysis
+                            items:
+                              description: AnalysisRunArgument defines an analysis run argument
+                              properties:
+                                name:
+                                  description: Name is the argument name
+                                  type: string
+                                value:
+                                  description: Value is the argument value
+                                  type: string
+                                valueFrom:
+                                  description: ValueFrom defines a source for the argument value
+                                  properties:
+                                    fieldRef:
+                                      description: FieldRef defines a field reference
+                                      properties:
+                                        apiVersion:
+                                          description: Version of the schema the FieldPath is written in terms of
+                                          type: string
+                                        fieldPath:
+                                          description: Path of the field to select in the specified API version.
+                                          type: string
+                                      required:
+                                      - fieldPath
+                                      type: object
+                                    secretKeyRef:
+                                      description: SecretKeyRef defines a secret key reference
+                                      properties:
+                                        key:
+                                          description: The key of the secret to select from.
+                                          type: string
+                                        name:
+                                          description: Name of the referent.
+                                          type: string
+                                        optional:
+                                          description: Specify whether the Secret or its key must be defined
+                                          type: boolean
+                                      required:
+                                      - key
+                                      type: object
+                                  type: object
+                              required:
+                              - name
+                              type: object
+                            type: array
+                          templates:
+                            description: Templates defines the analysis templates to use
+                            items:
+                              description: AnalysisTemplate defines an analysis template reference
+                              properties:
+                                clusterScope:
+                                  default: false
+                                  description: ClusterScope indicates if template is cluster-scoped
+                                  type: boolean
+                                templateName:
+                                  description: TemplateName is the name of the analysis template
+                                  type: string
+                              required:
+                              - templateName
+                              type: object
+                            type: array
+                        required:
+                        - templates
+                        type: object
+                      steps:
+                        description: Steps defines the canary deployment steps
+                        items:
+                          description: CanaryStep defines a single step in canary deployment
+                          properties:
+                            pause:
+                              description: Pause defines a pause step
+                              properties:
+                                duration:
+                                  description: Duration defines pause duration
+                                  type: string
+                              type: object
+                            setWeight:
+                              description: SetWeight defines a set weight step
+                              format: int32
+                              maximum: 100
+                              minimum: 0
+                              type: integer
+                            weight:
+                              description: Weight defines the percentage of traffic to route to canary
+                              format: int32
+                              maximum: 100
+                              minimum: 0
+                              type: integer
+                          type: object
+                        type: array
+                      trafficRouting:
+                        description: TrafficRouting defines traffic routing configuration
+                        properties:
+                          alb:
+                            description: ALB defines AWS ALB-specific traffic routing
+                            properties:
+                              ingress:
+                                description: Ingress defines the Ingress to update
+                                type: string
+                              servicePort:
+                                description: ServicePort defines the service port
+                                format: int32
+                                type: integer
+                            required:
+                            - ingress
+                            - servicePort
+                            type: object
+                          istio:
+                            description: Istio defines Istio-specific traffic routing
+                            properties:
+                              destinationRule:
+                                description: DestinationRule defines the DestinationRule to update
+                                properties:
+                                  canarySubsetName:
+                                    description: CanarySubsetName is the name of the canary subset
+                                    type: string
+                                  name:
+                                    description: Name is the name of the DestinationRule
+                                    type: string
+                                  stableSubsetName:
+                                    description: StableSubsetName is the name of the stable subset
+                                    type: string
+                                required:
+                                - canarySubsetName
+                                - name
+                                - stableSubsetName
+                                type: object
+                              virtualService:
+                                description: VirtualService defines the VirtualService to update
+                                properties:
+                                  name:
+                                    description: Name is the name of the VirtualService
+                                    type: string
+                                  routes:
+                                    description: Routes are the route names to update
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - name
+                                type: object
+                            required:
+                            - virtualService
+                            type: object
+                        type: object
+                    type: object
+                  rollingUpdate:
+                    description: RollingUpdate defines rolling update parameters
+                    properties:
+                      maxSurge:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        default: 25%
+                        description: MaxSurge is the maximum number of clusters that can be created above the desired number
+                        x-kubernetes-int-or-string: true
+                      maxUnavailable:
+                        anyOf:
+                        - type: integer
+                        - type: string
+                        default: 25%
+                        description: MaxUnavailable is the maximum number of clusters that can be unavailable during the update
+                        x-kubernetes-int-or-string: true
+                      pauseBetweenBatches:
+                        description: PauseBetweenBatches defines pause duration between cluster batches
+                        type: string
+                    type: object
+                  type:
+                    default: RollingUpdate
+                    description: Type defines the rollout strategy type
+                    enum:
+                    - RollingUpdate
+                    - BlueGreen
+                    - Canary
+                    - Recreate
+                    type: string
+                type: object
+              trafficSplitting:
+                description: TrafficSplitting defines traffic distribution across clusters
+                properties:
+                  clusterWeights:
+                    description: ClusterWeights defines traffic weight distribution across clusters
+                    items:
+                      description: ClusterWeight defines traffic weight for a cluster
+                      properties:
+                        clusterName:
+                          description: ClusterName is the name of the cluster
+                          type: string
+                        weight:
+                          description: Weight is the traffic weight (0-100)
+                          format: int32
+                          maximum: 100
+                          minimum: 0
+                          type: integer
+                      required:
+                      - clusterName
+                      - weight
+                      type: object
+                    type: array
+                  healthCheck:
+                    description: HealthCheck defines health check configuration for traffic routing
+                    properties:
+                      failureThreshold:
+                        default: 3
+                        description: FailureThreshold defines the failure threshold
+                        format: int32
+                        type: integer
+                      intervalSeconds:
+                        default: 30
+                        description: IntervalSeconds defines the health check interval
+                        format: int32
+                        type: integer
+                      path:
+                        default: /health
+                        description: Path defines the health check path
+                        type: string
+                      timeoutSeconds:
+                        default: 5
+                        description: TimeoutSeconds defines the health check timeout
+                        format: int32
+                        type: integer
+                    type: object
+                  stickySession:
+                    description: StickySession defines session affinity configuration
+                    properties:
+                      cookieName:
+                        description: CookieName defines the cookie name for session affinity
+                        type: string
+                      enabled:
+                        default: false
+                        description: Enabled enables session affinity
+                        type: boolean
+                      ttlSeconds:
+                        default: 3600
+                        description: TTLSeconds defines the session TTL
+                        format: int32
+                        type: integer
+                    required:
+                    - enabled
+                    type: object
+                required:
+                - clusterWeights
+                type: object
+              workloadSelector:
+                description: WorkloadSelector selects the workloads this placement applies to
+                properties:
+                  labelSelector:
+                    description: LabelSelector selects workloads based on labels
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector requirements.
+                        items:
+                          description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector applies to.
+                              type: string
+                            operator:
+                              description: operator represents a key's relationship to a set of values.
+                              type: string
+                            values:
+                              description: values is an array of string values.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: matchLabels is a map of {key,value} pairs.
+                        type: object
+                    type: object
+                  namespaceSelector:
+                    description: NamespaceSelector selects workloads from specific namespaces
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector requirements.
+                        items:
+                          description: A label selector requirement is a selector that contains values, a key, and an operator that relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector applies to.
+                              type: string
+                            operator:
+                              description: operator represents a key's relationship to a set of values.
+                              type: string
+                            values:
+                              description: values is an array of string values.
+                              items:
+                                type: string
+                              type: array
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: matchLabels is a map of {key,value} pairs.
+                        type: object
+                    type: object
+                  workloadTypes:
+                    description: WorkloadTypes specifies the types of workloads to select
+                    items:
+                      description: WorkloadType represents a Kubernetes workload type
+                      properties:
+                        apiVersion:
+                          description: APIVersion is the API version of the workload
+                          type: string
+                        kind:
+                          description: Kind is the kind of the workload
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      type: object
+                    type: array
+                type: object
+            required:
+            - clusterSelector
+            - workloadSelector
+            type: object
+          status:
+            description: WorkloadPlacementAdvancedStatus communicates the observed state of the WorkloadPlacementAdvanced.
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations of the placement's state
+                type: object
+              lastPlacementTime:
+                description: LastPlacementTime is the timestamp of the last placement decision
+                format: date-time
+                type: string
+              placedWorkloads:
+                description: PlacedWorkloads tracks the workloads that have been placed
+                items:
+                  description: PlacedWorkloadAdvanced represents a workload placed with advanced features
+                  properties:
+                    clusterPlacements:
+                      description: ClusterPlacements tracks placement across clusters
+                      items:
+                        description: ClusterPlacement represents placement of a workload on a specific cluster
+                        properties:
+                          clusterName:
+                            description: ClusterName is the name of the cluster
+                            type: string
+                          lastTransitionTime:
+                            description: LastTransitionTime is when the phase last changed
+                            format: date-time
+                            type: string
+                          phase:
+                            default: Active
+                            description: Phase indicates the deployment phase for this cluster
+                            enum:
+                            - Active
+                            - Canary
+                            - Preview
+                            - Deprecated
+                            type: string
+                          trafficWeight:
+                            description: TrafficWeight is the traffic weight for this cluster
+                            format: int32
+                            type: integer
+                        required:
+                        - clusterName
+                        type: object
+                      type: array
+                    placementTime:
+                      description: PlacementTime is when the workload was placed
+                      format: date-time
+                      type: string
+                    status:
+                      default: Pending
+                      description: Status indicates the current status of the placed workload
+                      enum:
+                      - Pending
+                      - Placed
+                      - Failed
+                      - Removed
+                      type: string
+                    workloadRef:
+                      description: WorkloadRef references the placed workload
+                      properties:
+                        apiVersion:
+                          description: APIVersion is the API version of the workload
+                          type: string
+                        kind:
+                          description: Kind is the kind of the workload
+                          type: string
+                        name:
+                          description: Name is the name of the workload
+                          type: string
+                        namespace:
+                          description: Namespace is the namespace of the workload
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      - name
+                      type: object
+                  required:
+                  - clusterPlacements
+                  - placementTime
+                  - workloadRef
+                  type: object
+                type: array
+              rolloutState:
+                description: RolloutState tracks the current rollout state
+                properties:
+                  completionTime:
+                    description: CompletionTime is when the rollout completed
+                    format: date-time
+                    type: string
+                  currentStep:
+                    description: CurrentStep is the current step in the rollout
+                    format: int32
+                    type: integer
+                  message:
+                    description: Message provides additional information about the rollout state
+                    type: string
+                  phase:
+                    default: Pending
+                    description: Phase indicates the current rollout phase
+                    enum:
+                    - Pending
+                    - InProgress
+                    - Paused
+                    - Completed
+                    - Failed
+                    - Aborted
+                    type: string
+                  startTime:
+                    description: StartTime is when the rollout started
+                    format: date-time
+                    type: string
+                  totalSteps:
+                    description: TotalSteps is the total number of steps in the rollout
+                    format: int32
+                    type: integer
+                type: object
+              selectedClusters:
+                description: SelectedClusters lists the clusters selected for workload placement
+                items:
+                  description: SelectedCluster represents a cluster selected for placement
+                  properties:
+                    clusterName:
+                      description: ClusterName is the name of the selected cluster
+                      type: string
+                    reason:
+                      description: Reason explains why this cluster was selected
+                      type: string
+                    score:
+                      description: Score is the placement score for this cluster
+                      format: int32
+                      type: integer
+                    weight:
+                      description: Weight is the traffic weight assigned to this cluster
+                      format: int32
+                      type: integer
+                  required:
+                  - clusterName
+                  type: object
+                type: array
+              trafficState:
+                description: TrafficState tracks the current traffic splitting state
+                properties:
+                  activeWeights:
+                    description: ActiveWeights shows the current traffic weight distribution
+                    items:
+                      description: ClusterWeight defines traffic weight for a cluster
+                      properties:
+                        clusterName:
+                          description: ClusterName is the name of the cluster
+                          type: string
+                        weight:
+                          description: Weight is the traffic weight (0-100)
+                          format: int32
+                          maximum: 100
+                          minimum: 0
+                          type: integer
+                      required:
+                      - clusterName
+                      - weight
+                      type: object
+                    type: array
+                  lastUpdateTime:
+                    description: LastUpdateTime is when traffic weights were last updated
+                    format: date-time
+                    type: string
+                  targetWeights:
+                    description: TargetWeights shows the target traffic weight distribution
+                    items:
+                      description: ClusterWeight defines traffic weight for a cluster
+                      properties:
+                        clusterName:
+                          description: ClusterName is the name of the cluster
+                          type: string
+                        weight:
+                          description: Weight is the traffic weight (0-100)
+                          format: int32
+                          maximum: 100
+                          minimum: 0
+                          type: integer
+                      required:
+                      - clusterName
+                      - weight
+                      type: object
+                    type: array
+                required:
+                - activeWeights
+                type: object
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
