@@ -1,0 +1,283 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  creationTimestamp: null
+  name: v250804-755cf794.locations.workload.kcp.io
+spec:
+  group: workload.kcp.io
+  names:
+    categories:
+    - kcp
+    kind: Location
+    listKind: LocationList
+    plural: locations
+    shortNames:
+    - loc
+    singular: location
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - description: Display name of the location
+      jsonPath: .spec.displayName
+      name: Display Name
+      type: string
+    - description: Type of the location
+      jsonPath: .spec.locationType
+      name: Type
+      type: string
+    - description: Parent location
+      jsonPath: .spec.parent
+      name: Parent
+      type: string
+    - description: Ready condition status
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      description: |-
+        Location represents a logical location where SyncTargets can be organized.
+        Locations provide a hierarchical way to group clusters by geography,
+        availability zones, data centers, or other organizational boundaries.
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+          type: string
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: Spec defines the desired state of the Location
+          properties:
+            availabilityZones:
+              description: AvailabilityZones list the availability zones within this
+                location
+              items:
+                type: string
+              type: array
+            coordinates:
+              description: Coordinates specify the geographical coordinates of the
+                location
+              properties:
+                latitude:
+                  description: Latitude specifies the latitude coordinate as a string
+                    to avoid float64 CRD issues
+                  type: string
+                longitude:
+                  description: Longitude specifies the longitude coordinate as a string
+                    to avoid float64 CRD issues
+                  type: string
+              required:
+              - latitude
+              - longitude
+              type: object
+            description:
+              description: Description provides additional information about the location
+              type: string
+            displayName:
+              description: DisplayName is a human-readable name for the location
+              type: string
+            instanceTypes:
+              description: InstanceTypes define the available compute instance types
+                at this location
+              items:
+                description: InstanceType defines a compute instance type available
+                  at a location
+                properties:
+                  accelerators:
+                    description: Accelerators define specialized compute accelerators
+                    items:
+                      description: Accelerator defines a specialized compute accelerator
+                      properties:
+                        count:
+                          description: Count specifies the number of accelerator units
+                          format: int64
+                          type: integer
+                        type:
+                          description: Type specifies the accelerator type (e.g.,
+                            "nvidia.com/gpu", "amd.com/gpu")
+                          type: string
+                      required:
+                      - count
+                      - type
+                      type: object
+                    type: array
+                  cpu:
+                    description: CPU specifies the CPU capacity in millicores
+                    format: int64
+                    type: integer
+                  gpu:
+                    description: GPU specifies the number of GPU units
+                    format: int64
+                    type: integer
+                  memory:
+                    description: Memory specifies the memory capacity in bytes
+                    format: int64
+                    type: integer
+                  name:
+                    description: Name is the identifier for the instance type
+                    type: string
+                  storage:
+                    description: Storage specifies the storage capacity in bytes
+                    format: int64
+                    type: integer
+                required:
+                - cpu
+                - memory
+                - name
+                type: object
+              type: array
+            labels:
+              additionalProperties:
+                type: string
+              description: Labels provide additional metadata for the location
+              type: object
+            locationType:
+              allOf:
+              - enum:
+                - Region
+                - AvailabilityZone
+                - DataCenter
+                - Edge
+                - Cloud
+                - OnPremise
+              - enum:
+                - Region
+                - AvailabilityZone
+                - DataCenter
+                - Edge
+                - Cloud
+                - OnPremise
+              default: Region
+              description: LocationType categorizes the location (e.g., region, zone,
+                datacenter)
+              type: string
+            parent:
+              description: Parent specifies the parent location in the hierarchy
+              type: string
+          type: object
+        status:
+          description: Status represents the current state of the Location
+          properties:
+            allocatedCapacity:
+              description: AllocatedCapacity represents the currently allocated resources
+                at this location
+              properties:
+                cpu:
+                  description: CPU capacity in millicores
+                  format: int64
+                  type: integer
+                memory:
+                  description: Memory capacity in bytes
+                  format: int64
+                  type: integer
+                pods:
+                  description: Pods represents maximum pod capacity
+                  format: int64
+                  type: integer
+                storage:
+                  description: Storage capacity in bytes
+                  format: int64
+                  type: integer
+              type: object
+            availableClusters:
+              description: AvailableClusters lists the SyncTargets available at this
+                location
+              items:
+                type: string
+              type: array
+            childLocations:
+              description: ChildLocations lists the child locations under this location
+              items:
+                type: string
+              type: array
+            conditions:
+              description: Conditions represent the latest available observations
+                of the location's current state
+              items:
+                description: Condition defines an observation of a object operational
+                  state.
+                properties:
+                  lastTransitionTime:
+                    description: |-
+                      Last time the condition transitioned from one status to another.
+                      This should be when the underlying condition changed. If that is not known, then using the time when
+                      the API field changed is acceptable.
+                    format: date-time
+                    type: string
+                  message:
+                    description: |-
+                      A human readable message indicating details about the transition.
+                      This field may be empty.
+                    type: string
+                  reason:
+                    description: |-
+                      The reason for the condition's last transition in CamelCase.
+                      The specific API may choose whether or not this field is considered a guaranteed API.
+                      This field may not be empty.
+                    type: string
+                  severity:
+                    description: |-
+                      Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                      understand the current situation and act accordingly.
+                      The Severity field MUST be set only when Status=False.
+                    type: string
+                  status:
+                    description: Status of the condition, one of True, False, Unknown.
+                    type: string
+                  type:
+                    description: |-
+                      Type of condition in CamelCase or in foo.example.com/CamelCase.
+                      Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                      can be useful (see .node.status.conditions), the ability to deconflict is important.
+                    type: string
+                required:
+                - lastTransitionTime
+                - status
+                - type
+                type: object
+              type: array
+            path:
+              description: Path represents the full path from root to this location
+              type: string
+            totalCapacity:
+              description: TotalCapacity represents the total resource capacity across
+                all clusters at this location
+              properties:
+                cpu:
+                  description: CPU capacity in millicores
+                  format: int64
+                  type: integer
+                memory:
+                  description: Memory capacity in bytes
+                  format: int64
+                  type: integer
+                pods:
+                  description: Pods represents maximum pod capacity
+                  format: int64
+                  type: integer
+                storage:
+                  description: Storage capacity in bytes
+                  format: int64
+                  type: integer
+              type: object
+          type: object
+      type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -1,0 +1,38 @@
+apiVersion: apis.kcp.io/v1alpha2
+kind: APIExport
+metadata:
+  creationTimestamp: null
+  name: workload.kcp.io
+spec:
+  resources:
+  - group: workload.kcp.io
+    name: locations
+    schema: v250804-755cf794.locations.workload.kcp.io
+    storage:
+      crd: {}
+  - group: workload.kcp.io
+    name: placements
+    schema: v250804-755cf794.placements.workload.kcp.io
+    storage:
+      crd: {}
+  - group: workload.kcp.io
+    name: resourceexports
+    schema: v250804-755cf794.resourceexports.workload.kcp.io
+    storage:
+      crd: {}
+  - group: workload.kcp.io
+    name: resourceimports
+    schema: v250804-755cf794.resourceimports.workload.kcp.io
+    storage:
+      crd: {}
+  - group: workload.kcp.io
+    name: synctargetheartbeats
+    schema: v250804-755cf794.synctargetheartbeats.workload.kcp.io
+    storage:
+      crd: {}
+  - group: workload.kcp.io
+    name: synctargets
+    schema: v250804-755cf794.synctargets.workload.kcp.io
+    storage:
+      crd: {}
+status: {}
