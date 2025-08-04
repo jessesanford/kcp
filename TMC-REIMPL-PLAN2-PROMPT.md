@@ -6,6 +6,13 @@ You are tasked with implementing the TMC Reimplementation Plan 2 through a serie
 
 ## 📋 **Critical Implementation Requirements**
 
+### **FEATURE FLAG USAGE**
+- Always implement features behind feature flags.
+- There should be one maste feature flag for all TMC functionality that will disable any sub-feature flags as well
+- If you need sub feature flags that is fine, just make sure to group and isolate things logically. Don't create too many feature flags that are too fine-grained.
+- If you need to use a github username for the feature flags use @jessesanford
+- If you need to use a version for the features use 0.1
+
 ### **PR Size & Quality Standards**
 - **Target PR Size**: 400-700 lines of code per PR
 - **Maximum PR Size**: 800 lines of code per PR
