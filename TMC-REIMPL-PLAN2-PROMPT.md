@@ -87,6 +87,8 @@ git push origin feature/tmc2-impl2/01-api-foundation
 
 ## **Critical Implementation Way-of-Working**
 - Read the Implementation Order & Dependencies section below and create a todo list that represents the work being asked for.
+- ALWAYS switch to the feature/tmc-planning branch and read the corresponding TMC-REIMPL-PLAN-PHASE-0X.md (Where X is 0-9) before starting each task within that phase. So if your task falls in Phase 2, then you would need to read the feature/tmc-planning branch's TMC-REIMPL-PLAN-PHASE-02.md file before starting any task in Phase 2.
+- ALWAYS make sure to branch off of the correct BASE. If the todo you are working on will be used to create a PR that requires a previous feature branch to have been merged then base your new feature branch off of that other branch.
 - ALWAYS REVIEW your TODO list and make sure it is up to date and does not contain any erroneous items or falsely completed items BEFORE moving to the next todo.
 - ALWAYS pick the TODOs from the top of the pile. If you need to re-order them or add new TODOS that is fine. Keep the list ordered correctly.
 - If you have to add new todos as you go that is ok. Use the guidance on sizing commits, files and PRs to appropriately drive the number of feature branches and PRs you will need.
