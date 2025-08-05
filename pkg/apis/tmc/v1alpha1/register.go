@@ -25,7 +25,7 @@ import (
 const (
 	// GroupName is the group name for the TMC API
 	GroupName = "tmc.kcp.io"
-	
+
 	// GroupVersion is the version for the TMC API
 	GroupVersion = "v1alpha1"
 )
