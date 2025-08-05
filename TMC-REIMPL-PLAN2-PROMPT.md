@@ -6,6 +6,12 @@ You are tasked with implementing the TMC Reimplementation Plan 2 through a serie
 
 ## 📋 **Critical Implementation Requirements**
 
+### ** ONLY BUILD WHAT IS NEEDED FOR TMC**
+- DO NOT BOIL THE OCEAN
+- Only build the features and functionality necessary to get the TMC feature over the line.
+- We don't need every feature under the sun. Start with minimally viable and then add additional features on in later PRs.
+- It's OK if a feature needs to be implmeneted over many PRs to get to it's full potential.
+
 ### **Generated Code**
 - Make sure to run code generation tooling when appropriate. This includes deepcopy and crd generation.
 - Commit all generated code. It will not count against your total lines of code rules.
@@ -65,6 +71,50 @@ git push origin feature/tmc2-impl2/01-api-foundation
 - ✅ **Always branch from main** - even for dependent PRs
 - ✅ **Rebase on main** if conflicts arise
 - ✅ **Keep branches focused** - one feature per branch
+
+## **Critical Implementation Way-of-Working**
+- Read the Implementation Order & Dependencies section below and create a todo list that represents the work being asked for.
+- ALWAYS REVIEW your TODO list and make sure it is up to date and does not contain any erroneous items or falsely completed items BEFORE moving to the next todo.
+- ALWAYS pick the TODOs from the top of the pile. If you need to re-order them or add new TODOS that is fine. Keep the list ordered correctly.
+- If you have to add new todos as you go that is ok. Use the guidance on sizing commits, files and PRs to appropriately drive the number of feature branches and PRs you will need.
+- After finishing a todo, before moving on to the next TODO, notify the user that you have finished and give a summary of the work. Then fill out a PR message for this work in a file name PR-MESSAGE-FOR-branch-name.md where branch name is the name of the branch you are working on.
+- The PR template looks like:
+```md
+<!--
+
+Thanks for creating a pull request!
+If this is your first time, please make sure to review CONTRIBUTING.MD.
+
+-->
+
+## Summary
+
+## What Type of PR Is This?
+
+<!--
+
+Add one of the following kinds:
+/kind bug
+/kind cleanup
+/kind documentation
+/kind feature
+
+Optionally add one or more of the following kinds if applicable:
+/kind api-change
+/kind deprecation
+/kind failing-test
+/kind flake
+/kind regression
+
+-->
+
+## Related Issue(s)
+
+Fixes #
+
+## Release Notes
+
+```
 
 ## 📊 **Implementation Order & Dependencies**
 
@@ -391,6 +441,15 @@ func TestClusterRegistrationController(t *testing.T) {
 }
 ```
 
+### **Commit Standards**
+- NEVER commit changes that are not logically grouped together with some specific change intent. Break up the commits so that they encapsulate a specific intent.
+- NEVER use `git commit -a`
+- ALWAYS stage each file individually into the staging area and then commit once the files in the staging area completely encapsulate the change intent for the commit.
+- ALWAYS sign commits for both the DCO and GPG signing: Use `git commit -s -S`
+- If you have to rebase or rewrite the git commit history make sure that it tells a logical linear story from commit to commit.
+- NEVER allow the git commit history to interleave or "mix" bodies of changes that correspond to different intents.
+- ALWAYS ALWAYS ALWAYS! When in doubt commit files to a temporary branch. Do not allow them to be lost.
+
 ### **Commit Message Standards**
 ```
 feat(api): add TMC ClusterRegistration and WorkloadPlacement APIs
@@ -407,6 +466,7 @@ Fixes: #XXX
 ## 🎯 **Success Criteria for Each PR**
 
 ### **Before Creating PR**
+1. ✅ **No uncommited files** - Never leave uncommited files in the working copy. If files do not need to be tracked then add them to .gitignore.
 1. ✅ **All tests pass** - no failing tests
 2. ✅ **Linting passes** - code meets quality standards
 3. ✅ **Documentation complete** - API docs, user guides, examples
@@ -415,6 +475,7 @@ Fixes: #XXX
 
 ### **PR Description Requirements**
 Each PR must include:
+- **Linear easy to understand commit history** Make sure that the story of the intent of the PR is told in a linear and understandable way from commit to commit through the entirety of the PR history.
 - **Clear title** following conventional commits
 - **Detailed description** of functionality added
 - **Testing section** describing test coverage
@@ -442,7 +503,9 @@ Each PR must include:
 
 ## ⚠️ **Critical Warnings**
 
+- **NEVER leave uncommited files** - Add all files into a logical commit that encapsulates the intent of a change. If the files do not need to be tracked then add them to .gitignore
 - **NEVER shortcuts tests** - every feature must be tested
+- **NEVER REWRITE HISTORY** - git commits must be maintained. If you need to reorder them then create a new branch.
 - **NEVER merge branches** - maintainers control main
 - **NEVER exceed 800 lines per file (generated files do not count, this applies to both deepcopy and crd code)** - Re-architect/refactor to allow for smaller file sizes with better encapsulation/isolation between objects.
 - **NEVER exceed 800 lines per commit (generated files do not count, this applies to both deepcopy and crd code)** - Break up commits into smaller atomic commits that still tell the appropriate story of the intent of the changes. Make sure tests continue to pass.
