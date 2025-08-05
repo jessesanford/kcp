@@ -1,5 +1,36 @@
 # TMC Reimplementation Plan 2: Complete PR Submission Order
 
+## TLDR: Complete Branch Submission Order
+
+**All 20 feature branches in recommended submission order (Strategy B - Incremental Foundation):**
+
+1. `feature/tmc2-impl2/01a-cluster-basic` - ClusterRegistration API foundation
+2. `feature/tmc2-impl2/01c-placement-basic` - WorkloadPlacement API foundation  
+3. `feature/tmc2-impl2/02-apiexport-integration` - TMC APIExport controller
+4. `feature/tmc2-impl2/04b-placement-engine` - Placement algorithms engine
+5. `feature/tmc2-impl2/04c-placement-controller` - WorkloadPlacement controller
+6. `feature/tmc2-impl2/04d-controller-manager` - TMC controller manager
+7. `feature/tmc2-impl2/04e-tmc-binary` - TMC controller binary
+8. `feature/tmc2-impl2/01b-cluster-enhanced` - Enhanced cluster management
+9. `feature/tmc2-impl2/01d-placement-advanced` - WorkloadPlacementAdvanced API
+10. `feature/tmc2-impl2/01e-placement-analysis` - Placement analysis APIs
+11. `feature/tmc2-impl2/01f-placement-health` - Health monitoring APIs
+12. `feature/tmc2-impl2/01g-placement-session` - Session management APIs
+13. `feature/tmc2-impl2/01h-traffic-analysis` - Traffic analysis APIs
+14. `feature/tmc2-impl2/01i-scaling-config` - Scaling configuration APIs
+15. `feature/tmc2-impl2/01j-status-management` - Status aggregation APIs
+
+**Alternative/Legacy branches (evaluate before submission):**
+16. `feature/tmc2-impl2/01-api-foundation` - Comprehensive API foundation (alternative to 1+2)
+17. `feature/tmc2-impl2/03-controller-foundation` - Basic controller framework (alternative to 4-7)
+18. `feature/tmc2-impl2/04a-api-types` - API types (may duplicate 1+2)
+19. `feature/tmc2-impl2/04-workload-placement` - Alternative placement implementation
+20. `feature/tmc2-impl2/cleanup-duplicates` - Cleanup utility branch
+
+**Core foundation (1-7) establishes complete TMC functionality. Enhanced APIs (8-15) add incremental features.**
+
+---
+
 ## Executive Summary
 
 This document provides the complete logical ordering of ALL 20 feature branches created for TMC Reimplementation Plan 2. This analysis focuses purely on understanding dependencies and logical submission order based on existing branch content **WITHOUT** modifying branches or considering size constraints.
