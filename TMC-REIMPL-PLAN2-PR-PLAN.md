@@ -4,35 +4,37 @@
 
 **All 20 feature branches in recommended submission order (Strategy B - Incremental Foundation):**
 
-**Phase 1: Core API Foundation**
-1. `feature/tmc2-impl2/01a-cluster-basic` - ClusterRegistration API foundation
-2. `feature/tmc2-impl2/01c-placement-basic` - WorkloadPlacement API foundation  
+**Phase 1: Basic API Foundation**
+1. `feature/tmc2-impl2/01a-cluster-basic` - Basic ClusterRegistration API
+2. `feature/tmc2-impl2/01c-placement-basic` - Basic WorkloadPlacement API  
 
-**Phase 2: Enhanced APIs (build on core APIs)**
-3. `feature/tmc2-impl2/01b-cluster-enhanced` - Enhanced cluster management
-4. `feature/tmc2-impl2/01d-placement-advanced` - WorkloadPlacementAdvanced API
-5. `feature/tmc2-impl2/01e-placement-analysis` - Placement analysis APIs
-6. `feature/tmc2-impl2/01f-placement-health` - Health monitoring APIs
-7. `feature/tmc2-impl2/01g-placement-session` - Session management APIs
-8. `feature/tmc2-impl2/01h-traffic-analysis` - Traffic analysis APIs
-9. `feature/tmc2-impl2/01i-scaling-config` - Scaling configuration APIs
-10. `feature/tmc2-impl2/01j-status-management` - Status aggregation APIs
+**Phase 2: Enhanced Core APIs (production-ready versions)**
+3. `feature/tmc2-impl2/04a-api-types` - Enhanced ClusterRegistration + WorkloadPlacement APIs
+4. `feature/tmc2-impl2/01b-cluster-enhanced` - Enhanced cluster management with workload integration
+5. `feature/tmc2-impl2/01d-placement-advanced` - WorkloadPlacementAdvanced API
 
-**Phase 3: Implementation (requires APIs to be available)**
-11. `feature/tmc2-impl2/02-apiexport-integration` - TMC APIExport controller
-12. `feature/tmc2-impl2/04b-placement-engine` - Placement algorithms engine
-13. `feature/tmc2-impl2/04c-placement-controller` - WorkloadPlacement controller
-14. `feature/tmc2-impl2/04d-controller-manager` - TMC controller manager
-15. `feature/tmc2-impl2/04e-tmc-binary` - TMC controller binary
+**Phase 3: Specialized APIs (build on enhanced APIs)**
+6. `feature/tmc2-impl2/01e-placement-analysis` - Placement analysis APIs
+7. `feature/tmc2-impl2/01f-placement-health` - Health monitoring APIs
+8. `feature/tmc2-impl2/01g-placement-session` - Session management APIs
+9. `feature/tmc2-impl2/01h-traffic-analysis` - Traffic analysis APIs
+10. `feature/tmc2-impl2/01i-scaling-config` - Scaling configuration APIs
+11. `feature/tmc2-impl2/01j-status-management` - Status aggregation APIs
+
+**Phase 4: Implementation (requires APIs to be available)**
+12. `feature/tmc2-impl2/02-apiexport-integration` - TMC APIExport controller
+13. `feature/tmc2-impl2/04b-placement-engine` - Placement algorithms engine
+14. `feature/tmc2-impl2/04c-placement-controller` - WorkloadPlacement controller
+15. `feature/tmc2-impl2/04d-controller-manager` - TMC controller manager
+16. `feature/tmc2-impl2/04e-tmc-binary` - TMC controller binary
 
 **Alternative/Legacy branches (evaluate before submission):**
-16. `feature/tmc2-impl2/01-api-foundation` - Comprehensive API foundation (alternative to 1+2)
-17. `feature/tmc2-impl2/03-controller-foundation` - Basic controller framework (alternative to 4-7)
-18. `feature/tmc2-impl2/04a-api-types` - API types (may duplicate 1+2)
+17. `feature/tmc2-impl2/01-api-foundation` - Comprehensive API foundation (alternative to 1+2+3)
+18. `feature/tmc2-impl2/03-controller-foundation` - Basic controller framework (alternative to 13-16)
 19. `feature/tmc2-impl2/04-workload-placement` - Alternative placement implementation
 20. `feature/tmc2-impl2/cleanup-duplicates` - Cleanup utility branch
 
-**APIs first (1-10), then implementation (11-15). This ensures all APIs are available before any controllers try to use them.**
+**APIs first (1-11), then implementation (12-16). This ensures all APIs are available before any controllers try to use them.**
 
 ---
 
