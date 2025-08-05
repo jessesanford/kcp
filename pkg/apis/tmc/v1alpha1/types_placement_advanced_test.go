@@ -181,8 +181,8 @@ func TestWorkloadPlacementAdvancedValidation(t *testing.T) {
 			}
 
 			// Basic validation - ensure required fields are present
-			if tc.placement.Spec.WorkloadSelector.LabelSelector == nil && 
-			   len(tc.placement.Spec.WorkloadSelector.WorkloadTypes) == 0 {
+			if tc.placement.Spec.WorkloadSelector.LabelSelector == nil &&
+				len(tc.placement.Spec.WorkloadSelector.WorkloadTypes) == 0 {
 				if tc.wantValid {
 					t.Error("expected valid placement, but WorkloadSelector has no selection criteria")
 				}
@@ -245,4 +245,3 @@ func TestWorkloadPlacementAdvancedStatusTransitions(t *testing.T) {
 func int32Ptr(i int32) *int32 {
 	return &i
 }
-

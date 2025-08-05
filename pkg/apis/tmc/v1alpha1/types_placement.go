@@ -55,7 +55,6 @@ type WorkloadPlacementSpec struct {
 	PlacementPolicy PlacementPolicy `json:"placementPolicy,omitempty"`
 }
 
-
 // WorkloadPlacementStatus communicates the observed state of the WorkloadPlacement.
 type WorkloadPlacementStatus struct {
 	// Conditions represent the latest available observations of the placement's state
@@ -91,7 +90,6 @@ type PlacedWorkload struct {
 	// +optional
 	Status PlacedWorkloadStatus `json:"status,omitempty"`
 }
-
 
 // WorkloadPlacementList is a list of WorkloadPlacement resources
 //

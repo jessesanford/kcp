@@ -25,7 +25,7 @@ import (
 const (
 	// GroupName is the group name for the TMC API
 	GroupName = "tmc.kcp.io"
-	
+
 	// GroupVersion is the version for the TMC API
 	GroupVersion = "v1alpha1"
 )
@@ -54,6 +54,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&WorkloadPlacementList{},
 		&WorkloadPlacementAdvanced{},
 		&WorkloadPlacementAdvancedList{},
+		&WorkloadSessionPolicy{},
+		&WorkloadSessionPolicyList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
