@@ -14,14 +14,14 @@
 
 **Phase 3: Specialized APIs (build on enhanced APIs)**
 5. `feature/tmc2-impl2/01e-placement-analysis` - Placement analysis APIs **(963 lines changed)** 🚨
-6. `feature/tmc2-impl2/01f-placement-health` - Health monitoring APIs **(4,332 lines changed)** 🚨
+6. `feature/tmc2-impl2/01f-placement-health` - Health monitoring APIs **(4,332 lines changed)** 🚨 DOES NEED REFACTOR
 7. `feature/tmc2-impl2/01g-placement-session` - Session management APIs **(2,628 lines changed)** 🚨
 8. `feature/tmc2-impl2/01h-traffic-analysis` - Traffic analysis APIs **(695 lines changed)** ✅
 9. `feature/tmc2-impl2/01i-scaling-config` - Scaling configuration APIs **(1,016 lines changed)** 🚨
 10. `feature/tmc2-impl2/01j-status-management` - Status aggregation APIs **(921 lines changed)** 🚨
 
 **Phase 4: API Export (makes APIs available)**
-11. `feature/tmc2-impl2/02-apiexport-integration` - TMC APIExport controller **(7,475 lines changed)** 🚨
+11. `feature/tmc2-impl2/02-apiexport-integration` - TMC APIExport controller **(7,475 lines changed)** 🚨 DOES NEED REFACTOR
 
 **Phase 5: Production-Ready API Enhancement**
 12. `feature/tmc2-impl2/04a-api-types` - Enhanced ClusterRegistration + WorkloadPlacement APIs with comprehensive features **(1,632 lines changed)** 🚨
