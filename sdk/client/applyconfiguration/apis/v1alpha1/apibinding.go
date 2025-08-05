@@ -25,7 +25,7 @@ import (
 	v1 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/meta/v1"
 )
 
-// APIBindingApplyConfiguration represents a declarative configuration of the APIBinding type for use
+// APIBindingApplyConfiguration represents an declarative configuration of the APIBinding type for use
 // with apply.
 type APIBindingApplyConfiguration struct {
 	v1.TypeMetaApplyConfiguration    `json:",inline"`
@@ -34,7 +34,7 @@ type APIBindingApplyConfiguration struct {
 	Status                           *APIBindingStatusApplyConfiguration `json:"status,omitempty"`
 }
 
-// APIBinding constructs a declarative configuration of the APIBinding type for use with
+// APIBinding constructs an declarative configuration of the APIBinding type for use with
 // apply.
 func APIBinding(name string) *APIBindingApplyConfiguration {
 	b := &APIBindingApplyConfiguration{}
@@ -48,7 +48,7 @@ func APIBinding(name string) *APIBindingApplyConfiguration {
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Kind field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithKind(value string) *APIBindingApplyConfiguration {
-	b.TypeMetaApplyConfiguration.Kind = &value
+	b.Kind = &value
 	return b
 }
 
@@ -56,7 +56,7 @@ func (b *APIBindingApplyConfiguration) WithKind(value string) *APIBindingApplyCo
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the APIVersion field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithAPIVersion(value string) *APIBindingApplyConfiguration {
-	b.TypeMetaApplyConfiguration.APIVersion = &value
+	b.APIVersion = &value
 	return b
 }
 
@@ -65,7 +65,7 @@ func (b *APIBindingApplyConfiguration) WithAPIVersion(value string) *APIBindingA
 // If called multiple times, the Name field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithName(value string) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.Name = &value
+	b.Name = &value
 	return b
 }
 
@@ -74,7 +74,7 @@ func (b *APIBindingApplyConfiguration) WithName(value string) *APIBindingApplyCo
 // If called multiple times, the GenerateName field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithGenerateName(value string) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.GenerateName = &value
+	b.GenerateName = &value
 	return b
 }
 
@@ -83,7 +83,7 @@ func (b *APIBindingApplyConfiguration) WithGenerateName(value string) *APIBindin
 // If called multiple times, the Namespace field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithNamespace(value string) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.Namespace = &value
+	b.Namespace = &value
 	return b
 }
 
@@ -92,7 +92,7 @@ func (b *APIBindingApplyConfiguration) WithNamespace(value string) *APIBindingAp
 // If called multiple times, the UID field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithUID(value types.UID) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.UID = &value
+	b.UID = &value
 	return b
 }
 
@@ -101,7 +101,7 @@ func (b *APIBindingApplyConfiguration) WithUID(value types.UID) *APIBindingApply
 // If called multiple times, the ResourceVersion field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithResourceVersion(value string) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.ResourceVersion = &value
+	b.ResourceVersion = &value
 	return b
 }
 
@@ -110,7 +110,7 @@ func (b *APIBindingApplyConfiguration) WithResourceVersion(value string) *APIBin
 // If called multiple times, the Generation field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithGeneration(value int64) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.Generation = &value
+	b.Generation = &value
 	return b
 }
 
@@ -119,7 +119,7 @@ func (b *APIBindingApplyConfiguration) WithGeneration(value int64) *APIBindingAp
 // If called multiple times, the CreationTimestamp field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithCreationTimestamp(value metav1.Time) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.CreationTimestamp = &value
+	b.CreationTimestamp = &value
 	return b
 }
 
@@ -128,7 +128,7 @@ func (b *APIBindingApplyConfiguration) WithCreationTimestamp(value metav1.Time) 
 // If called multiple times, the DeletionTimestamp field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithDeletionTimestamp(value metav1.Time) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.DeletionTimestamp = &value
+	b.DeletionTimestamp = &value
 	return b
 }
 
@@ -137,7 +137,7 @@ func (b *APIBindingApplyConfiguration) WithDeletionTimestamp(value metav1.Time) 
 // If called multiple times, the DeletionGracePeriodSeconds field is set to the value of the last call.
 func (b *APIBindingApplyConfiguration) WithDeletionGracePeriodSeconds(value int64) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.DeletionGracePeriodSeconds = &value
+	b.DeletionGracePeriodSeconds = &value
 	return b
 }
 
@@ -147,11 +147,11 @@ func (b *APIBindingApplyConfiguration) WithDeletionGracePeriodSeconds(value int6
 // overwriting an existing map entries in Labels field with the same key.
 func (b *APIBindingApplyConfiguration) WithLabels(entries map[string]string) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	if b.ObjectMetaApplyConfiguration.Labels == nil && len(entries) > 0 {
-		b.ObjectMetaApplyConfiguration.Labels = make(map[string]string, len(entries))
+	if b.Labels == nil && len(entries) > 0 {
+		b.Labels = make(map[string]string, len(entries))
 	}
 	for k, v := range entries {
-		b.ObjectMetaApplyConfiguration.Labels[k] = v
+		b.Labels[k] = v
 	}
 	return b
 }
@@ -162,11 +162,11 @@ func (b *APIBindingApplyConfiguration) WithLabels(entries map[string]string) *AP
 // overwriting an existing map entries in Annotations field with the same key.
 func (b *APIBindingApplyConfiguration) WithAnnotations(entries map[string]string) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	if b.ObjectMetaApplyConfiguration.Annotations == nil && len(entries) > 0 {
-		b.ObjectMetaApplyConfiguration.Annotations = make(map[string]string, len(entries))
+	if b.Annotations == nil && len(entries) > 0 {
+		b.Annotations = make(map[string]string, len(entries))
 	}
 	for k, v := range entries {
-		b.ObjectMetaApplyConfiguration.Annotations[k] = v
+		b.Annotations[k] = v
 	}
 	return b
 }
@@ -180,7 +180,7 @@ func (b *APIBindingApplyConfiguration) WithOwnerReferences(values ...*v1.OwnerRe
 		if values[i] == nil {
 			panic("nil value passed to WithOwnerReferences")
 		}
-		b.ObjectMetaApplyConfiguration.OwnerReferences = append(b.ObjectMetaApplyConfiguration.OwnerReferences, *values[i])
+		b.OwnerReferences = append(b.OwnerReferences, *values[i])
 	}
 	return b
 }
@@ -191,7 +191,7 @@ func (b *APIBindingApplyConfiguration) WithOwnerReferences(values ...*v1.OwnerRe
 func (b *APIBindingApplyConfiguration) WithFinalizers(values ...string) *APIBindingApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	for i := range values {
-		b.ObjectMetaApplyConfiguration.Finalizers = append(b.ObjectMetaApplyConfiguration.Finalizers, values[i])
+		b.Finalizers = append(b.Finalizers, values[i])
 	}
 	return b
 }
@@ -216,10 +216,4 @@ func (b *APIBindingApplyConfiguration) WithSpec(value *APIBindingSpecApplyConfig
 func (b *APIBindingApplyConfiguration) WithStatus(value *APIBindingStatusApplyConfiguration) *APIBindingApplyConfiguration {
 	b.Status = value
 	return b
-}
-
-// GetName retrieves the value of the Name field in the declarative configuration.
-func (b *APIBindingApplyConfiguration) GetName() *string {
-	b.ensureObjectMetaApplyConfigurationExists()
-	return b.ObjectMetaApplyConfiguration.Name
 }

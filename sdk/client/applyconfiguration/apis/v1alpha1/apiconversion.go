@@ -25,7 +25,7 @@ import (
 	v1 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/meta/v1"
 )
 
-// APIConversionApplyConfiguration represents a declarative configuration of the APIConversion type for use
+// APIConversionApplyConfiguration represents an declarative configuration of the APIConversion type for use
 // with apply.
 type APIConversionApplyConfiguration struct {
 	v1.TypeMetaApplyConfiguration    `json:",inline"`
@@ -33,7 +33,7 @@ type APIConversionApplyConfiguration struct {
 	Spec                             *APIConversionSpecApplyConfiguration `json:"spec,omitempty"`
 }
 
-// APIConversion constructs a declarative configuration of the APIConversion type for use with
+// APIConversion constructs an declarative configuration of the APIConversion type for use with
 // apply.
 func APIConversion(name string) *APIConversionApplyConfiguration {
 	b := &APIConversionApplyConfiguration{}
@@ -47,7 +47,7 @@ func APIConversion(name string) *APIConversionApplyConfiguration {
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Kind field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithKind(value string) *APIConversionApplyConfiguration {
-	b.TypeMetaApplyConfiguration.Kind = &value
+	b.Kind = &value
 	return b
 }
 
@@ -55,7 +55,7 @@ func (b *APIConversionApplyConfiguration) WithKind(value string) *APIConversionA
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the APIVersion field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithAPIVersion(value string) *APIConversionApplyConfiguration {
-	b.TypeMetaApplyConfiguration.APIVersion = &value
+	b.APIVersion = &value
 	return b
 }
 
@@ -64,7 +64,7 @@ func (b *APIConversionApplyConfiguration) WithAPIVersion(value string) *APIConve
 // If called multiple times, the Name field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithName(value string) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.Name = &value
+	b.Name = &value
 	return b
 }
 
@@ -73,7 +73,7 @@ func (b *APIConversionApplyConfiguration) WithName(value string) *APIConversionA
 // If called multiple times, the GenerateName field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithGenerateName(value string) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.GenerateName = &value
+	b.GenerateName = &value
 	return b
 }
 
@@ -82,7 +82,7 @@ func (b *APIConversionApplyConfiguration) WithGenerateName(value string) *APICon
 // If called multiple times, the Namespace field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithNamespace(value string) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.Namespace = &value
+	b.Namespace = &value
 	return b
 }
 
@@ -91,7 +91,7 @@ func (b *APIConversionApplyConfiguration) WithNamespace(value string) *APIConver
 // If called multiple times, the UID field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithUID(value types.UID) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.UID = &value
+	b.UID = &value
 	return b
 }
 
@@ -100,7 +100,7 @@ func (b *APIConversionApplyConfiguration) WithUID(value types.UID) *APIConversio
 // If called multiple times, the ResourceVersion field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithResourceVersion(value string) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.ResourceVersion = &value
+	b.ResourceVersion = &value
 	return b
 }
 
@@ -109,7 +109,7 @@ func (b *APIConversionApplyConfiguration) WithResourceVersion(value string) *API
 // If called multiple times, the Generation field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithGeneration(value int64) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.Generation = &value
+	b.Generation = &value
 	return b
 }
 
@@ -118,7 +118,7 @@ func (b *APIConversionApplyConfiguration) WithGeneration(value int64) *APIConver
 // If called multiple times, the CreationTimestamp field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithCreationTimestamp(value metav1.Time) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.CreationTimestamp = &value
+	b.CreationTimestamp = &value
 	return b
 }
 
@@ -127,7 +127,7 @@ func (b *APIConversionApplyConfiguration) WithCreationTimestamp(value metav1.Tim
 // If called multiple times, the DeletionTimestamp field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithDeletionTimestamp(value metav1.Time) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.DeletionTimestamp = &value
+	b.DeletionTimestamp = &value
 	return b
 }
 
@@ -136,7 +136,7 @@ func (b *APIConversionApplyConfiguration) WithDeletionTimestamp(value metav1.Tim
 // If called multiple times, the DeletionGracePeriodSeconds field is set to the value of the last call.
 func (b *APIConversionApplyConfiguration) WithDeletionGracePeriodSeconds(value int64) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	b.ObjectMetaApplyConfiguration.DeletionGracePeriodSeconds = &value
+	b.DeletionGracePeriodSeconds = &value
 	return b
 }
 
@@ -146,11 +146,11 @@ func (b *APIConversionApplyConfiguration) WithDeletionGracePeriodSeconds(value i
 // overwriting an existing map entries in Labels field with the same key.
 func (b *APIConversionApplyConfiguration) WithLabels(entries map[string]string) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	if b.ObjectMetaApplyConfiguration.Labels == nil && len(entries) > 0 {
-		b.ObjectMetaApplyConfiguration.Labels = make(map[string]string, len(entries))
+	if b.Labels == nil && len(entries) > 0 {
+		b.Labels = make(map[string]string, len(entries))
 	}
 	for k, v := range entries {
-		b.ObjectMetaApplyConfiguration.Labels[k] = v
+		b.Labels[k] = v
 	}
 	return b
 }
@@ -161,11 +161,11 @@ func (b *APIConversionApplyConfiguration) WithLabels(entries map[string]string) 
 // overwriting an existing map entries in Annotations field with the same key.
 func (b *APIConversionApplyConfiguration) WithAnnotations(entries map[string]string) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
-	if b.ObjectMetaApplyConfiguration.Annotations == nil && len(entries) > 0 {
-		b.ObjectMetaApplyConfiguration.Annotations = make(map[string]string, len(entries))
+	if b.Annotations == nil && len(entries) > 0 {
+		b.Annotations = make(map[string]string, len(entries))
 	}
 	for k, v := range entries {
-		b.ObjectMetaApplyConfiguration.Annotations[k] = v
+		b.Annotations[k] = v
 	}
 	return b
 }
@@ -179,7 +179,7 @@ func (b *APIConversionApplyConfiguration) WithOwnerReferences(values ...*v1.Owne
 		if values[i] == nil {
 			panic("nil value passed to WithOwnerReferences")
 		}
-		b.ObjectMetaApplyConfiguration.OwnerReferences = append(b.ObjectMetaApplyConfiguration.OwnerReferences, *values[i])
+		b.OwnerReferences = append(b.OwnerReferences, *values[i])
 	}
 	return b
 }
@@ -190,7 +190,7 @@ func (b *APIConversionApplyConfiguration) WithOwnerReferences(values ...*v1.Owne
 func (b *APIConversionApplyConfiguration) WithFinalizers(values ...string) *APIConversionApplyConfiguration {
 	b.ensureObjectMetaApplyConfigurationExists()
 	for i := range values {
-		b.ObjectMetaApplyConfiguration.Finalizers = append(b.ObjectMetaApplyConfiguration.Finalizers, values[i])
+		b.Finalizers = append(b.Finalizers, values[i])
 	}
 	return b
 }
@@ -207,10 +207,4 @@ func (b *APIConversionApplyConfiguration) ensureObjectMetaApplyConfigurationExis
 func (b *APIConversionApplyConfiguration) WithSpec(value *APIConversionSpecApplyConfiguration) *APIConversionApplyConfiguration {
 	b.Spec = value
 	return b
-}
-
-// GetName retrieves the value of the Name field in the declarative configuration.
-func (b *APIConversionApplyConfiguration) GetName() *string {
-	b.ensureObjectMetaApplyConfigurationExists()
-	return b.ObjectMetaApplyConfiguration.Name
 }

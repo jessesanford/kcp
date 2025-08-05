@@ -28,6 +28,7 @@ import (
 	"github.com/kcp-dev/logicalcluster/v3"
 
 	"github.com/kcp-dev/kcp/sdk/apis/core"
+	workloadv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/workload/v1alpha1"
 )
 
 const (
@@ -38,6 +39,7 @@ const (
 	ByLogicalClusterPath = "ByLogicalClusterPath"
 	// ByLogicalClusterPathAndName indexes by logical cluster path and object name, if the annotation exists.
 	ByLogicalClusterPathAndName = "ByLogicalClusterPathAndName"
+	SyncTargetsBySyncTargetKey  = "synctargets-by-sync-target-key"
 )
 
 // IndexByLogicalClusterPath indexes by logical cluster path, if the annotation exists.
@@ -118,6 +120,18 @@ func ByPathAndName[T runtime.Object](groupResource schema.GroupResource, indexer
 		return ret, fmt.Errorf("multiple %s found for %s", groupResource, path.Join(name).String())
 	}
 	return objs[0].(T), nil
+}
+
+// IndexSyncTargetsBySyncTargetKey indexes SyncTargets by their InternalSyncTargetKey label.
+func IndexSyncTargetsBySyncTargetKey(obj interface{}) ([]string, error) {
+	metaObj, ok := obj.(metav1.Object)
+	if !ok {
+		return []string{}, fmt.Errorf("obj is supposed to be a metav1.Object, but is %T", obj)
+	}
+	if key, found := metaObj.GetLabels()[workloadv1alpha1.InternalSyncTargetKeyLabel]; found {
+		return []string{key}, nil
+	}
+	return []string{}, nil
 }
 
 // ByPathAndNameWithFallback returns the instance of T from the indexer with the matching path and name. Path may be a canonical path

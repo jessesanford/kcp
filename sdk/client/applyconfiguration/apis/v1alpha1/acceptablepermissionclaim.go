@@ -22,14 +22,14 @@ import (
 	apisv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/apis/v1alpha1"
 )
 
-// AcceptablePermissionClaimApplyConfiguration represents a declarative configuration of the AcceptablePermissionClaim type for use
+// AcceptablePermissionClaimApplyConfiguration represents an declarative configuration of the AcceptablePermissionClaim type for use
 // with apply.
 type AcceptablePermissionClaimApplyConfiguration struct {
 	PermissionClaimApplyConfiguration `json:",inline"`
 	State                             *apisv1alpha1.AcceptablePermissionClaimState `json:"state,omitempty"`
 }
 
-// AcceptablePermissionClaimApplyConfiguration constructs a declarative configuration of the AcceptablePermissionClaim type for use with
+// AcceptablePermissionClaimApplyConfiguration constructs an declarative configuration of the AcceptablePermissionClaim type for use with
 // apply.
 func AcceptablePermissionClaim() *AcceptablePermissionClaimApplyConfiguration {
 	return &AcceptablePermissionClaimApplyConfiguration{}
@@ -39,7 +39,8 @@ func AcceptablePermissionClaim() *AcceptablePermissionClaimApplyConfiguration {
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Group field is set to the value of the last call.
 func (b *AcceptablePermissionClaimApplyConfiguration) WithGroup(value string) *AcceptablePermissionClaimApplyConfiguration {
-	b.GroupResourceApplyConfiguration.Group = &value
+	b.ensureGroupResourceApplyConfigurationExists()
+	b.Group = &value
 	return b
 }
 
@@ -47,15 +48,22 @@ func (b *AcceptablePermissionClaimApplyConfiguration) WithGroup(value string) *A
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Resource field is set to the value of the last call.
 func (b *AcceptablePermissionClaimApplyConfiguration) WithResource(value string) *AcceptablePermissionClaimApplyConfiguration {
-	b.GroupResourceApplyConfiguration.Resource = &value
+	b.ensureGroupResourceApplyConfigurationExists()
+	b.Resource = &value
 	return b
+}
+
+func (b *AcceptablePermissionClaimApplyConfiguration) ensureGroupResourceApplyConfigurationExists() {
+	if b.GroupResourceApplyConfiguration == nil {
+		b.GroupResourceApplyConfiguration = &GroupResourceApplyConfiguration{}
+	}
 }
 
 // WithAll sets the All field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the All field is set to the value of the last call.
 func (b *AcceptablePermissionClaimApplyConfiguration) WithAll(value bool) *AcceptablePermissionClaimApplyConfiguration {
-	b.PermissionClaimApplyConfiguration.All = &value
+	b.All = &value
 	return b
 }
 
@@ -67,7 +75,7 @@ func (b *AcceptablePermissionClaimApplyConfiguration) WithResourceSelector(value
 		if values[i] == nil {
 			panic("nil value passed to WithResourceSelector")
 		}
-		b.PermissionClaimApplyConfiguration.ResourceSelector = append(b.PermissionClaimApplyConfiguration.ResourceSelector, *values[i])
+		b.ResourceSelector = append(b.ResourceSelector, *values[i])
 	}
 	return b
 }
@@ -76,7 +84,7 @@ func (b *AcceptablePermissionClaimApplyConfiguration) WithResourceSelector(value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the IdentityHash field is set to the value of the last call.
 func (b *AcceptablePermissionClaimApplyConfiguration) WithIdentityHash(value string) *AcceptablePermissionClaimApplyConfiguration {
-	b.PermissionClaimApplyConfiguration.IdentityHash = &value
+	b.IdentityHash = &value
 	return b
 }
 

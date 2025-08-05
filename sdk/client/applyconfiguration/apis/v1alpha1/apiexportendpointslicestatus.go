@@ -19,18 +19,17 @@ limitations under the License.
 package v1alpha1
 
 import (
-	conditionsv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
+	v1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
 )
 
-// APIExportEndpointSliceStatusApplyConfiguration represents a declarative configuration of the APIExportEndpointSliceStatus type for use
+// APIExportEndpointSliceStatusApplyConfiguration represents an declarative configuration of the APIExportEndpointSliceStatus type for use
 // with apply.
 type APIExportEndpointSliceStatusApplyConfiguration struct {
-	Conditions         *conditionsv1alpha1.Conditions        `json:"conditions,omitempty"`
+	Conditions         *v1alpha1.Conditions                  `json:"conditions,omitempty"`
 	APIExportEndpoints []APIExportEndpointApplyConfiguration `json:"endpoints,omitempty"`
-	ShardSelector      *string                               `json:"shardSelector,omitempty"`
 }
 
-// APIExportEndpointSliceStatusApplyConfiguration constructs a declarative configuration of the APIExportEndpointSliceStatus type for use with
+// APIExportEndpointSliceStatusApplyConfiguration constructs an declarative configuration of the APIExportEndpointSliceStatus type for use with
 // apply.
 func APIExportEndpointSliceStatus() *APIExportEndpointSliceStatusApplyConfiguration {
 	return &APIExportEndpointSliceStatusApplyConfiguration{}
@@ -39,7 +38,7 @@ func APIExportEndpointSliceStatus() *APIExportEndpointSliceStatusApplyConfigurat
 // WithConditions sets the Conditions field in the declarative configuration to the given value
 // and returns the receiver, so that objects can be built by chaining "With" function invocations.
 // If called multiple times, the Conditions field is set to the value of the last call.
-func (b *APIExportEndpointSliceStatusApplyConfiguration) WithConditions(value conditionsv1alpha1.Conditions) *APIExportEndpointSliceStatusApplyConfiguration {
+func (b *APIExportEndpointSliceStatusApplyConfiguration) WithConditions(value v1alpha1.Conditions) *APIExportEndpointSliceStatusApplyConfiguration {
 	b.Conditions = &value
 	return b
 }
@@ -54,13 +53,5 @@ func (b *APIExportEndpointSliceStatusApplyConfiguration) WithAPIExportEndpoints(
 		}
 		b.APIExportEndpoints = append(b.APIExportEndpoints, *values[i])
 	}
-	return b
-}
-
-// WithShardSelector sets the ShardSelector field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the ShardSelector field is set to the value of the last call.
-func (b *APIExportEndpointSliceStatusApplyConfiguration) WithShardSelector(value string) *APIExportEndpointSliceStatusApplyConfiguration {
-	b.ShardSelector = &value
 	return b
 }

@@ -1,0 +1,3 @@
+package openstack
+
+func init() {}
