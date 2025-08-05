@@ -6,11 +6,11 @@
 
 **Phase 1: Basic API Foundation**
 1. `feature/tmc2-impl2/01a-cluster-basic` - Basic ClusterRegistration API
-2. `feature/tmc2-impl2/01c-placement-basic` - Basic WorkloadPlacement API  
+2. `feature/tmc2-impl2/01b-cluster-enhanced` - Enhanced cluster management (builds on 01a)
+3. `feature/tmc2-impl2/01c-placement-basic` - Basic WorkloadPlacement API  
 
 **Phase 2: Enhanced APIs (build incrementally)**
-3. `feature/tmc2-impl2/01b-cluster-enhanced` - Enhanced cluster management with workload integration
-4. `feature/tmc2-impl2/01d-placement-advanced` - WorkloadPlacementAdvanced API
+4. `feature/tmc2-impl2/01d-placement-advanced` - WorkloadPlacementAdvanced API (builds on 01c)
 
 **Phase 3: Specialized APIs (build on enhanced APIs)**
 5. `feature/tmc2-impl2/01e-placement-analysis` - Placement analysis APIs
