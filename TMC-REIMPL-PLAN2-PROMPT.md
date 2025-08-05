@@ -23,6 +23,11 @@ You are tasked with implementing the TMC Reimplementation Plan 2 through a serie
 - If you need to use a github username for the feature flags use @jessesanford
 - If you need to use a version for the features use 0.1
 
+### **MEASURING UNIQUE LINES OF CODE IN A BRANCH**
+- ONLY measure the number of lines of code created between the branch and the branch it is based upon.
+- ONLY measure lines of code that are hand created. Generated lines of code (compiled files, compiled templates, crds, deepcopy files) DO NOT COUNT
+- Binary Files DO NOT COUNT. You should never commit them anyway.
+
 ### **PR Size & Quality Standards**
 - **Target PR Size**: 400-700 lines of code per PR  (however generated files do not count, this applies to both deepcopy and crd code)
 - **Maximum PR Size**: 800 lines of code per PR (however generated files do not count, this applies to both deepcopy and crd code)
@@ -40,7 +45,12 @@ When a PR would exceed 800 lines to achieve atomic functionality:
 3. **Add extra documentation and tests** to compensate for size
 4. **Create detailed commit messages** explaining each logical change
 
-## 🌳 **Branch Management Strategy**
+## 🌳 **PR and Branch Management Strategy**
+
+## **ALWAYS KEEP PR Plan up to date**
+- Use the feature/tmc-planning branch's TMC-REIMPL-PLAN2-PR-PLAN.md file to keep a running list of which branches need to be merged in which order to achieve the totality of all TMC functionality.
+- ALWAYS pay close attention to the appropriate ordering of branches. When in doubt check to make sure that the ordering is correct.
+- ALWAYS make sure that each branch passes it's tests no matter which branch you choose to base it on. DO NOT MODIFY TESTS TO MAKE THEM PASS. Double check that you are basing on the right branch instead.
 
 ### **Branch Naming Convention**
 ```
@@ -51,8 +61,11 @@ Where:
 - `description` = Succinct feature description (kebab-case)
 
 ### **Branch Creation Pattern**
+- If you are building a feature that does not build upon commits from a different unmerged feature branch then just branch from main.
+- If you are building a feature that does require commits from another unmerged feature branch then base your new branch off of that unmerged branch.
+- Keep your bran
 ```bash
-# Always branch from main
+# Try to branch from main
 git checkout main
 git pull origin main
 git checkout -b feature/tmc2-impl2/01-api-foundation
@@ -442,6 +455,7 @@ func TestClusterRegistrationController(t *testing.T) {
 ```
 
 ### **Commit Standards**
+- NEVER commit binary files. Add them to .gitignore
 - NEVER commit changes that are not logically grouped together with some specific change intent. Break up the commits so that they encapsulate a specific intent.
 - NEVER use `git commit -a`
 - ALWAYS stage each file individually into the staging area and then commit once the files in the staging area completely encapsulate the change intent for the commit.
