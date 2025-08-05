@@ -176,8 +176,8 @@ fi
 
 print_header "File Analysis"
 
-# Count implementation lines (excluding tests and generated files)
-IMPL_FILES=$(echo "$CHANGED_FILES" | grep "\.go$" | grep -v "_test\.go$" | grep -v "zz_generated" | grep -v "/testdata/" | grep -v "/vendor/" || true)
+# Count implementation lines (excluding tests, generated files, and SDK client code)
+IMPL_FILES=$(echo "$CHANGED_FILES" | grep "\.go$" | grep -v "_test\.go$" | grep -v "zz_generated" | grep -v "/testdata/" | grep -v "/vendor/" | grep -v "sdk/client/" | grep -v "test/e2e/fixtures/" || true)
 
 IMPL_LINE_COUNT=0
 if [ -n "$IMPL_FILES" ]; then
@@ -186,13 +186,28 @@ if [ -n "$IMPL_FILES" ]; then
     echo "$IMPL_FILES" > "$TEMP_IMPL_FILE"
     
     if [ -s "$TEMP_IMPL_FILE" ]; then
-        IMPL_LINE_COUNT=$(cat "$TEMP_IMPL_FILE" | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}' || echo "0")
+        # Try to count lines from existing files, fall back to git show for missing files
+        IMPL_LINE_COUNT=0
+        while read -r file; do
+            if [ -f "$file" ]; then
+                lines=$(wc -l < "$file" 2>/dev/null || echo "0")
+            else
+                # File doesn't exist on current branch, use git show from target branch
+                lines=$(git show "$CURRENT_BRANCH:$file" 2>/dev/null | wc -l || echo "0")
+            fi
+            IMPL_LINE_COUNT=$((IMPL_LINE_COUNT + lines))
+        done < "$TEMP_IMPL_FILE"
         
         if [ "$SHOW_BREAKDOWN" = true ]; then
             print_colored "$GREEN" "📄 Implementation Files:"
-            cat "$TEMP_IMPL_FILE" | xargs wc -l 2>/dev/null | head -n -1 | sort -nr | while read line file; do
-                printf "  %4d lines: %s\n" "$line" "$file"
-            done
+            while read -r file; do
+                if [ -f "$file" ]; then
+                    lines=$(wc -l < "$file" 2>/dev/null || echo "0")
+                else
+                    lines=$(git show "$CURRENT_BRANCH:$file" 2>/dev/null | wc -l || echo "0")
+                fi
+                printf "  %4d lines: %s\n" "$lines" "$file"
+            done < "$TEMP_IMPL_FILE" | sort -nr
         else
             IMPL_FILE_COUNT=$(cat "$TEMP_IMPL_FILE" | wc -l)
             print_colored "$GREEN" "📄 Implementation Files: $IMPL_FILE_COUNT files, $IMPL_LINE_COUNT lines"
@@ -213,13 +228,27 @@ if [ -n "$TEST_FILES" ]; then
     echo "$TEST_FILES" > "$TEMP_TEST_FILE"
     
     if [ -s "$TEMP_TEST_FILE" ]; then
-        TEST_LINE_COUNT=$(cat "$TEMP_TEST_FILE" | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}' || echo "0")
+        # Count test lines using git show for missing files
+        TEST_LINE_COUNT=0
+        while read -r file; do
+            if [ -f "$file" ]; then
+                lines=$(wc -l < "$file" 2>/dev/null || echo "0")
+            else
+                lines=$(git show "$CURRENT_BRANCH:$file" 2>/dev/null | wc -l || echo "0")
+            fi
+            TEST_LINE_COUNT=$((TEST_LINE_COUNT + lines))
+        done < "$TEMP_TEST_FILE"
         
         if [ "$SHOW_BREAKDOWN" = true ]; then
             print_colored "$CYAN" "🧪 Test Files:"
-            cat "$TEMP_TEST_FILE" | xargs wc -l 2>/dev/null | head -n -1 | sort -nr | while read line file; do
-                printf "  %4d lines: %s\n" "$line" "$file"
-            done
+            while read -r file; do
+                if [ -f "$file" ]; then
+                    lines=$(wc -l < "$file" 2>/dev/null || echo "0")
+                else
+                    lines=$(git show "$CURRENT_BRANCH:$file" 2>/dev/null | wc -l || echo "0")
+                fi
+                printf "  %4d lines: %s\n" "$lines" "$file"
+            done < "$TEMP_TEST_FILE" | sort -nr
         else
             TEST_FILE_COUNT=$(cat "$TEMP_TEST_FILE" | wc -l)
             print_colored "$CYAN" "🧪 Test Files: $TEST_FILE_COUNT files, $TEST_LINE_COUNT lines"
@@ -253,15 +282,30 @@ if [ -n "$TMC_FILES" ]; then
     TEMP_TMC_FILE=$(mktemp)
     echo "$TMC_FILES" > "$TEMP_TMC_FILE"
     
-    TMC_LINE_COUNT=$(cat "$TEMP_TMC_FILE" | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}' || echo "0")
+    # Count TMC lines using git show for missing files  
+    TMC_LINE_COUNT=0
+    while read -r file; do
+        if [ -f "$file" ]; then
+            lines=$(wc -l < "$file" 2>/dev/null || echo "0")
+        else
+            lines=$(git show "$CURRENT_BRANCH:$file" 2>/dev/null | wc -l || echo "0")
+        fi
+        TMC_LINE_COUNT=$((TMC_LINE_COUNT + lines))
+    done < "$TEMP_TMC_FILE"
+    
     TMC_FILE_COUNT=$(cat "$TEMP_TMC_FILE" | wc -l)
     
     print_colored "$PURPLE" "🏗️ TMC Implementation: $TMC_FILE_COUNT files, $TMC_LINE_COUNT lines"
     
     if [ "$SHOW_BREAKDOWN" = true ]; then
-        cat "$TEMP_TMC_FILE" | xargs wc -l 2>/dev/null | head -n -1 | sort -nr | while read line file; do
-            printf "  %4d lines: %s\n" "$line" "$file"
-        done
+        while read -r file; do
+            if [ -f "$file" ]; then
+                lines=$(wc -l < "$file" 2>/dev/null || echo "0")
+            else
+                lines=$(git show "$CURRENT_BRANCH:$file" 2>/dev/null | wc -l || echo "0")
+            fi
+            printf "  %4d lines: %s\n" "$lines" "$file"
+        done < "$TEMP_TMC_FILE" | sort -nr
     fi
     
     rm -f "$TEMP_TMC_FILE"
