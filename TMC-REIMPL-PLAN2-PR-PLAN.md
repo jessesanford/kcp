@@ -32,11 +32,11 @@
 15. `feature/tmc2-impl2/04d-controller-manager` - TMC controller manager
 16. `feature/tmc2-impl2/04e-tmc-binary` - TMC controller binary
 
-**Excluded branches (not using incremental approach):**
-17. `feature/tmc2-impl2/01-api-foundation` - Comprehensive foundation (1,167 lines, 54 types) - **TOO LARGE**
-18. `feature/tmc2-impl2/03-controller-foundation` - Basic controller framework - **SUPERSEDED BY 04-SERIES**
-19. `feature/tmc2-impl2/04-workload-placement` - Alternative placement implementation - **SUPERSEDED BY 04c**
-20. `feature/tmc2-impl2/cleanup-duplicates` - Cleanup utility branch - **NOT NEEDED FOR SUBMISSION**
+**Renamed unused branches:**
+17. `feature/tmc2-impl2/unused-01-api-foundation` - Comprehensive foundation (1,167 lines, 54 types) - **TOO LARGE**
+18. `feature/tmc2-impl2/unused-03-controller-foundation` - Basic controller framework - **SUPERSEDED BY 04-SERIES**
+19. `feature/tmc2-impl2/unused-04-workload-placement` - Alternative placement implementation - **SUPERSEDED BY 04c**
+20. `feature/tmc2-impl2/unused-cleanup-duplicates` - Cleanup utility branch - **NOT NEEDED FOR SUBMISSION**
 
 ## ✅ Selected Approach: Incremental Foundation
 
