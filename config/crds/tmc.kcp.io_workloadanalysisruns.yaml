@@ -1,0 +1,673 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: workloadanalysisruns.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    kind: WorkloadAnalysisRun
+    listKind: WorkloadAnalysisRunList
+    plural: workloadanalysisruns
+    singular: workloadanalysisrun
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            type: string
+          kind:
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              analysisSchedule:
+                properties:
+                  continuousSchedule:
+                    properties:
+                      interval:
+                        default: 300s
+                        type: string
+                      maxRuns:
+                        format: int32
+                        type: integer
+                    type: object
+                  cronSchedule:
+                    properties:
+                      schedule:
+                        type: string
+                      suspend:
+                        default: false
+                        type: boolean
+                      timeZone:
+                        default: UTC
+                        type: string
+                    required:
+                    - schedule
+                    type: object
+                  eventTrigger:
+                    properties:
+                      debounce:
+                        default: 30s
+                        type: string
+                      events:
+                        items:
+                          properties:
+                            selector:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            type:
+                              allOf:
+                              - enum:
+                                - Deployment
+                                - ScaleUp
+                                - ScaleDown
+                                - ConfigChange
+                                - HealthChange
+                              - enum:
+                                - Deployment
+                                - ScaleUp
+                                - ScaleDown
+                                - ConfigChange
+                                - HealthChange
+                              type: string
+                          required:
+                          - type
+                          type: object
+                        type: array
+                    required:
+                    - events
+                    type: object
+                  type:
+                    allOf:
+                    - enum:
+                      - Immediate
+                      - Scheduled
+                      - Event
+                      - Continuous
+                    - enum:
+                      - Immediate
+                      - Scheduled
+                      - Event
+                      - Continuous
+                    default: Immediate
+                    type: string
+                type: object
+              analysisTemplates:
+                items:
+                  properties:
+                    analysisType:
+                      allOf:
+                      - enum:
+                        - Prometheus
+                        - DataDog
+                        - Custom
+                        - SLO
+                        - Canary
+                        - NewRelic
+                        - Grafana
+                      - enum:
+                        - Prometheus
+                        - DataDog
+                        - Custom
+                        - SLO
+                        - Canary
+                        - NewRelic
+                        - Grafana
+                      type: string
+                    interval:
+                      default: 30s
+                      type: string
+                    name:
+                      type: string
+                    provider:
+                      properties:
+                        custom:
+                          properties:
+                            body:
+                              type: string
+                            credentials:
+                              properties:
+                                basicAuth:
+                                  properties:
+                                    passwordRef:
+                                      properties:
+                                        keys:
+                                          additionalProperties:
+                                            type: string
+                                          type: object
+                                        name:
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    username:
+                                      type: string
+                                  required:
+                                  - passwordRef
+                                  - username
+                                  type: object
+                                bearerToken:
+                                  properties:
+                                    tokenRef:
+                                      properties:
+                                        keys:
+                                          additionalProperties:
+                                            type: string
+                                          type: object
+                                        name:
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                  required:
+                                  - tokenRef
+                                  type: object
+                                secretRef:
+                                  properties:
+                                    keys:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    name:
+                                      type: string
+                                    namespace:
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                              type: object
+                            endpoint:
+                              type: string
+                            headers:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            method:
+                              default: GET
+                              enum:
+                              - GET
+                              - POST
+                              - PUT
+                              - PATCH
+                              type: string
+                          required:
+                          - endpoint
+                          type: object
+                        dataDog:
+                          properties:
+                            apiKey:
+                              type: string
+                            appKey:
+                              type: string
+                            site:
+                              default: datadoghq.com
+                              type: string
+                          required:
+                          - apiKey
+                          - appKey
+                          type: object
+                        grafana:
+                          properties:
+                            address:
+                              type: string
+                            credentials:
+                              properties:
+                                basicAuth:
+                                  properties:
+                                    passwordRef:
+                                      properties:
+                                        keys:
+                                          additionalProperties:
+                                            type: string
+                                          type: object
+                                        name:
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    username:
+                                      type: string
+                                  required:
+                                  - passwordRef
+                                  - username
+                                  type: object
+                                bearerToken:
+                                  properties:
+                                    tokenRef:
+                                      properties:
+                                        keys:
+                                          additionalProperties:
+                                            type: string
+                                          type: object
+                                        name:
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                  required:
+                                  - tokenRef
+                                  type: object
+                                secretRef:
+                                  properties:
+                                    keys:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    name:
+                                      type: string
+                                    namespace:
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                              type: object
+                            orgId:
+                              format: int64
+                              type: integer
+                          required:
+                          - address
+                          type: object
+                        newRelic:
+                          properties:
+                            accountId:
+                              type: string
+                            apiKey:
+                              type: string
+                            region:
+                              default: US
+                              enum:
+                              - US
+                              - EU
+                              type: string
+                          required:
+                          - accountId
+                          - apiKey
+                          type: object
+                        prometheus:
+                          properties:
+                            address:
+                              type: string
+                            credentials:
+                              properties:
+                                basicAuth:
+                                  properties:
+                                    passwordRef:
+                                      properties:
+                                        keys:
+                                          additionalProperties:
+                                            type: string
+                                          type: object
+                                        name:
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                    username:
+                                      type: string
+                                  required:
+                                  - passwordRef
+                                  - username
+                                  type: object
+                                bearerToken:
+                                  properties:
+                                    tokenRef:
+                                      properties:
+                                        keys:
+                                          additionalProperties:
+                                            type: string
+                                          type: object
+                                        name:
+                                          type: string
+                                        namespace:
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
+                                  required:
+                                  - tokenRef
+                                  type: object
+                                secretRef:
+                                  properties:
+                                    keys:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                    name:
+                                      type: string
+                                    namespace:
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
+                              type: object
+                            headers:
+                              additionalProperties:
+                                type: string
+                              type: object
+                          required:
+                          - address
+                          type: object
+                      type: object
+                    query:
+                      type: string
+                    successCriteria:
+                      properties:
+                        operator:
+                          allOf:
+                          - enum:
+                            - GreaterThan
+                            - LessThan
+                            - Equal
+                            - GreaterThanOrEqual
+                            - LessThanOrEqual
+                            - NotEqual
+                          - enum:
+                            - GreaterThan
+                            - LessThan
+                            - Equal
+                            - GreaterThanOrEqual
+                            - LessThanOrEqual
+                            - NotEqual
+                          type: string
+                        threshold:
+                          type: string
+                        tolerancePercentage:
+                          format: int32
+                          maximum: 100
+                          minimum: 0
+                          type: integer
+                        unit:
+                          type: string
+                      required:
+                      - operator
+                      - threshold
+                      type: object
+                    timeout:
+                      default: 60s
+                      type: string
+                    weight:
+                      default: 50
+                      format: int32
+                      maximum: 100
+                      minimum: 0
+                      type: integer
+                  required:
+                  - analysisType
+                  - name
+                  - query
+                  - successCriteria
+                  type: object
+                type: array
+              clusterSelector:
+                properties:
+                  clusterNames:
+                    items:
+                      type: string
+                    type: array
+                  labelSelector:
+                    properties:
+                      matchExpressions:
+                        items:
+                          properties:
+                            key:
+                              type: string
+                            operator:
+                              type: string
+                            values:
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  locationSelector:
+                    items:
+                      type: string
+                    type: array
+                type: object
+              failureThreshold:
+                default: 3
+                format: int32
+                type: integer
+              successThreshold:
+                default: 1
+                format: int32
+                type: integer
+              timeout:
+                default: 300s
+                type: string
+              workloadSelector:
+                properties:
+                  labelSelector:
+                    properties:
+                      matchExpressions:
+                        items:
+                          properties:
+                            key:
+                              type: string
+                            operator:
+                              type: string
+                            values:
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  namespaceSelector:
+                    properties:
+                      matchExpressions:
+                        items:
+                          properties:
+                            key:
+                              type: string
+                            operator:
+                              type: string
+                            values:
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  workloadTypes:
+                    items:
+                      properties:
+                        apiVersion:
+                          type: string
+                        kind:
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      type: object
+                    type: array
+                type: object
+            required:
+            - analysisTemplates
+            - clusterSelector
+            - workloadSelector
+            type: object
+          status:
+            properties:
+              analysisResults:
+                items:
+                  properties:
+                    expected:
+                      type: string
+                    finishTime:
+                      format: date-time
+                      type: string
+                    measurements:
+                      items:
+                        properties:
+                          finishedAt:
+                            format: date-time
+                            type: string
+                          message:
+                            type: string
+                          metadata:
+                            additionalProperties:
+                              type: string
+                            type: object
+                          phase:
+                            enum:
+                            - Pending
+                            - Running
+                            - Completed
+                            - Failed
+                            - Inconclusive
+                            - Stopped
+                            type: string
+                          startedAt:
+                            format: date-time
+                            type: string
+                          value:
+                            type: string
+                        required:
+                        - phase
+                        - startedAt
+                        - value
+                        type: object
+                      type: array
+                    message:
+                      type: string
+                    name:
+                      type: string
+                    phase:
+                      enum:
+                      - Pending
+                      - Running
+                      - Completed
+                      - Failed
+                      - Inconclusive
+                      - Stopped
+                      type: string
+                    score:
+                      format: int32
+                      maximum: 100
+                      minimum: 0
+                      type: integer
+                    startTime:
+                      format: date-time
+                      type: string
+                    value:
+                      type: string
+                  required:
+                  - name
+                  - phase
+                  - score
+                  - startTime
+                  type: object
+                type: array
+              conditions:
+                items:
+                  properties:
+                    lastTransitionTime:
+                      format: date-time
+                      type: string
+                    message:
+                      type: string
+                    reason:
+                      type: string
+                    severity:
+                      type: string
+                    status:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failedRuns:
+                format: int32
+                type: integer
+              finishTime:
+                format: date-time
+                type: string
+              message:
+                type: string
+              overallScore:
+                format: int32
+                maximum: 100
+                minimum: 0
+                type: integer
+              phase:
+                default: Pending
+                enum:
+                - Pending
+                - Running
+                - Completed
+                - Failed
+                - Inconclusive
+                - Stopped
+                type: string
+              runCount:
+                format: int32
+                type: integer
+              startTime:
+                format: date-time
+                type: string
+              successfulRuns:
+                format: int32
+                type: integer
+            required:
+            - failedRuns
+            - runCount
+            - successfulRuns
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
