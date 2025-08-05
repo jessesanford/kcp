@@ -8,21 +8,25 @@
 1. `feature/tmc2-impl2/01a-cluster-basic` - Basic ClusterRegistration API
 2. `feature/tmc2-impl2/01c-placement-basic` - Basic WorkloadPlacement API  
 
-**Phase 2: Enhanced Core APIs (production-ready versions)**
-3. `feature/tmc2-impl2/04a-api-types` - Enhanced ClusterRegistration + WorkloadPlacement APIs
-4. `feature/tmc2-impl2/01b-cluster-enhanced` - Enhanced cluster management with workload integration
-5. `feature/tmc2-impl2/01d-placement-advanced` - WorkloadPlacementAdvanced API
+**Phase 2: Enhanced APIs (build incrementally)**
+3. `feature/tmc2-impl2/01b-cluster-enhanced` - Enhanced cluster management with workload integration
+4. `feature/tmc2-impl2/01d-placement-advanced` - WorkloadPlacementAdvanced API
 
 **Phase 3: Specialized APIs (build on enhanced APIs)**
-6. `feature/tmc2-impl2/01e-placement-analysis` - Placement analysis APIs
-7. `feature/tmc2-impl2/01f-placement-health` - Health monitoring APIs
-8. `feature/tmc2-impl2/01g-placement-session` - Session management APIs
-9. `feature/tmc2-impl2/01h-traffic-analysis` - Traffic analysis APIs
-10. `feature/tmc2-impl2/01i-scaling-config` - Scaling configuration APIs
-11. `feature/tmc2-impl2/01j-status-management` - Status aggregation APIs
+5. `feature/tmc2-impl2/01e-placement-analysis` - Placement analysis APIs
+6. `feature/tmc2-impl2/01f-placement-health` - Health monitoring APIs
+7. `feature/tmc2-impl2/01g-placement-session` - Session management APIs
+8. `feature/tmc2-impl2/01h-traffic-analysis` - Traffic analysis APIs
+9. `feature/tmc2-impl2/01i-scaling-config` - Scaling configuration APIs
+10. `feature/tmc2-impl2/01j-status-management` - Status aggregation APIs
 
-**Phase 4: Implementation (requires APIs to be available)**
-12. `feature/tmc2-impl2/02-apiexport-integration` - TMC APIExport controller
+**Phase 4: API Export (makes APIs available)**
+11. `feature/tmc2-impl2/02-apiexport-integration` - TMC APIExport controller
+
+**Phase 5: Production-Ready API Enhancement**
+12. `feature/tmc2-impl2/04a-api-types` - Enhanced ClusterRegistration + WorkloadPlacement APIs with comprehensive features
+
+**Phase 6: Implementation (requires APIs to be available)**
 13. `feature/tmc2-impl2/04b-placement-engine` - Placement algorithms engine
 14. `feature/tmc2-impl2/04c-placement-controller` - WorkloadPlacement controller
 15. `feature/tmc2-impl2/04d-controller-manager` - TMC controller manager
