@@ -54,6 +54,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&WorkloadPlacementList{},
 		&WorkloadPlacementAdvanced{},
 		&WorkloadPlacementAdvancedList{},
+		&WorkloadHealthPolicy{},
+		&WorkloadHealthPolicyList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

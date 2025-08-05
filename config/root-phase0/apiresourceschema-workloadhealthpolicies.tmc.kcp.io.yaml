@@ -1,0 +1,452 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  creationTimestamp: null
+  name: v250805-f1d77fa8.workloadhealthpolicies.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    kind: WorkloadHealthPolicy
+    listKind: WorkloadHealthPolicyList
+    plural: workloadhealthpolicies
+    singular: workloadhealthpolicy
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      properties:
+        apiVersion:
+          type: string
+        kind:
+          type: string
+        metadata:
+          type: object
+        spec:
+          properties:
+            clusterSelector:
+              properties:
+                clusterNames:
+                  items:
+                    type: string
+                  type: array
+                labelSelector:
+                  properties:
+                    matchExpressions:
+                      items:
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                          values:
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        required:
+                        - key
+                        - operator
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  type: object
+                  x-kubernetes-map-type: atomic
+                locationSelector:
+                  items:
+                    type: string
+                  type: array
+              type: object
+            failurePolicy:
+              default: Quarantine
+              enum:
+              - Ignore
+              - Quarantine
+              - Remove
+              - Alert
+              type: string
+            globalTimeout:
+              default: 300s
+              type: string
+            healthChecks:
+              items:
+                properties:
+                  commandCheck:
+                    properties:
+                      command:
+                        items:
+                          type: string
+                        type: array
+                      environment:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      expectedExitCode:
+                        default: 0
+                        format: int32
+                        type: integer
+                      workingDirectory:
+                        type: string
+                    required:
+                    - command
+                    type: object
+                  failureThreshold:
+                    default: 3
+                    format: int32
+                    type: integer
+                  grpcCheck:
+                    properties:
+                      address:
+                        type: string
+                      insecureTls:
+                        type: boolean
+                      service:
+                        type: string
+                    required:
+                    - address
+                    type: object
+                  httpCheck:
+                    properties:
+                      expectedResponseBody:
+                        type: string
+                      expectedStatusCodes:
+                        items:
+                          type: integer
+                        type: array
+                      headers:
+                        additionalProperties:
+                          type: string
+                        type: object
+                      insecureTls:
+                        type: boolean
+                      method:
+                        default: GET
+                        enum:
+                        - GET
+                        - POST
+                        - PUT
+                        - HEAD
+                        type: string
+                      url:
+                        type: string
+                    required:
+                    - url
+                    type: object
+                  interval:
+                    default: 30s
+                    type: string
+                  kubernetesCheck:
+                    properties:
+                      containerName:
+                        type: string
+                      probeType:
+                        allOf:
+                        - enum:
+                          - Readiness
+                          - Liveness
+                          - Startup
+                        - enum:
+                          - Readiness
+                          - Liveness
+                          - Startup
+                        type: string
+                      requiredHealthyPods:
+                        default: 1
+                        format: int32
+                        type: integer
+                      selector:
+                        properties:
+                          matchExpressions:
+                            items:
+                              properties:
+                                key:
+                                  type: string
+                                operator:
+                                  type: string
+                                values:
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    required:
+                    - probeType
+                    type: object
+                  name:
+                    type: string
+                  successThreshold:
+                    default: 1
+                    format: int32
+                    type: integer
+                  tcpCheck:
+                    properties:
+                      expectedResponse:
+                        type: string
+                      host:
+                        type: string
+                      port:
+                        format: int32
+                        type: integer
+                      sendData:
+                        type: string
+                    required:
+                    - host
+                    - port
+                    type: object
+                  timeout:
+                    default: 10s
+                    type: string
+                  type:
+                    allOf:
+                    - enum:
+                      - HTTP
+                      - TCP
+                      - GRPC
+                      - Command
+                      - Kubernetes
+                    - enum:
+                      - HTTP
+                      - TCP
+                      - GRPC
+                      - Command
+                      - Kubernetes
+                    type: string
+                  weight:
+                    default: 50
+                    format: int32
+                    maximum: 100
+                    minimum: 0
+                    type: integer
+                required:
+                - name
+                - type
+                type: object
+              type: array
+            recoveryPolicy:
+              properties:
+                autoRecovery:
+                  default: true
+                  type: boolean
+                maxRecoveryAttempts:
+                  default: 3
+                  format: int32
+                  type: integer
+                recoveryDelay:
+                  default: 60s
+                  type: string
+                recoveryThreshold:
+                  default: 80
+                  format: int32
+                  maximum: 100
+                  minimum: 0
+                  type: integer
+              type: object
+            workloadSelector:
+              properties:
+                labelSelector:
+                  properties:
+                    matchExpressions:
+                      items:
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                          values:
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        required:
+                        - key
+                        - operator
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  type: object
+                  x-kubernetes-map-type: atomic
+                namespaceSelector:
+                  properties:
+                    matchExpressions:
+                      items:
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                          values:
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        required:
+                        - key
+                        - operator
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      type: object
+                  type: object
+                  x-kubernetes-map-type: atomic
+                workloadTypes:
+                  items:
+                    properties:
+                      apiVersion:
+                        type: string
+                      kind:
+                        type: string
+                    required:
+                    - apiVersion
+                    - kind
+                    type: object
+                  type: array
+              type: object
+          required:
+          - clusterSelector
+          - healthChecks
+          - workloadSelector
+          type: object
+        status:
+          properties:
+            affectedWorkloads:
+              items:
+                properties:
+                  apiVersion:
+                    type: string
+                  clusterName:
+                    type: string
+                  healthStatus:
+                    enum:
+                    - Healthy
+                    - Unhealthy
+                    - Unknown
+                    - Degraded
+                    type: string
+                  kind:
+                    type: string
+                  lastHealthUpdate:
+                    format: date-time
+                    type: string
+                  name:
+                    type: string
+                  namespace:
+                    type: string
+                required:
+                - apiVersion
+                - clusterName
+                - healthStatus
+                - kind
+                - lastHealthUpdate
+                - name
+                type: object
+              type: array
+            conditions:
+              items:
+                properties:
+                  lastTransitionTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  reason:
+                    type: string
+                  severity:
+                    type: string
+                  status:
+                    type: string
+                  type:
+                    type: string
+                required:
+                - lastTransitionTime
+                - status
+                - type
+                type: object
+              type: array
+            healthCheckResults:
+              items:
+                properties:
+                  consecutiveFailures:
+                    format: int32
+                    type: integer
+                  consecutiveSuccesses:
+                    format: int32
+                    type: integer
+                  lastCheckTime:
+                    format: date-time
+                    type: string
+                  message:
+                    type: string
+                  name:
+                    type: string
+                  score:
+                    format: int32
+                    maximum: 100
+                    minimum: 0
+                    type: integer
+                  status:
+                    allOf:
+                    - enum:
+                      - Healthy
+                      - Unhealthy
+                      - Unknown
+                      - Degraded
+                    - enum:
+                      - Healthy
+                      - Unhealthy
+                      - Unknown
+                      - Degraded
+                    type: string
+                required:
+                - consecutiveFailures
+                - consecutiveSuccesses
+                - lastCheckTime
+                - name
+                - score
+                - status
+                type: object
+              type: array
+            lastUpdateTime:
+              format: date-time
+              type: string
+            message:
+              type: string
+            overallHealthScore:
+              format: int32
+              maximum: 100
+              minimum: 0
+              type: integer
+            phase:
+              default: Active
+              enum:
+              - Active
+              - Suspended
+              - Failed
+              - Unknown
+              type: string
+          type: object
+      type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
