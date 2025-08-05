@@ -47,7 +47,7 @@ func TestNewClusterRegistrationController(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			mockInf := newMockInformer()
-			
+
 			controller, err := NewClusterRegistrationController(
 				mockInf,
 				tc.healthCheckInterval,
@@ -67,7 +67,7 @@ func TestNewClusterRegistrationController(t *testing.T) {
 
 func TestClusterRegistrationController_SyncClusterRegistration(t *testing.T) {
 	mockInf := newMockInformer()
-	
+
 	controller, err := NewClusterRegistrationController(
 		mockInf,
 		30*time.Second,
@@ -82,7 +82,7 @@ func TestClusterRegistrationController_SyncClusterRegistration(t *testing.T) {
 		wantError bool
 	}{
 		"invalid key": {
-			key:       "invalid-key",
+			key:       "invalid|key|format|too|many|parts",
 			wantError: true,
 		},
 		"valid key - object not found": {
@@ -111,7 +111,7 @@ func TestClusterRegistrationController_SyncClusterRegistration(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// Reset indexer
 			mockInf.indexer = newMockInformer().indexer
-			
+
 			if tc.setupFunc != nil {
 				tc.setupFunc()
 			}
@@ -129,7 +129,7 @@ func TestClusterRegistrationController_SyncClusterRegistration(t *testing.T) {
 
 func TestClusterRegistrationController_PerformGlobalHealthCheck(t *testing.T) {
 	mockInf := newMockInformer()
-	
+
 	controller, err := NewClusterRegistrationController(
 		mockInf,
 		30*time.Second,
@@ -146,7 +146,7 @@ func TestClusterRegistrationController_PerformGlobalHealthCheck(t *testing.T) {
 
 func TestClusterRegistrationController_GetClusterRegistrations(t *testing.T) {
 	mockInf := newMockInformer()
-	
+
 	controller, err := NewClusterRegistrationController(
 		mockInf,
 		30*time.Second,
@@ -168,7 +168,7 @@ func TestClusterRegistrationController_GetClusterRegistrations(t *testing.T) {
 	}
 	testObj2 := &mockObject{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "cluster2", 
+			Name: "cluster2",
 			Annotations: map[string]string{
 				"kcp.io/cluster": "root:workspace2",
 			},
@@ -185,7 +185,7 @@ func TestClusterRegistrationController_GetClusterRegistrations(t *testing.T) {
 
 func TestClusterRegistrationController_GetClusterRegistrationByKey(t *testing.T) {
 	mockInf := newMockInformer()
-	
+
 	controller, err := NewClusterRegistrationController(
 		mockInf,
 		30*time.Second,
@@ -201,7 +201,7 @@ func TestClusterRegistrationController_GetClusterRegistrationByKey(t *testing.T)
 		},
 	}
 	key := "test-key"
-	
+
 	// Object not found
 	obj, exists, err := controller.GetClusterRegistrationByKey(key)
 	assert.NoError(t, err)
@@ -220,7 +220,7 @@ func TestClusterRegistrationController_GetClusterRegistrationByKey(t *testing.T)
 
 func TestClusterRegistrationController_ListClusterRegistrationsByWorkspace(t *testing.T) {
 	mockInf := newMockInformer()
-	
+
 	controller, err := NewClusterRegistrationController(
 		mockInf,
 		30*time.Second,
@@ -262,7 +262,7 @@ func TestClusterRegistrationController_ListClusterRegistrationsByWorkspace(t *te
 	workspace1 := logicalcluster.Name("root:workspace1")
 	objects, err := controller.ListClusterRegistrationsByWorkspace(workspace1)
 	assert.NoError(t, err)
-	
+
 	// Should find objects that have workspace1 in their key
 	// Note: This test is limited by our mock implementation
 	// In real usage, the key generation would properly include workspace info

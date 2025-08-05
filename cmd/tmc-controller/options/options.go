@@ -19,6 +19,7 @@ package options
 import (
 	"flag"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -140,7 +141,11 @@ func (o *TMCControllerOptions) Validate() error {
 		if workspace == "" {
 			return fmt.Errorf("workspace path cannot be empty")
 		}
-		// Additional validation could be added here for workspace path format
+		// Validate workspace path format (should be like "root:org:workspace")
+		parts := strings.Split(workspace, ":")
+		if len(parts) > 4 {
+			return fmt.Errorf("invalid workspace path %q: too many segments", workspace)
+		}
 	}
 
 	return nil
@@ -153,9 +158,9 @@ func (o *TMCControllerOptions) Complete() error {
 	klogFlags := flag.NewFlagSet("klog", flag.ContinueOnError)
 	klog.InitFlags(klogFlags)
 	klogFlags.Set("v", fmt.Sprintf("%d", o.LogLevel))
-	
+
 	var err error
-	
+
 	// Build REST config from kubeconfig
 	if o.KubeConfig == "" {
 		// Use in-cluster config if no kubeconfig specified
