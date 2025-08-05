@@ -79,6 +79,26 @@ func (c *Controller) createTMCAPIExport(ctx context.Context, clusterName logical
 					Group:  "tmc.kcp.io",
 					Schema: "v1alpha1.workloadplacementadvanceds.tmc.kcp.io",
 				},
+				{
+					Name:   "workloadsessionpolicies",
+					Group:  "tmc.kcp.io",
+					Schema: "v1alpha1.workloadsessionpolicies.tmc.kcp.io",
+				},
+				{
+					Name:   "trafficmetrics",
+					Group:  "tmc.kcp.io",
+					Schema: "v1alpha1.trafficmetrics.tmc.kcp.io",
+				},
+				{
+					Name:   "workloadscalingpolicies",
+					Group:  "tmc.kcp.io",
+					Schema: "v1alpha1.workloadscalingpolicies.tmc.kcp.io",
+				},
+				{
+					Name:   "workloadstatusaggregators",
+					Group:  "tmc.kcp.io",
+					Schema: "v1alpha1.workloadstatusaggregators.tmc.kcp.io",
+				},
 			},
 			PermissionClaims: []apisv1alpha2.PermissionClaim{
 				{

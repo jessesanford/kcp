@@ -9,6 +9,10 @@ spec:
   - clusters.tmc.kcp.io
   - workloadplacements.tmc.kcp.io
   - workloadplacementadvanceds.tmc.kcp.io
+  - workloadsessionpolicies.tmc.kcp.io
+  - trafficmetrics.tmc.kcp.io
+  - workloadscalingpolicies.tmc.kcp.io
+  - workloadstatusaggregators.tmc.kcp.io
   permissionClaims:
   - group: ""
     resource: namespaces
