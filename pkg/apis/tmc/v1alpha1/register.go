@@ -58,6 +58,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&WorkloadSessionPolicyList{},
 		&TrafficMetrics{},
 		&TrafficMetricsList{},
+		&WorkloadScalingPolicy{},
+		&WorkloadScalingPolicyList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
