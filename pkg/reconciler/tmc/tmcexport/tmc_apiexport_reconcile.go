@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 
@@ -54,98 +53,11 @@ func (c *Controller) reconcile(ctx context.Context, apiExport *apisv1alpha2.APIE
 
 func (c *Controller) createTMCAPIExport(ctx context.Context, clusterName logicalcluster.Name) error {
 	logger := klog.FromContext(ctx)
-
-	tmcAPIExport := &apisv1alpha2.APIExport{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: TMCAPIExportName,
-			Annotations: map[string]string{
-				"kcp.io/tmc-managed": "true",
-			},
-		},
-		Spec: apisv1alpha2.APIExportSpec{
-			Resources: []apisv1alpha2.ResourceSchema{
-				{
-					Name:   "clusters",
-					Group:  "tmc.kcp.io",
-					Schema: "v1alpha1.clusters.tmc.kcp.io",
-				},
-				{
-					Name:   "workloadplacements",
-					Group:  "tmc.kcp.io",
-					Schema: "v1alpha1.workloadplacements.tmc.kcp.io",
-				},
-				{
-					Name:   "workloadplacementadvanceds",
-					Group:  "tmc.kcp.io",
-					Schema: "v1alpha1.workloadplacementadvanceds.tmc.kcp.io",
-				},
-				{
-					Name:   "workloadsessionpolicies",
-					Group:  "tmc.kcp.io",
-					Schema: "v1alpha1.workloadsessionpolicies.tmc.kcp.io",
-				},
-				{
-					Name:   "trafficmetrics",
-					Group:  "tmc.kcp.io",
-					Schema: "v1alpha1.trafficmetrics.tmc.kcp.io",
-				},
-				{
-					Name:   "workloadscalingpolicies",
-					Group:  "tmc.kcp.io",
-					Schema: "v1alpha1.workloadscalingpolicies.tmc.kcp.io",
-				},
-				{
-					Name:   "workloadstatusaggregators",
-					Group:  "tmc.kcp.io",
-					Schema: "v1alpha1.workloadstatusaggregators.tmc.kcp.io",
-				},
-			},
-			PermissionClaims: []apisv1alpha2.PermissionClaim{
-				{
-					GroupResource: apisv1alpha2.GroupResource{Group: "", Resource: "namespaces"},
-					Verbs:         []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					IdentityHash:  "",
-				},
-				{
-					GroupResource: apisv1alpha2.GroupResource{Group: "", Resource: "configmaps"},
-					Verbs:         []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					IdentityHash:  "",
-				},
-				{
-					GroupResource: apisv1alpha2.GroupResource{Group: "", Resource: "secrets"},
-					Verbs:         []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					IdentityHash:  "",
-				},
-				{
-					GroupResource: apisv1alpha2.GroupResource{Group: "apps", Resource: "deployments"},
-					Verbs:         []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					IdentityHash:  "",
-				},
-				{
-					GroupResource: apisv1alpha2.GroupResource{Group: "apps", Resource: "replicasets"},
-					Verbs:         []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					IdentityHash:  "",
-				},
-				{
-					GroupResource: apisv1alpha2.GroupResource{Group: "", Resource: "services"},
-					Verbs:         []string{"get", "list", "watch", "create", "update", "patch", "delete"},
-					IdentityHash:  "",
-				},
-			},
-		},
-	}
-
-	_, err := c.kcpClusterClient.Cluster(clusterName.Path()).ApisV1alpha2().APIExports().Create(ctx, tmcAPIExport, metav1.CreateOptions{})
-	if err != nil {
-		if errors.IsAlreadyExists(err) {
-			logger.V(3).Info("TMC APIExport already exists")
-			return nil
-		}
-		return fmt.Errorf("failed to create TMC APIExport: %w", err)
-	}
-
-	logger.V(2).Info("created TMC APIExport")
-	return nil
+	
+	// The TMC APIExport should be created via the generated manifests in config/root-phase0/apiexport-tmc.kcp.io.yaml
+	// This controller only manages the lifecycle and status of existing APIExports
+	logger.V(2).Info("TMC APIExport should be created via KCP bootstrap manifests, not by controller")
+	return fmt.Errorf("TMC APIExport not found - should be created via bootstrap manifests")
 }
 
 func (c *Controller) reconcileTMCAPIExport(ctx context.Context, apiExport *apisv1alpha2.APIExport, clusterName logicalcluster.Name) error {

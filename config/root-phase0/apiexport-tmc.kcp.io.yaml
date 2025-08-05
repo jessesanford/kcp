@@ -1,0 +1,43 @@
+apiVersion: apis.kcp.io/v1alpha2
+kind: APIExport
+metadata:
+  creationTimestamp: null
+  name: tmc.kcp.io
+spec:
+  resources:
+  - group: tmc.kcp.io
+    name: clusterregistrations
+    schema: v250805-30fc9e6d.clusterregistrations.tmc.kcp.io
+    storage:
+      crd: {}
+  - group: tmc.kcp.io
+    name: trafficmetrics
+    schema: v250805-30fc9e6d.trafficmetrics.tmc.kcp.io
+    storage:
+      crd: {}
+  - group: tmc.kcp.io
+    name: workloadplacementadvanceds
+    schema: v250805-30fc9e6d.workloadplacementadvanceds.tmc.kcp.io
+    storage:
+      crd: {}
+  - group: tmc.kcp.io
+    name: workloadplacements
+    schema: v250805-30fc9e6d.workloadplacements.tmc.kcp.io
+    storage:
+      crd: {}
+  - group: tmc.kcp.io
+    name: workloadscalingpolicies
+    schema: v250805-30fc9e6d.workloadscalingpolicies.tmc.kcp.io
+    storage:
+      crd: {}
+  - group: tmc.kcp.io
+    name: workloadsessionpolicies
+    schema: v250805-30fc9e6d.workloadsessionpolicies.tmc.kcp.io
+    storage:
+      crd: {}
+  - group: tmc.kcp.io
+    name: workloadstatusaggregators
+    schema: v250805-30fc9e6d.workloadstatusaggregators.tmc.kcp.io
+    storage:
+      crd: {}
+status: {}
