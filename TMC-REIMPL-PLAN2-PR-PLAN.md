@@ -28,41 +28,22 @@
 15. `feature/tmc2-impl2/04d-controller-manager` - TMC controller manager
 16. `feature/tmc2-impl2/04e-tmc-binary` - TMC controller binary
 
-**Alternative/Legacy branches:**
+**Excluded branches (not using incremental approach):**
+17. `feature/tmc2-impl2/01-api-foundation` - Comprehensive foundation (1,167 lines, 54 types) - **TOO LARGE**
+18. `feature/tmc2-impl2/03-controller-foundation` - Basic controller framework - **SUPERSEDED BY 04-SERIES**
+19. `feature/tmc2-impl2/04-workload-placement` - Alternative placement implementation - **SUPERSEDED BY 04c**
+20. `feature/tmc2-impl2/cleanup-duplicates` - Cleanup utility branch - **NOT NEEDED FOR SUBMISSION**
 
-**🔥 CRITICAL DISCOVERY: `feature/tmc2-impl2/01-api-foundation` contains ALL APIs!**
-17. `feature/tmc2-impl2/01-api-foundation` - **MASSIVE comprehensive foundation (1,167 lines, 54 types)**
-    - **This branch contains ALL APIs from branches 1-11 in a single comprehensive implementation**
-    - **Contains both ClusterRegistration and WorkloadPlacement with all features**
-    - **Includes all functionality from 01a-01j branches: taints, tolerations, capabilities, etc.**  
-    - **Alternative to the entire incremental approach (replaces branches 1-11)**
+## ✅ Selected Approach: Incremental Foundation
 
-18. `feature/tmc2-impl2/03-controller-foundation` - Basic controller framework (alternative to 13-16)
-19. `feature/tmc2-impl2/04-workload-placement` - Alternative placement implementation
-20. `feature/tmc2-impl2/cleanup-duplicates` - Cleanup utility branch
+**Using the incremental API approach with focused, reviewable PRs following size guidelines.**
 
-## 🎯 Two Major Submission Approaches Identified
-
-### **Approach A: Comprehensive Foundation (SINGLE MASSIVE PR)**
-```
-1. feature/tmc2-impl2/01-api-foundation (ALL APIs: 1,167 lines, 54 types)
-2-5. Implementation branches (02, 04b-04e)
-```
-- **Pros**: Single comprehensive API foundation, complete feature set
-- **Cons**: Massive PR (1,167 lines), harder to review, violates size guidelines
-
-### **Approach B: Incremental Foundation (MULTIPLE FOCUSED PRs)**  
-```
-1-11. Incremental API branches (01a-01j, 04a)
-12-16. Implementation branches (02, 04b-04e)
-```
-- **Pros**: Smaller, focused PRs; easier to review; follows size guidelines
-- **Cons**: More PRs to manage; potential API inconsistencies across branches
-
-### **CRITICAL QUESTION FOR DECISION:**
-Should we use the single comprehensive foundation (`01-api-foundation`) or the incremental approach (`01a-01j` series)?
-
-**The `01-api-foundation` branch contains ALL the functionality from `01a-01j` in one place!**
+**Benefits of incremental approach:**
+- ✅ Smaller, focused PRs (easier to review)
+- ✅ Follows TMC size guidelines (400-700 target, 800 max)
+- ✅ Atomic functionality per PR
+- ✅ Clear progression from basic → enhanced → specialized APIs
+- ✅ Better for iterative development and feedback
 
 ---
 
