@@ -10,4 +10,14 @@ spec:
     schema: v250806-131ed13d.sessionaffinitypolicies.tmc.kcp.io
     storage:
       crd: {}
+  - group: tmc.kcp.io
+    name: sessionbindingconstraints
+    schema: v250806-b2b0e52b.sessionbindingconstraints.tmc.kcp.io
+    storage:
+      crd: {}
+  - group: tmc.kcp.io
+    name: stickybindings
+    schema: v250806-b2b0e52b.stickybindings.tmc.kcp.io
+    storage:
+      crd: {}
 status: {}

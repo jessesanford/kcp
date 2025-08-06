@@ -48,3 +48,6 @@ dex/
 *.pem
 
 index.html
+
+# PR message files should not be committed
+PR-MESSAGE-FOR-*.md

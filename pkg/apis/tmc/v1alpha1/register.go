@@ -58,6 +58,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&StickyBindingList{},
 		&SessionBindingConstraint{},
 		&SessionBindingConstraintList{},
+		&ConstraintEvaluationEngine{},
+		&ConstraintEvaluationEngineList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
