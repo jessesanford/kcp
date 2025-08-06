@@ -51,7 +51,10 @@ func init() {
 
 // addKnownTypes adds the list of known types to the given scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
-	// Note: Additional types will be registered by extending branches
+	scheme.AddKnownTypes(SchemeGroupVersion,
+		&SessionValidator{},
+		&SessionValidatorList{},
+	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }

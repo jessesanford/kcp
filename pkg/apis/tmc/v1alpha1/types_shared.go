@@ -95,3 +95,93 @@ type ObjectReference struct {
 	// +optional
 	UID string `json:"uid,omitempty"`
 }
+
+// SessionReference is a reference to a placement session
+type SessionReference struct {
+	// Name is the name of the session
+	Name string `json:"name"`
+
+	// Namespace is the namespace of the session
+	Namespace string `json:"namespace"`
+
+	// SessionID is the unique identifier of the session
+	// +optional
+	SessionID string `json:"sessionID,omitempty"`
+}
+
+// WorkloadReference is a reference to a workload
+type WorkloadReference struct {
+	// APIVersion is the API version of the workload
+	APIVersion string `json:"apiVersion"`
+
+	// Kind is the kind of the workload
+	Kind string `json:"kind"`
+
+	// Name is the name of the workload
+	Name string `json:"name"`
+
+	// Namespace is the namespace of the workload
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// PlacementReference is a reference to a placement decision
+type PlacementReference struct {
+	// Name is the name of the placement decision
+	Name string `json:"name"`
+
+	// Namespace is the namespace of the placement decision
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+
+	// UID is the UID of the placement decision
+	// +optional
+	UID string `json:"uid,omitempty"`
+}
+
+// ConflictType defines the types of conflicts that can occur
+// +kubebuilder:validation:Enum=ResourceContention;PolicyViolation;AffinityConflict;ConstraintViolation;ClusterUnavailable
+type ConflictType string
+
+const (
+	// ConflictTypeResourceContention indicates resource contention conflict
+	ConflictTypeResourceContention ConflictType = "ResourceContention"
+	// ConflictTypePolicyViolation indicates policy violation conflict
+	ConflictTypePolicyViolation ConflictType = "PolicyViolation"
+	// ConflictTypeAffinityConflict indicates affinity rule conflict
+	ConflictTypeAffinityConflict ConflictType = "AffinityConflict"
+	// ConflictTypeConstraintViolation indicates constraint violation conflict
+	ConflictTypeConstraintViolation ConflictType = "ConstraintViolation"
+	// ConflictTypeClusterUnavailable indicates cluster unavailability conflict
+	ConflictTypeClusterUnavailable ConflictType = "ClusterUnavailable"
+)
+
+// ConflictResolutionType defines the types of conflict resolution strategies
+// +kubebuilder:validation:Enum=Override;Merge;Fail
+type ConflictResolutionType string
+
+const (
+	// ConflictResolutionTypeOverride overrides existing placements with new ones
+	ConflictResolutionTypeOverride ConflictResolutionType = "Override"
+	// ConflictResolutionTypeMerge merges conflicting placements when possible
+	ConflictResolutionTypeMerge ConflictResolutionType = "Merge"
+	// ConflictResolutionTypeFail fails the session when conflicts occur
+	ConflictResolutionTypeFail ConflictResolutionType = "Fail"
+)
+
+// ConflictStatus defines the status of a conflict
+// +kubebuilder:validation:Enum=Detected;Analyzing;Resolving;Resolved;Failed
+type ConflictStatus string
+
+const (
+	// ConflictStatusDetected indicates the conflict has been detected
+	ConflictStatusDetected ConflictStatus = "Detected"
+	// ConflictStatusAnalyzing indicates the conflict is being analyzed
+	ConflictStatusAnalyzing ConflictStatus = "Analyzing"
+	// ConflictStatusResolving indicates the conflict is being resolved
+	ConflictStatusResolving ConflictStatus = "Resolving"
+	// ConflictStatusResolved indicates the conflict has been resolved
+	ConflictStatusResolved ConflictStatus = "Resolved"
+	// ConflictStatusFailed indicates conflict resolution has failed
+	ConflictStatusFailed ConflictStatus = "Failed"
+)
