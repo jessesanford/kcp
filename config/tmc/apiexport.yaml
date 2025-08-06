@@ -1,0 +1,18 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIExport
+metadata:
+  name: tmc.kcp.io
+  annotations:
+    kcp.io/cluster: root:tmc
+spec:
+  latestResourceSchemas:
+    - tmc.kcp.io.v1alpha1.ClusterRegistration
+    - tmc.kcp.io.v1alpha1.WorkloadPlacement
+  # Optional: Add permission claims for accessing related KCP resources
+  permissionClaims:
+    - group: "apps"
+      resource: "deployments"
+      all: true
+    - group: ""
+      resource: "services" 
+      all: true
