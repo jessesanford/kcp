@@ -1,0 +1,408 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: workloadplacements.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    categories:
+    - kcp
+    kind: WorkloadPlacement
+    listKind: WorkloadPlacementList
+    plural: workloadplacements
+    singular: workloadplacement
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.strategy
+      name: Strategy
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          WorkloadPlacement defines how and where workloads should be placed across clusters.
+          It provides policies and strategies for transparent multi-cluster placement.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of the WorkloadPlacement.
+            properties:
+              capabilityRequirements:
+                description: |-
+                  CapabilityRequirements defines the minimum capabilities required
+                  from clusters for this placement.
+                items:
+                  description: CapabilityRequirement defines a required capability
+                    for placement
+                  properties:
+                    required:
+                      description: Required indicates if this capability is mandatory.
+                      type: boolean
+                    type:
+                      description: Type is the type of capability required.
+                      type: string
+                    values:
+                      description: Values contains specific values required for this
+                        capability.
+                      items:
+                        type: string
+                      type: array
+                  required:
+                  - required
+                  - type
+                  type: object
+                type: array
+              locationSelector:
+                description: |-
+                  LocationSelector selects clusters based on location labels.
+                  If specified, only clusters matching this selector will be considered.
+                properties:
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                      The requirements are ANDed.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                      map is equivalent to an element of matchExpressions, whose key field is "key", the
+                      operator is "In", and the values array contains only "value". The requirements are ANDed.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              maxClusters:
+                description: |-
+                  MaxClusters defines the maximum number of clusters to place workloads on.
+                  If 0 or unset, no limit is applied.
+                format: int32
+                type: integer
+              preferredClusters:
+                description: |-
+                  PreferredClusters is a list of cluster names that are preferred for placement.
+                  These clusters will be given higher priority during placement decisions.
+                items:
+                  type: string
+                type: array
+              strategy:
+                description: Strategy defines the placement strategy to use.
+                type: string
+              workloadSelector:
+                description: WorkloadSelector defines which workloads this placement
+                  applies to.
+                properties:
+                  labelSelector:
+                    description: LabelSelector selects workloads based on their labels.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  namespaceSelector:
+                    description: NamespaceSelector selects workloads from namespaces
+                      matching this selector.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  workloadTypes:
+                    description: |-
+                      WorkloadTypes restricts the selector to specific workload types.
+                      If empty, all workload types are selected.
+                    items:
+                      description: WorkloadType represents a Kubernetes workload type
+                      properties:
+                        apiVersion:
+                          description: APIVersion is the API version of the workload
+                            type.
+                          type: string
+                        kind:
+                          description: Kind is the kind of the workload type.
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      type: object
+                    type: array
+                type: object
+            required:
+            - strategy
+            - workloadSelector
+            type: object
+          status:
+            description: Status defines the observed state of the WorkloadPlacement.
+            properties:
+              conditions:
+                description: |-
+                  Conditions represent the latest available observations of the
+                  placement's current state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastPlacementTime:
+                description: LastPlacementTime is the last time a placement decision
+                  was made.
+                format: date-time
+                type: string
+              phase:
+                description: Phase represents the current phase of the placement.
+                type: string
+              placedWorkloads:
+                description: PlacedWorkloads tracks workloads that have been placed
+                  by this placement.
+                items:
+                  description: PlacedWorkload tracks a workload that has been placed
+                  properties:
+                    clusterName:
+                      description: ClusterName is the name of the cluster where the
+                        workload was placed.
+                      type: string
+                    placementTime:
+                      description: PlacementTime is when the workload was placed.
+                      format: date-time
+                      type: string
+                    status:
+                      description: Status represents the current status of the placed
+                        workload.
+                      type: string
+                    workloadRef:
+                      description: WorkloadRef references the placed workload.
+                      properties:
+                        apiVersion:
+                          description: API version of the referent.
+                          type: string
+                        kind:
+                          description: Kind of the referent.
+                          type: string
+                        name:
+                          description: Name of the referent.
+                          type: string
+                        namespace:
+                          description: Namespace of the referent.
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      - name
+                      type: object
+                  required:
+                  - clusterName
+                  - placementTime
+                  - workloadRef
+                  type: object
+                type: array
+              selectedClusters:
+                description: SelectedClusters contains the list of clusters selected
+                  for placement.
+                items:
+                  description: SelectedCluster represents a cluster selected for placement
+                  properties:
+                    name:
+                      description: Name is the name of the selected cluster.
+                      type: string
+                    reason:
+                      description: Reason provides a human-readable reason why this
+                        cluster was selected.
+                      type: string
+                    weight:
+                      description: |-
+                        Weight represents the relative weight of this cluster for placement.
+                        Higher weights indicate higher preference.
+                      format: int32
+                      type: integer
+                  required:
+                  - name
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
