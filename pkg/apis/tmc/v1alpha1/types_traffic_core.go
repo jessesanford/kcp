@@ -121,7 +121,8 @@ type TrafficMetricsStatus struct {
 
 	// OverallSuccessRate is the weighted success rate across all clusters (0-100)
 	// +optional
-	OverallSuccessRate *float64 `json:"overallSuccessRate,omitempty"`
+	// +kubebuilder:validation:Pattern="^[0-9]+(\\.[0-9]+)?$"
+	OverallSuccessRate *string `json:"overallSuccessRate,omitempty"`
 }
 
 // TrafficMetricsPhase defines the phase of traffic metrics collection
@@ -149,7 +150,8 @@ type ClusterTrafficMetrics struct {
 	RequestCount int64 `json:"requestCount"`
 
 	// SuccessRate is the percentage of successful requests (0-100)
-	SuccessRate float64 `json:"successRate"`
+	// +kubebuilder:validation:Pattern="^[0-9]+(\\.[0-9]+)?$"
+	SuccessRate string `json:"successRate"`
 
 	// AverageLatency is the average request latency in milliseconds
 	AverageLatency int64 `json:"averageLatency"`
@@ -162,7 +164,8 @@ type ClusterTrafficMetrics struct {
 	ErrorCount int64 `json:"errorCount"`
 
 	// Throughput is requests per second
-	Throughput float64 `json:"throughput"`
+	// +kubebuilder:validation:Pattern="^[0-9]+(\\.[0-9]+)?$"
+	Throughput string `json:"throughput"`
 
 	// LastUpdated indicates when these metrics were last collected
 	LastUpdated metav1.Time `json:"lastUpdated"`
@@ -170,7 +173,8 @@ type ClusterTrafficMetrics struct {
 	// HealthScore is a computed health score for TMC placement (0-100, higher is better)
 	// Combines success rate, latency, and throughput into a single placement score
 	// +optional
-	HealthScore *float64 `json:"healthScore,omitempty"`
+	// +kubebuilder:validation:Pattern="^[0-9]+(\\.[0-9]+)?$"
+	HealthScore *string `json:"healthScore,omitempty"`
 }
 
 // TrafficMetricsList contains a list of TrafficMetrics

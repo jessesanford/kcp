@@ -20,9 +20,4 @@ spec:
     schema: v250805-f1d77fa8.workloadplacements.tmc.kcp.io
     storage:
       crd: {}
-  - group: tmc.kcp.io
-    name: workloadsessionpolicies
-    schema: v250805-f1d77fa8.workloadsessionpolicies.tmc.kcp.io
-    storage:
-      crd: {}
 status: {}

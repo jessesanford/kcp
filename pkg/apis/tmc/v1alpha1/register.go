@@ -54,8 +54,6 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&WorkloadPlacementList{},
 		&WorkloadPlacementAdvanced{},
 		&WorkloadPlacementAdvancedList{},
-		&WorkloadSessionPolicy{},
-		&WorkloadSessionPolicyList{},
 		&TrafficMetrics{},
 		&TrafficMetricsList{},
 	)

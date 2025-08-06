@@ -1,0 +1,72 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  creationTimestamp: null
+  name: v250805-f1d77fa8.trafficmetrics.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    kind: TrafficMetrics
+    listKind: TrafficMetricsList
+    plural: trafficmetrics
+    singular: trafficmetrics
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      description: TrafficMetrics provides basic traffic analysis for TMC workload placement decisions.
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+          type: string
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: TrafficMetricsSpec defines the desired traffic metrics collection
+          properties:
+            workloadSelector:
+              description: WorkloadSelector specifies which workloads to analyze traffic for
+              type: object
+            clusterSelector:
+              description: ClusterSelector specifies which clusters to collect metrics from
+              type: object
+            metricsSource:
+              description: MetricsSource defines where to collect traffic metrics
+              type: object
+            collectionInterval:
+              description: CollectionInterval defines how often to collect metrics
+              type: object
+            retentionPeriod:
+              description: RetentionPeriod defines how long to keep collected metrics
+              type: object
+          required:
+          - workloadSelector
+          - clusterSelector
+          - metricsSource
+          type: object
+        status:
+          description: TrafficMetricsStatus defines the observed traffic metrics
+          type: object
+      type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: null
+  storedVersions: null
