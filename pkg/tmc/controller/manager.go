@@ -27,7 +27,6 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
@@ -50,7 +49,6 @@ type Manager struct {
 	// Observability
 	metricsServer *http.Server
 	healthServer  *http.Server
-	metrics       *ManagerMetrics
 
 	// Lifecycle management
 	mu       sync.RWMutex
@@ -105,15 +103,11 @@ func NewManager(ctx context.Context, config *Config) (*Manager, error) {
 		config.ResyncPeriod,
 	)
 
-	// Initialize metrics
-	metrics := NewManagerMetrics()
-
 	manager := &Manager{
 		kcpClusterClient: kcpClusterClient,
 		informerFactory:  informerFactory,
 		config:           config,
 		workspace:        workspace,
-		metrics:          metrics,
 	}
 
 	// Initialize observability servers
@@ -154,8 +148,11 @@ func (m *Manager) Start(ctx context.Context) error {
 
 	// Wait for cache sync
 	klog.V(2).InfoS("Waiting for informer caches to sync")
-	if !m.informerFactory.WaitForCacheSync(ctx.Done()) {
-		return fmt.Errorf("failed to sync informer caches")
+	cacheSynced := m.informerFactory.WaitForCacheSync(ctx.Done())
+	for informerType, synced := range cacheSynced {
+		if !synced {
+			return fmt.Errorf("failed to sync cache for %v", informerType)
+		}
 	}
 
 	// Block until context is cancelled
