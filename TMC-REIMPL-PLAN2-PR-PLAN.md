@@ -5,26 +5,29 @@
 **All 20 feature branches in recommended submission order (Strategy B - Incremental Foundation):**
 
 **Phase 1: Basic API Foundation**
-1. `feature/tmc2-impl2/01a-cluster-basic` - Basic ClusterRegistration API **(538 lines changed)** ✅
-2. `feature/tmc2-impl2/01b-cluster-enhanced` - Enhanced cluster management (builds on 01a) **(2,553 lines changed)** 🚨
-3. `feature/tmc2-impl2/01c-placement-basic` - Basic WorkloadPlacement API **(1,052 lines changed)** 🚨
+1. `feature/tmc2-impl2/01a-cluster-basic` - Basic ClusterRegistration API **(180 lines)** ✅
+2. `feature/tmc2-impl2/01b-cluster-enhanced` - Enhanced cluster management (builds on 01a) **(286 lines)** ✅
+3. `feature/tmc2-impl2/01c-placement-basic` - Basic WorkloadPlacement API **(376 lines)** ✅
 
 **Phase 2: Enhanced APIs (build incrementally)**
-4. `feature/tmc2-impl2/01d-placement-advanced` - WorkloadPlacementAdvanced API (builds on 01c) **(1,564 lines changed)** 🚨
+4. `feature/tmc2-impl2/01d-placement-advanced` - WorkloadPlacementAdvanced API (builds on 01c) **(705 lines)** ✅
 
 **Phase 3: Specialized APIs (build on enhanced APIs)**
-5. `feature/tmc2-impl2/01e-placement-analysis` - Placement analysis APIs **(963 lines changed)** 🚨
-6. `feature/tmc2-impl2/01f-placement-health` - Health monitoring APIs **(4,332 lines changed)** 🚨 DOES NEED REFACTOR
-7. `feature/tmc2-impl2/01g-placement-session` - Session management APIs **(2,628 lines changed)** 🚨
-8. `feature/tmc2-impl2/01h-traffic-analysis` - Traffic analysis APIs **(695 lines changed)** ✅
-9. `feature/tmc2-impl2/01i-scaling-config` - Scaling configuration APIs **(1,016 lines changed)** 🚨
+5. `feature/tmc2-impl2/01e-placement-analysis` - Placement analysis APIs **(1,283 lines)** 🚨 **LARGE**
+6. `feature/tmc2-impl2/01f-placement-health` - Health monitoring APIs **(1,670 lines)** 🚨 **LARGE**
+7. `feature/tmc2-impl2/01g-placement-session` - Session management APIs **(1,076 lines)** 🚨
+8. `feature/tmc2-impl2/01h-traffic-analysis` - Traffic analysis APIs **(1,260 lines)** 🚨
+9. `feature/tmc2-impl2/01i-scaling-config` - Scaling configuration APIs **(1,543 lines)** 🚨
 10. `feature/tmc2-impl2/01j-status-management` - Status aggregation APIs **(921 lines changed)** 🚨
 
 **Phase 4: API Export (makes APIs available)**
-11. `feature/tmc2-impl2/02-apiexport-integration` - TMC APIExport controller **(7,475 lines changed)** 🚨 DOES NEED REFACTOR
+11. `feature/tmc2-impl2/02-apiexport-integration` - TMC APIExport controller **(2,101 lines)** 🚨
 
-**Phase 5: Production-Ready API Enhancement**
-12. `feature/tmc2-impl2/04a-api-types` - Enhanced ClusterRegistration + WorkloadPlacement APIs with comprehensive features **(1,632 lines changed)** 🚨
+**Phase 5: Controller Foundation**
+12. `feature/tmc2-impl2/03-controller-foundation` - TMC controller foundation **(871 lines)** 🚨
+
+**Phase 6: Production-Ready API Enhancement**
+13. `feature/tmc2-impl2/04a-api-types` - Enhanced ClusterRegistration + WorkloadPlacement APIs with comprehensive features **(1,632 lines changed)** 🚨
 
 **Phase 6: Implementation (requires APIs to be available)**
 13. `feature/tmc2-impl2/04b-placement-engine` - Placement algorithms engine **(2,041 lines changed)** 🚨
@@ -34,33 +37,51 @@
 
 ## ⚠️ Review Burden Analysis (Hand-Written Code Only, Excluding Generated Files)
 
-**Branches exceeding 800-line review limit:**
-- `02-apiexport-integration`: **7,475 lines** (9.3x over limit) 🚨 **MASSIVE REVIEW BURDEN**
-- `01f-placement-health`: **4,332 lines** (5.4x over limit) 🚨
-- `04d-controller-manager`: **3,771 lines** (4.7x over limit) 🚨
-- `01g-placement-session`: **2,628 lines** (3.3x over limit) 🚨
-- `01b-cluster-enhanced`: **2,553 lines** (3.2x over limit) 🚨
-- `04b-placement-engine`: **2,041 lines** (2.6x over limit) 🚨
-- `04c-placement-controller`: **1,672 lines** (2.1x over limit) 🚨
-- `04e-tmc-binary`: **1,658 lines** (2.1x over limit) 🚨
-- `04a-api-types`: **1,632 lines** (2.0x over limit) 🚨
-- `01d-placement-advanced`: **1,564 lines** (2.0x over limit) 🚨
-- `01c-placement-basic`: **1,052 lines** (1.3x over limit) 🚨
-- `01i-scaling-config`: **1,016 lines** (1.3x over limit) 🚨
-- `01e-placement-analysis`: **963 lines** (1.2x over limit) 🚨
-- `01j-status-management`: **921 lines** (1.2x over limit) 🚨
+**UPDATED: Branch sizes using improved TMC line counting methodology (implementation lines only):**
 
-**Size-compliant branches (under 800 lines):**
-- `01a-cluster-basic`: **538 lines** ✅ (within target range)
-- `01h-traffic-analysis`: **695 lines** ✅ (within target range)
+**🚨 MASSIVE branches (2,000+ lines):**
+- `02-apiexport-integration`: **2,101 lines** (3.0x over limit) 🚨
 
-**CRITICAL: Only 2 of 16 branches are compliant! 14 branches need significant reorganization.**
+**🚨 LARGE branches (1,000-2,000 lines):**
+- `01f-placement-health`: **1,670 lines** (2.4x over limit) 🚨
+- `01i-scaling-config`: **1,543 lines** (2.2x over limit) 🚨
+- `01e-placement-analysis`: **1,283 lines** (1.8x over limit) 🚨
+- `01h-traffic-analysis`: **1,260 lines** (1.8x over limit) 🚨
+- `01g-placement-session`: **1,076 lines** (1.5x over limit) 🚨
 
-**Key Improvements from Excluding Generated Code:**
-- Reduced `02-apiexport-integration` from 12,511 to 7,475 lines (still massive)
-- Several branches reduced significantly but still over limit
-- Two branches now compliant vs. none before
-- But still 87.5% of branches need reorganization
+**🚨 Over-limit branches (700-1,000 lines):**
+- `03-controller-foundation`: **871 lines** (1.2x over limit) 🚨
+- `01d-placement-advanced`: **705 lines** (1.0x over limit) ⚠️
+
+**✅ Size-compliant branches (under 700 lines):**
+- `01a-cluster-basic`: **180 lines** ✅ **EXCELLENT**
+- `01b-cluster-enhanced`: **286 lines** ✅ **EXCELLENT** 
+- `01c-placement-basic`: **376 lines** ✅ **EXCELLENT**
+
+**SIGNIFICANT IMPROVEMENT: 3 of 11 analyzed branches are now compliant! 7 branches need reorganization, with improved sizing overall.**
+
+**Detailed Branch Implementation Line Summary (Using updated TMC line counting script):**
+
+| Branch | Impl Lines | Test Lines | Coverage | Status |
+|--------|-----------|-----------|----------|---------|
+| **01a-cluster-basic** | **180** | 167 | 92% | ✅ EXCELLENT |
+| **01b-cluster-enhanced** | **286** | 324 | 113% | ✅ EXCELLENT |
+| **01c-placement-basic** | **376** | 459 | 122% | ✅ EXCELLENT |
+| **01d-placement-advanced** | **705** | 248 | 35% | ⚠️ SIZE OK, TESTS NEEDED |
+| **01e-placement-analysis** | **1,283** | 395 | 30% | 🚨 LARGE |
+| **01f-placement-health** | **1,670** | 530 | 31% | 🚨 LARGE |
+| **01g-placement-session** | **1,076** | 546 | 50% | 🚨 LARGE |
+| **01h-traffic-analysis** | **1,260** | 863 | 68% | 🚨 LARGE |
+| **01i-scaling-config** | **1,543** | 1,373 | 88% | 🚨 LARGE |
+| **02-apiexport-integration** | **2,101** | 1,957 | 93% | 🚨 MASSIVE |
+| **03-controller-foundation** | **871** | 944 | 108% | 🚨 OVER LIMIT |
+
+**Key Methodology Improvements:**
+- Now excludes SDK client code (`sdk/client/`) and test fixtures  
+- More accurate exclusion of generated files
+- Better handling of missing files across branches
+- Implementation lines only (tests counted separately for coverage)
+- Target: 700 lines for optimal review
 
 **Renamed unused branches:**
 17. `feature/tmc2-impl2/unused-01-api-foundation` - Comprehensive foundation (1,167 lines, 54 types) - **TOO LARGE**
