@@ -1,0 +1,790 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+    kcp.io/cluster-aware: "true"
+  name: sessionbindingconstraints.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    categories:
+    - tmc
+    - all
+    kind: SessionBindingConstraint
+    listKind: SessionBindingConstraintList
+    plural: sessionbindingconstraints
+    singular: sessionbindingconstraint
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.constraintType
+      name: Constraint Type
+      type: string
+    - jsonPath: .spec.enforcement
+      name: Enforcement
+      type: string
+    - jsonPath: .spec.target.type
+      name: Target
+      type: string
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          SessionBindingConstraint defines constraints on session bindings to enforce
+          operational policies and resource limits across the multi-cluster environment.
+
+          This resource is workspace-aware and supports KCP logical cluster isolation to ensure
+          proper multi-tenancy in KCP environments.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SessionBindingConstraintSpec defines the desired constraint
+              behavior
+            properties:
+              checkInterval:
+                default: 60s
+                description: CheckInterval defines how often to evaluate the constraint
+                type: string
+              constraintType:
+                description: ConstraintType defines the type of constraint to enforce
+                enum:
+                - MaxBindingsPerCluster
+                - MaxBindingsPerWorkload
+                - ResourceUtilizationLimit
+                - NetworkBandwidthLimit
+                - StorageCapacityLimit
+                type: string
+              description:
+                description: Description provides human-readable explanation of the
+                  constraint
+                type: string
+              enforcement:
+                default: Hard
+                description: Enforcement defines how strictly the constraint should
+                  be enforced
+                enum:
+                - Hard
+                - Soft
+                - Warning
+                type: string
+              exemptions:
+                description: Exemptions define conditions under which the constraint
+                  can be bypassed
+                items:
+                  description: ConstraintExemption defines conditions under which
+                    constraints can be bypassed
+                  properties:
+                    conditions:
+                      description: Conditions define when this exemption is active
+                      items:
+                        description: ExemptionCondition defines a condition for constraint
+                          exemption
+                        properties:
+                          type:
+                            description: Type defines the condition type
+                            enum:
+                            - Emergency
+                            - Maintenance
+                            - Testing
+                            - Development
+                            type: string
+                          value:
+                            description: Value provides additional context for the
+                              condition
+                            type: string
+                        required:
+                        - type
+                        type: object
+                      type: array
+                    expiresAt:
+                      description: ExpiresAt defines when this exemption expires
+                      format: date-time
+                      type: string
+                    name:
+                      description: Name is a descriptive name for the exemption
+                      type: string
+                    reason:
+                      description: Reason provides justification for the exemption
+                      type: string
+                    target:
+                      description: Target defines what this exemption applies to
+                      properties:
+                        clusterSelector:
+                          description: ClusterSelector selects target clusters (when
+                            type is Cluster)
+                          properties:
+                            clusterNames:
+                              description: ClusterNames explicitly lists cluster names
+                                to target
+                              items:
+                                type: string
+                              type: array
+                            labelSelector:
+                              description: LabelSelector selects clusters based on
+                                labels
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label
+                                    selector requirements. The requirements are ANDed.
+                                  items:
+                                    description: |-
+                                      A label selector requirement is a selector that contains values, a key, and an operator that
+                                      relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the
+                                          selector applies to.
+                                        type: string
+                                      operator:
+                                        description: |-
+                                          operator represents a key's relationship to a set of values.
+                                          Valid operators are In, NotIn, Exists and DoesNotExist.
+                                        type: string
+                                      values:
+                                        description: |-
+                                          values is an array of string values. If the operator is In or NotIn,
+                                          the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                          the values array must be empty. This array is replaced during a strategic
+                                          merge patch.
+                                        items:
+                                          type: string
+                                        type: array
+                                        x-kubernetes-list-type: atomic
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                    map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                    operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                  type: object
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            locationSelector:
+                              description: LocationSelector selects clusters from
+                                specific locations
+                              items:
+                                type: string
+                              type: array
+                          type: object
+                        namespaceSelector:
+                          description: NamespaceSelector selects target namespaces
+                            (when type is Namespace)
+                          properties:
+                            matchExpressions:
+                              description: matchExpressions is a list of label selector
+                                requirements. The requirements are ANDed.
+                              items:
+                                description: |-
+                                  A label selector requirement is a selector that contains values, a key, and an operator that
+                                  relates the key and values.
+                                properties:
+                                  key:
+                                    description: key is the label key that the selector
+                                      applies to.
+                                    type: string
+                                  operator:
+                                    description: |-
+                                      operator represents a key's relationship to a set of values.
+                                      Valid operators are In, NotIn, Exists and DoesNotExist.
+                                    type: string
+                                  values:
+                                    description: |-
+                                      values is an array of string values. If the operator is In or NotIn,
+                                      the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                      the values array must be empty. This array is replaced during a strategic
+                                      merge patch.
+                                    items:
+                                      type: string
+                                    type: array
+                                    x-kubernetes-list-type: atomic
+                                required:
+                                - key
+                                - operator
+                                type: object
+                              type: array
+                              x-kubernetes-list-type: atomic
+                            matchLabels:
+                              additionalProperties:
+                                type: string
+                              description: |-
+                                matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                operator is "In", and the values array contains only "value". The requirements are ANDed.
+                              type: object
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        type:
+                          description: Type defines the target type
+                          enum:
+                          - Cluster
+                          - Namespace
+                          - Workload
+                          - Global
+                          type: string
+                        workloadSelector:
+                          description: WorkloadSelector selects target workloads (when
+                            type is Workload)
+                          properties:
+                            labelSelector:
+                              description: LabelSelector selects workloads based on
+                                labels
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label
+                                    selector requirements. The requirements are ANDed.
+                                  items:
+                                    description: |-
+                                      A label selector requirement is a selector that contains values, a key, and an operator that
+                                      relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the
+                                          selector applies to.
+                                        type: string
+                                      operator:
+                                        description: |-
+                                          operator represents a key's relationship to a set of values.
+                                          Valid operators are In, NotIn, Exists and DoesNotExist.
+                                        type: string
+                                      values:
+                                        description: |-
+                                          values is an array of string values. If the operator is In or NotIn,
+                                          the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                          the values array must be empty. This array is replaced during a strategic
+                                          merge patch.
+                                        items:
+                                          type: string
+                                        type: array
+                                        x-kubernetes-list-type: atomic
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                    map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                    operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                  type: object
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            namespaceSelector:
+                              description: NamespaceSelector selects workloads from
+                                specific namespaces
+                              properties:
+                                matchExpressions:
+                                  description: matchExpressions is a list of label
+                                    selector requirements. The requirements are ANDed.
+                                  items:
+                                    description: |-
+                                      A label selector requirement is a selector that contains values, a key, and an operator that
+                                      relates the key and values.
+                                    properties:
+                                      key:
+                                        description: key is the label key that the
+                                          selector applies to.
+                                        type: string
+                                      operator:
+                                        description: |-
+                                          operator represents a key's relationship to a set of values.
+                                          Valid operators are In, NotIn, Exists and DoesNotExist.
+                                        type: string
+                                      values:
+                                        description: |-
+                                          values is an array of string values. If the operator is In or NotIn,
+                                          the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                          the values array must be empty. This array is replaced during a strategic
+                                          merge patch.
+                                        items:
+                                          type: string
+                                        type: array
+                                        x-kubernetes-list-type: atomic
+                                    required:
+                                    - key
+                                    - operator
+                                    type: object
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                                matchLabels:
+                                  additionalProperties:
+                                    type: string
+                                  description: |-
+                                    matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                    map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                    operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                  type: object
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            workloadTypes:
+                              description: WorkloadTypes specifies the types of workloads
+                                to select
+                              items:
+                                description: WorkloadType represents a Kubernetes
+                                  workload type
+                                properties:
+                                  apiVersion:
+                                    description: APIVersion is the API version of
+                                      the workload
+                                    type: string
+                                  kind:
+                                    description: Kind is the kind of the workload
+                                    type: string
+                                required:
+                                - apiVersion
+                                - kind
+                                type: object
+                              type: array
+                          type: object
+                      required:
+                      - type
+                      type: object
+                  required:
+                  - name
+                  - target
+                  type: object
+                type: array
+              limit:
+                description: Limit defines the constraint limit (interpretation depends
+                  on constraint type)
+                format: int64
+                minimum: 1
+                type: integer
+              target:
+                description: Target defines what the constraint applies to
+                properties:
+                  clusterSelector:
+                    description: ClusterSelector selects target clusters (when type
+                      is Cluster)
+                    properties:
+                      clusterNames:
+                        description: ClusterNames explicitly lists cluster names to
+                          target
+                        items:
+                          type: string
+                        type: array
+                      labelSelector:
+                        description: LabelSelector selects clusters based on labels
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      locationSelector:
+                        description: LocationSelector selects clusters from specific
+                          locations
+                        items:
+                          type: string
+                        type: array
+                    type: object
+                  namespaceSelector:
+                    description: NamespaceSelector selects target namespaces (when
+                      type is Namespace)
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  type:
+                    description: Type defines the target type
+                    enum:
+                    - Cluster
+                    - Namespace
+                    - Workload
+                    - Global
+                    type: string
+                  workloadSelector:
+                    description: WorkloadSelector selects target workloads (when type
+                      is Workload)
+                    properties:
+                      labelSelector:
+                        description: LabelSelector selects workloads based on labels
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      namespaceSelector:
+                        description: NamespaceSelector selects workloads from specific
+                          namespaces
+                        properties:
+                          matchExpressions:
+                            description: matchExpressions is a list of label selector
+                              requirements. The requirements are ANDed.
+                            items:
+                              description: |-
+                                A label selector requirement is a selector that contains values, a key, and an operator that
+                                relates the key and values.
+                              properties:
+                                key:
+                                  description: key is the label key that the selector
+                                    applies to.
+                                  type: string
+                                operator:
+                                  description: |-
+                                    operator represents a key's relationship to a set of values.
+                                    Valid operators are In, NotIn, Exists and DoesNotExist.
+                                  type: string
+                                values:
+                                  description: |-
+                                    values is an array of string values. If the operator is In or NotIn,
+                                    the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                    the values array must be empty. This array is replaced during a strategic
+                                    merge patch.
+                                  items:
+                                    type: string
+                                  type: array
+                                  x-kubernetes-list-type: atomic
+                              required:
+                              - key
+                              - operator
+                              type: object
+                            type: array
+                            x-kubernetes-list-type: atomic
+                          matchLabels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                              map is equivalent to an element of matchExpressions, whose key field is "key", the
+                              operator is "In", and the values array contains only "value". The requirements are ANDed.
+                            type: object
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      workloadTypes:
+                        description: WorkloadTypes specifies the types of workloads
+                          to select
+                        items:
+                          description: WorkloadType represents a Kubernetes workload
+                            type
+                          properties:
+                            apiVersion:
+                              description: APIVersion is the API version of the workload
+                              type: string
+                            kind:
+                              description: Kind is the kind of the workload
+                              type: string
+                          required:
+                          - apiVersion
+                          - kind
+                          type: object
+                        type: array
+                    type: object
+                required:
+                - type
+                type: object
+              violationAction:
+                default: Block
+                description: ViolationAction defines what action to take when constraint
+                  is violated
+                enum:
+                - Block
+                - Warn
+                - Log
+                - None
+                type: string
+            required:
+            - constraintType
+            - enforcement
+            - limit
+            - target
+            type: object
+          status:
+            description: SessionBindingConstraintStatus represents the observed state
+              of the constraint
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the constraint state
+                items:
+                  description: Condition defines an observation of a object operational
+                    state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              currentUsage:
+                description: CurrentUsage tracks current usage relative to the constraint
+                  limit
+                format: int64
+                type: integer
+              lastCheckTime:
+                description: LastCheckTime is when the constraint was last evaluated
+                format: date-time
+                type: string
+              lastUpdateTime:
+                description: LastUpdateTime is when the status was last updated
+                format: date-time
+                type: string
+              message:
+                description: Message provides additional information about the constraint
+                  state
+                type: string
+              phase:
+                default: Active
+                description: Phase indicates the current constraint phase
+                type: string
+              recentViolations:
+                description: RecentViolations tracks recent constraint violations
+                items:
+                  description: ConstraintViolation represents a violation of a binding
+                    constraint
+                  properties:
+                    action:
+                      description: Action describes what action was taken
+                      type: string
+                    currentValue:
+                      description: CurrentValue is the current value that violated
+                        the constraint
+                      format: int64
+                      type: integer
+                    limitValue:
+                      description: LimitValue is the constraint limit that was violated
+                      format: int64
+                      type: integer
+                    message:
+                      description: Message provides additional details about the violation
+                      type: string
+                    target:
+                      description: Target describes what was affected by the violation
+                      properties:
+                        apiVersion:
+                          description: APIVersion is the API version of the referenced
+                            object
+                          type: string
+                        kind:
+                          description: Kind is the kind of the referenced object
+                          type: string
+                        name:
+                          description: Name is the name of the referenced object
+                          type: string
+                        namespace:
+                          description: Namespace is the namespace of the referenced
+                            object
+                          type: string
+                        uid:
+                          description: UID is the UID of the referenced object
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      - name
+                      type: object
+                    timestamp:
+                      description: Timestamp is when the violation occurred
+                      format: date-time
+                      type: string
+                    violationType:
+                      description: ViolationType describes the type of violation
+                      type: string
+                  required:
+                  - action
+                  - currentValue
+                  - limitValue
+                  - target
+                  - timestamp
+                  - violationType
+                  type: object
+                type: array
+              violationCount:
+                description: ViolationCount tracks the number of constraint violations
+                  detected
+                format: int64
+                type: integer
+            required:
+            - violationCount
+            type: object
+        type: object
+        x-kubernetes-validations:
+        - rule: self.metadata.annotations['kcp.io/cluster'] != ''
+    served: true
+    storage: true
+    subresources:
+      status: {}

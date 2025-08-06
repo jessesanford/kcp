@@ -54,6 +54,10 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&SessionAffinityPolicy{},
 		&SessionAffinityPolicyList{},
+		&StickyBinding{},
+		&StickyBindingList{},
+		&SessionBindingConstraint{},
+		&SessionBindingConstraintList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil

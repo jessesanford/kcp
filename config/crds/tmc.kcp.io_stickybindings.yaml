@@ -1,0 +1,559 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+    kcp.io/cluster-aware: "true"
+  name: stickybindings.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    categories:
+    - tmc
+    - all
+    kind: StickyBinding
+    listKind: StickyBindingList
+    plural: stickybindings
+    singular: stickybinding
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.sessionID
+      name: Session ID
+      type: string
+    - jsonPath: .spec.targetCluster
+      name: Target Cluster
+      type: string
+    - jsonPath: .status.phase
+      name: Status
+      type: string
+    - jsonPath: .spec.expiresAt
+      name: Expires
+      type: date
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          StickyBinding represents a session-to-cluster binding that provides persistence
+          and management for session affinity. It tracks the binding of sessions to specific
+          clusters to ensure workload placement consistency across the multi-cluster environment.
+
+          This resource is workspace-aware and supports KCP logical cluster isolation to ensure
+          proper multi-tenancy in KCP environments.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: StickyBindingSpec defines the desired state of StickyBinding
+            properties:
+              affinityPolicyRef:
+                description: AffinityPolicy reference to the SessionAffinityPolicy
+                  that created this binding
+                properties:
+                  apiVersion:
+                    description: APIVersion is the API version of the referenced object
+                    type: string
+                  kind:
+                    description: Kind is the kind of the referenced object
+                    type: string
+                  name:
+                    description: Name is the name of the referenced object
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace of the referenced object
+                    type: string
+                  uid:
+                    description: UID is the UID of the referenced object
+                    type: string
+                required:
+                - apiVersion
+                - kind
+                - name
+                type: object
+              autoRenewal:
+                description: AutoRenewal configuration for automatic binding renewal
+                properties:
+                  enabled:
+                    default: true
+                    description: Enabled indicates whether auto-renewal is active
+                    type: boolean
+                  extensionDuration:
+                    default: 3600s
+                    description: ExtensionDuration defines how much to extend the
+                      binding on each renewal
+                    type: string
+                  maxRenewalAttempts:
+                    default: 3
+                    description: MaxRenewalAttempts defines maximum renewal attempts
+                      before giving up
+                    format: int32
+                    maximum: 10
+                    minimum: 1
+                    type: integer
+                  renewalInterval:
+                    default: 300s
+                    description: RenewalInterval defines how often to check for renewal
+                    type: string
+                  renewalThreshold:
+                    default: 600s
+                    description: RenewalThreshold defines when to trigger renewal
+                      before expiration
+                    type: string
+                required:
+                - enabled
+                type: object
+              conflictResolution:
+                description: ConflictResolution defines how to handle binding conflicts
+                properties:
+                  conflictTimeout:
+                    default: 300s
+                    description: ConflictTimeout defines how long to wait for conflict
+                      resolution
+                    type: string
+                  manualApprovalRequired:
+                    default: false
+                    description: ManualApprovalRequired indicates if manual approval
+                      is needed for conflict resolution
+                    type: boolean
+                  strategy:
+                    default: HighestWeight
+                    description: Strategy defines the conflict resolution strategy
+                    enum:
+                    - HighestWeight
+                    - NewestBinding
+                    - OldestBinding
+                    - Manual
+                    type: string
+                required:
+                - strategy
+                type: object
+              expiresAt:
+                description: ExpiresAt defines when this binding should expire
+                format: date-time
+                type: string
+              sessionID:
+                description: SessionID uniquely identifies the session this binding
+                  belongs to
+                maxLength: 128
+                minLength: 1
+                type: string
+              storageBackend:
+                description: StorageBackend specifies where binding data should be
+                  persisted
+                properties:
+                  configMapRef:
+                    description: ConfigMapRef references a ConfigMap for storage (when
+                      type is ConfigMap)
+                    properties:
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  encryption:
+                    description: Encryption settings for persisted binding data
+                    properties:
+                      algorithm:
+                        default: AES256
+                        description: Algorithm defines the encryption algorithm to
+                          use
+                        enum:
+                        - AES256
+                        - ChaCha20Poly1305
+                        type: string
+                      enabled:
+                        default: false
+                        description: Enabled indicates whether encryption should be
+                          applied
+                        type: boolean
+                      keySecretRef:
+                        description: KeySecretRef references a secret containing the
+                          encryption key
+                        properties:
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                    required:
+                    - enabled
+                    type: object
+                  externalConfig:
+                    description: ExternalConfig configures external storage systems
+                    properties:
+                      authSecretRef:
+                        description: AuthSecretRef references a secret containing
+                          authentication credentials
+                        properties:
+                          name:
+                            default: ""
+                            description: |-
+                              Name of the referent.
+                              This field is effectively required, but due to backwards compatibility is
+                              allowed to be empty. Instances of this type with an empty value here are
+                              almost certainly wrong.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                            type: string
+                        type: object
+                        x-kubernetes-map-type: atomic
+                      connectionTimeout:
+                        default: 30s
+                        description: ConnectionTimeout defines timeout for storage
+                          operations
+                        type: string
+                      tls:
+                        description: TLS configuration for secure connections
+                        properties:
+                          caSecretRef:
+                            description: CASecretRef references a secret containing
+                              the CA certificate
+                            properties:
+                              name:
+                                default: ""
+                                description: |-
+                                  Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          clientCertSecretRef:
+                            description: ClientCertSecretRef references a secret containing
+                              client certificates
+                            properties:
+                              name:
+                                default: ""
+                                description: |-
+                                  Name of the referent.
+                                  This field is effectively required, but due to backwards compatibility is
+                                  allowed to be empty. Instances of this type with an empty value here are
+                                  almost certainly wrong.
+                                  More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          enabled:
+                            default: true
+                            description: Enabled indicates whether TLS should be used
+                            type: boolean
+                          insecureSkipVerify:
+                            default: false
+                            description: InsecureSkipVerify skips certificate verification
+                              (not recommended for production)
+                            type: boolean
+                        required:
+                        - enabled
+                        type: object
+                      url:
+                        description: URL is the endpoint URL for the external storage
+                          system
+                        type: string
+                    required:
+                    - url
+                    type: object
+                  secretRef:
+                    description: SecretRef references a Secret for storage (when type
+                      is Secret)
+                    properties:
+                      name:
+                        default: ""
+                        description: |-
+                          Name of the referent.
+                          This field is effectively required, but due to backwards compatibility is
+                          allowed to be empty. Instances of this type with an empty value here are
+                          almost certainly wrong.
+                          More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                        type: string
+                    type: object
+                    x-kubernetes-map-type: atomic
+                  type:
+                    description: Type defines the storage backend type
+                    enum:
+                    - Memory
+                    - ConfigMap
+                    - Secret
+                    - CustomResource
+                    - External
+                    type: string
+                required:
+                - type
+                type: object
+              tags:
+                additionalProperties:
+                  type: string
+                description: Tags provide additional metadata for binding organization
+                  and management
+                type: object
+              targetCluster:
+                description: TargetCluster is the cluster this session is bound to
+                type: string
+              weight:
+                default: 100
+                description: Weight defines the priority of this binding for conflict
+                  resolution
+                format: int32
+                maximum: 1000
+                minimum: 1
+                type: integer
+              workloadReference:
+                description: WorkloadReference refers to the workload associated with
+                  this binding
+                properties:
+                  apiVersion:
+                    description: APIVersion is the API version of the referenced object
+                    type: string
+                  kind:
+                    description: Kind is the kind of the referenced object
+                    type: string
+                  name:
+                    description: Name is the name of the referenced object
+                    type: string
+                  namespace:
+                    description: Namespace is the namespace of the referenced object
+                    type: string
+                  uid:
+                    description: UID is the UID of the referenced object
+                    type: string
+                required:
+                - apiVersion
+                - kind
+                - name
+                type: object
+            required:
+            - affinityPolicyRef
+            - expiresAt
+            - sessionID
+            - storageBackend
+            - targetCluster
+            - workloadReference
+            type: object
+          status:
+            description: StickyBindingStatus represents the observed state of StickyBinding
+            properties:
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the binding state
+                items:
+                  description: Condition defines an observation of a object operational
+                    state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              conflictStatus:
+                description: ConflictStatus tracks any conflicts with this binding
+                properties:
+                  conflictingBindings:
+                    description: ConflictingBindings lists other bindings that conflict
+                      with this one
+                    items:
+                      description: ObjectReference is a reference to a Kubernetes
+                        object
+                      properties:
+                        apiVersion:
+                          description: APIVersion is the API version of the referenced
+                            object
+                          type: string
+                        kind:
+                          description: Kind is the kind of the referenced object
+                          type: string
+                        name:
+                          description: Name is the name of the referenced object
+                          type: string
+                        namespace:
+                          description: Namespace is the namespace of the referenced
+                            object
+                          type: string
+                        uid:
+                          description: UID is the UID of the referenced object
+                          type: string
+                      required:
+                      - apiVersion
+                      - kind
+                      - name
+                      type: object
+                    type: array
+                  hasConflicts:
+                    description: HasConflicts indicates whether there are any conflicts
+                    type: boolean
+                  lastConflictTime:
+                    description: LastConflictTime is when the last conflict was detected
+                    format: date-time
+                    type: string
+                  resolutionStatus:
+                    description: ResolutionStatus indicates the status of conflict
+                      resolution
+                    type: string
+                required:
+                - hasConflicts
+                type: object
+              lastRenewalTime:
+                description: LastRenewalTime is when the binding was last renewed
+                format: date-time
+                type: string
+              lastUpdateTime:
+                description: LastUpdateTime is when the status was last updated
+                format: date-time
+                type: string
+              message:
+                description: Message provides additional information about the binding
+                  state
+                type: string
+              nextRenewalTime:
+                description: NextRenewalTime is when the next renewal attempt will
+                  occur
+                format: date-time
+                type: string
+              performance:
+                description: Performance metrics for this binding
+                properties:
+                  averageRenewalLatency:
+                    description: AverageRenewalLatency is the average time for binding
+                      renewals
+                    type: string
+                  conflictResolutionTime:
+                    description: ConflictResolutionTime is the time spent resolving
+                      conflicts
+                    type: string
+                  creationLatency:
+                    description: CreationLatency is the time it took to create this
+                      binding
+                    type: string
+                  errorCount:
+                    description: ErrorCount tracks the number of errors encountered
+                    format: int64
+                    type: integer
+                  lastRequestTime:
+                    description: LastRequestTime is when this binding last served
+                      a request
+                    format: date-time
+                    type: string
+                  requestCount:
+                    description: RequestCount tracks the number of requests served
+                      by this binding
+                    format: int64
+                    type: integer
+                  storageLatency:
+                    description: StorageLatency is the average time for storage operations
+                    type: string
+                required:
+                - errorCount
+                - requestCount
+                type: object
+              phase:
+                default: Active
+                description: Phase indicates the current binding phase
+                type: string
+              renewalAttempts:
+                description: RenewalAttempts tracks the number of renewal attempts
+                  made
+                format: int32
+                type: integer
+              storageStatus:
+                description: StorageStatus tracks the persistence status of this binding
+                properties:
+                  backendType:
+                    description: BackendType indicates which storage backend is actively
+                      being used
+                    type: string
+                  error:
+                    description: Error message if storage operations are failing
+                    type: string
+                  lastSyncTime:
+                    description: LastSyncTime is when the binding was last synchronized
+                      to storage
+                    format: date-time
+                    type: string
+                  storageHealth:
+                    description: StorageHealth indicates the health of the storage
+                      backend
+                    type: string
+                  syncFailures:
+                    description: SyncFailures tracks the number of consecutive sync
+                      failures
+                    format: int32
+                    type: integer
+                required:
+                - backendType
+                - storageHealth
+                - syncFailures
+                type: object
+            required:
+            - renewalAttempts
+            type: object
+        type: object
+        x-kubernetes-validations:
+        - rule: self.metadata.annotations['kcp.io/cluster'] != ''
+    served: true
+    storage: true
+    subresources:
+      status: {}
