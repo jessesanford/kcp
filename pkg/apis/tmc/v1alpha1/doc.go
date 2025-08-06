@@ -16,11 +16,14 @@ limitations under the License.
 
 // Package v1alpha1 contains API Schema definitions for the TMC (Transparent Multi-Cluster) v1alpha1 API group.
 //
-// This package provides the foundational types and shared utilities for session-based workload placement management.
-// The TMC APIs enable coordinated multi-cluster placement with session management, state persistence,
-// decision coordination, and comprehensive validation frameworks.
+// This package provides session-based workload placement management APIs that enable coordinated
+// multi-cluster placement with comprehensive lifecycle management, state persistence,
+// decision coordination, and validation frameworks.
 //
-// Shared Foundation Types:
+// Core APIs:
+// - PlacementSession for session-based placement lifecycle management
+//
+// Foundation Types:
 // - WorkloadSelector for workload selection criteria
 // - ClusterSelector for cluster targeting
 // - WorkloadType for Kubernetes resource type specification
