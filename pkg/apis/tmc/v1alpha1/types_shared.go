@@ -95,3 +95,63 @@ type ObjectReference struct {
 	// +optional
 	UID string `json:"uid,omitempty"`
 }
+
+// SessionReference is a reference to a placement session
+type SessionReference struct {
+	// Name is the name of the session
+	Name string `json:"name"`
+
+	// Namespace is the namespace of the session
+	Namespace string `json:"namespace"`
+
+	// SessionID is the unique identifier of the session
+	// +optional
+	SessionID string `json:"sessionID,omitempty"`
+}
+
+// WorkloadReference is a reference to a workload
+type WorkloadReference struct {
+	// APIVersion is the API version of the workload
+	APIVersion string `json:"apiVersion"`
+
+	// Kind is the kind of the workload
+	Kind string `json:"kind"`
+
+	// Name is the name of the workload
+	Name string `json:"name"`
+
+	// Namespace is the namespace of the workload
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// PlacementReference is a reference to a placement decision
+type PlacementReference struct {
+	// Name is the name of the placement decision
+	Name string `json:"name"`
+
+	// Namespace is the namespace of the placement decision
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+
+	// UID is the UID of the placement decision
+	// +optional
+	UID string `json:"uid,omitempty"`
+}
+
+// ConflictType defines the types of conflicts that can occur
+// +kubebuilder:validation:Enum=ResourceContention;PolicyViolation;AffinityConflict;ConstraintViolation;ClusterUnavailable
+type ConflictType string
+
+const (
+	// ConflictTypeResourceContention indicates resource contention conflict
+	ConflictTypeResourceContention ConflictType = "ResourceContention"
+	// ConflictTypePolicyViolation indicates policy violation conflict
+	ConflictTypePolicyViolation ConflictType = "PolicyViolation"
+	// ConflictTypeAffinityConflict indicates affinity rule conflict
+	ConflictTypeAffinityConflict ConflictType = "AffinityConflict"
+	// ConflictTypeConstraintViolation indicates constraint violation conflict
+	ConflictTypeConstraintViolation ConflictType = "ConstraintViolation"
+	// ConflictTypeClusterUnavailable indicates cluster unavailability conflict
+	ConflictTypeClusterUnavailable ConflictType = "ClusterUnavailable"
+)

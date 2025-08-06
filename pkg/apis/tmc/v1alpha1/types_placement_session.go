@@ -169,7 +169,7 @@ const (
 )
 
 // ConflictResolutionType defines how to handle placement conflicts
-// +kubebuilder:validation:Enum=Override;Merge;Fail
+// +kubebuilder:validation:Enum=Override;Merge;Fail;PriorityBased
 type ConflictResolutionType string
 
 const (
@@ -179,6 +179,8 @@ const (
 	ConflictResolutionTypeMerge ConflictResolutionType = "Merge"
 	// ConflictResolutionTypeFail fails the session when conflicts occur
 	ConflictResolutionTypeFail ConflictResolutionType = "Fail"
+	// ConflictResolutionTypePriorityBased resolves conflicts based on priority
+	ConflictResolutionTypePriorityBased ConflictResolutionType = "PriorityBased"
 )
 
 // PersistenceStrategy defines how session state should be persisted
@@ -219,7 +221,7 @@ type PlacementPolicy struct {
 }
 
 // PlacementPolicyType defines the types of placement policies
-// +kubebuilder:validation:Enum=Affinity;AntiAffinity;Spread;Consolidate;Custom
+// +kubebuilder:validation:Enum=Affinity;AntiAffinity;Spread;Consolidate;Resource;Custom
 type PlacementPolicyType string
 
 const (
@@ -231,6 +233,8 @@ const (
 	PlacementPolicyTypeSpread PlacementPolicyType = "Spread"
 	// PlacementPolicyTypeConsolidate represents consolidation placement policies
 	PlacementPolicyTypeConsolidate PlacementPolicyType = "Consolidate"
+	// PlacementPolicyTypeResource represents resource-based placement policies
+	PlacementPolicyTypeResource PlacementPolicyType = "Resource"
 	// PlacementPolicyTypeCustom represents custom placement policies
 	PlacementPolicyTypeCustom PlacementPolicyType = "Custom"
 )
