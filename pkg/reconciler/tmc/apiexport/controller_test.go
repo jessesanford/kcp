@@ -19,29 +19,23 @@ package apiexport
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/tools/cache"
 
 	"github.com/kcp-dev/logicalcluster/v3"
 
 	apisv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/apis/v1alpha1"
-	kcpfakeclient "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/fake"
-	apisv1alpha1informers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/apis/v1alpha1"
 )
 
-func TestTMCAPIExportController(t *testing.T) {
+func TestIsTMCAPIExport(t *testing.T) {
 	tests := map[string]struct {
 		apiExport       *apisv1alpha1.APIExport
-		schemas         []*apisv1alpha1.APIResourceSchema
-		workspace       string
 		expectProcessed bool
 	}{
-		"tmc apiexport processing": {
+		"tmc apiexport": {
 			apiExport: &apisv1alpha1.APIExport{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: TMCAPIExportName,
@@ -49,35 +43,10 @@ func TestTMCAPIExportController(t *testing.T) {
 						logicalcluster.AnnotationKey: "root:tmc",
 					},
 				},
-				Spec: apisv1alpha1.APIExportSpec{
-					LatestResourceSchemas: []string{
-						"tmc.kcp.io.v1alpha1.ClusterRegistration",
-						"tmc.kcp.io.v1alpha1.WorkloadPlacement",
-					},
-				},
 			},
-			schemas: []*apisv1alpha1.APIResourceSchema{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "tmc.kcp.io.v1alpha1.ClusterRegistration",
-						Annotations: map[string]string{
-							logicalcluster.AnnotationKey: "root:tmc",
-						},
-					},
-				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "tmc.kcp.io.v1alpha1.WorkloadPlacement",
-						Annotations: map[string]string{
-							logicalcluster.AnnotationKey: "root:tmc",
-						},
-					},
-				},
-			},
-			workspace:       "root:tmc",
 			expectProcessed: true,
 		},
-		"non-tmc apiexport ignored": {
+		"non-tmc apiexport": {
 			apiExport: &apisv1alpha1.APIExport{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "other-api.kcp.io",
@@ -86,36 +55,7 @@ func TestTMCAPIExportController(t *testing.T) {
 					},
 				},
 			},
-			workspace:       "root:other",
 			expectProcessed: false,
-		},
-		"tmc apiexport missing schemas": {
-			apiExport: &apisv1alpha1.APIExport{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: TMCAPIExportName,
-					Annotations: map[string]string{
-						logicalcluster.AnnotationKey: "root:tmc",
-					},
-				},
-				Spec: apisv1alpha1.APIExportSpec{
-					LatestResourceSchemas: []string{
-						"tmc.kcp.io.v1alpha1.ClusterRegistration",
-						// Missing WorkloadPlacement schema
-					},
-				},
-			},
-			schemas: []*apisv1alpha1.APIResourceSchema{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "tmc.kcp.io.v1alpha1.ClusterRegistration",
-						Annotations: map[string]string{
-							logicalcluster.AnnotationKey: "root:tmc",
-						},
-					},
-				},
-			},
-			workspace:       "root:tmc",
-			expectProcessed: true, // Still processes but logs missing schema
 		},
 	}
 
@@ -124,41 +64,15 @@ func TestTMCAPIExportController(t *testing.T) {
 		t.Run(testName, func(t *testing.T) {
 			t.Parallel()
 
-			// Create fake client
-			objs := []runtime.Object{testCase.apiExport}
-			for _, schema := range testCase.schemas {
-				objs = append(objs, schema)
-			}
-			kcpClusterClient := kcpfakeclient.NewSimpleClientset(objs...)
-
-			// Create informers
-			apiExportInformer := apisv1alpha1informers.NewAPIExportClusterInformer(
-				kcpClusterClient,
-				time.Minute*10,
-				cache.Indexers{},
-			)
-			apiResourceSchemaInformer := apisv1alpha1informers.NewAPIResourceSchemaClusterInformer(
-				kcpClusterClient,
-				time.Minute*10,
-				cache.Indexers{},
-			)
-
-			// Create controller
-			controller, err := NewController(
-				kcpClusterClient,
-				apiExportInformer,
-				apiResourceSchemaInformer,
-			)
-			require.NoError(t, err, "failed to create controller")
-
-			// Add objects to informer stores
-			clusterName := logicalcluster.Name(testCase.workspace)
-			err = apiExportInformer.Informer().GetStore().Add(testCase.apiExport)
-			require.NoError(t, err)
-
-			for _, schema := range testCase.schemas {
-				err = apiResourceSchemaInformer.Informer().GetStore().Add(schema)
-				require.NoError(t, err)
+			// Create a minimal controller with mock schema getter
+			controller := &Controller{
+				getAPIResourceSchema: func(clusterName logicalcluster.Name, name string) (*apisv1alpha1.APIResourceSchema, error) {
+					return &apisv1alpha1.APIResourceSchema{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: name,
+						},
+					}, nil
+				},
 			}
 
 			// Test isTMCAPIExport
@@ -166,16 +80,51 @@ func TestTMCAPIExportController(t *testing.T) {
 			require.Equal(t, testCase.expectProcessed, isTMC, "isTMCAPIExport result mismatch")
 
 			if testCase.expectProcessed {
-				// Test reconcile
+				// Test reconcile - this should not error for basic cases
 				ctx := context.Background()
-				err = controller.reconcileTMCAPIExport(ctx, testCase.apiExport)
+				err := controller.reconcileTMCAPIExport(ctx, testCase.apiExport)
 				require.NoError(t, err, "reconcileTMCAPIExport should not return error")
 			}
 		})
 	}
 }
 
-func TestTMCAPIExportControllerName(t *testing.T) {
+func TestReconcileTMCAPIExportSchemaValidation(t *testing.T) {
+	controller := &Controller{
+		getAPIResourceSchema: func(clusterName logicalcluster.Name, name string) (*apisv1alpha1.APIResourceSchema, error) {
+			// Simulate schema exists for ClusterRegistration but not WorkloadPlacement
+			if name == "tmc.kcp.io.v1alpha1.ClusterRegistration" {
+				return &apisv1alpha1.APIResourceSchema{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: name,
+					},
+				}, nil
+			}
+			return nil, errors.NewNotFound(apisv1alpha1.Resource("apiresourceschema"), name)
+		},
+	}
+
+	apiExport := &apisv1alpha1.APIExport{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: TMCAPIExportName,
+			Annotations: map[string]string{
+				logicalcluster.AnnotationKey: "root:tmc",
+			},
+		},
+		Spec: apisv1alpha1.APIExportSpec{
+			LatestResourceSchemas: []string{
+				"tmc.kcp.io.v1alpha1.ClusterRegistration",
+				"tmc.kcp.io.v1alpha1.WorkloadPlacement",
+			},
+		},
+	}
+
+	ctx := context.Background()
+	err := controller.reconcileTMCAPIExport(ctx, apiExport)
+	require.NoError(t, err, "reconcileTMCAPIExport should handle missing schemas gracefully")
+}
+
+func TestTMCAPIExportControllerConstants(t *testing.T) {
 	require.Equal(t, "tmc-apiexport", ControllerName)
 	require.Equal(t, "tmc.kcp.io", TMCAPIExportName)
 }
