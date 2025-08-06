@@ -51,7 +51,15 @@ func init() {
 
 // addKnownTypes adds the list of known types to the given scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
-	// Note: Additional types will be registered by extending branches
+	// Session affinity and sticky binding types
+	scheme.AddKnownTypes(SchemeGroupVersion,
+		&SessionAffinityPolicy{},
+		&SessionAffinityPolicyList{},
+		&StickyBinding{},
+		&StickyBindingList{},
+		&SessionBindingConstraint{},
+		&SessionBindingConstraintList{},
+	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
 }
