@@ -5,6 +5,11 @@ Multi-Agent TMC Implementation Orchestration Prompt
   # IMPERATIVE USE OF WORKTREES!
   - NEVER EVER ALLOW AGENTS TO WORK OUTSIDE OF THEIR WORKTREES
 
+  # IMPERATIVE DEPLOY AGENTS IN PARALLEL
+  - DEPLOY THE SW AGENTS IN PARALLEL PER THE PLAN BELOW
+
+  # IMPERATIVE ALWAYS ASK REVIEW AGENT TO REVIEW AFTER SW AGENT IS FINISHED
+
   🎯 Core Orchestration Objectives
 
   1. Deploy 8 kcp-go-lang-sr-sw-eng agents in parallel following the TMC orchestration plan
