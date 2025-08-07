@@ -24,6 +24,7 @@ import (
 	cachev1alpha1 "github.com/kcp-dev/kcp/sdk/apis/cache/v1alpha1"
 	corev1alpha1 "github.com/kcp-dev/kcp/sdk/apis/core/v1alpha1"
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tenancy/v1alpha1"
+	tmcv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tmc/v1alpha1"
 	topologyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/topology/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -41,6 +42,7 @@ var localSchemeBuilder = runtime.SchemeBuilder{
 	cachev1alpha1.AddToScheme,
 	corev1alpha1.AddToScheme,
 	tenancyv1alpha1.AddToScheme,
+	tmcv1alpha1.AddToScheme,
 	topologyv1alpha1.AddToScheme,
 }
 
