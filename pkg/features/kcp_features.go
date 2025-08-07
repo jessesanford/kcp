@@ -53,6 +53,28 @@ const (
 	// Enables VirtualWorkspace urls on APIExport. This enables to use Deprecated APIExport VirtualWorkspace urls.
 	// This is a temporary feature to ease the migration to the new VirtualWorkspace urls.
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls featuregate.Feature = "EnableDeprecatedAPIExportVirtualWorkspacesUrls"
+
+	// TMC Feature Flags
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Master feature flag for all TMC functionality. When disabled, all TMC features are disabled.
+	TMCFeature featuregate.Feature = "TMCFeature"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables TMC APIs (ClusterRegistration, WorkloadPlacement) and APIExport functionality.
+	TMCAPIs featuregate.Feature = "TMCAPIs"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables TMC controllers for cluster registration and workload placement management.
+	TMCControllers featuregate.Feature = "TMCControllers"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables TMC placement engine for advanced workload placement strategies.
+	TMCPlacement featuregate.Feature = "TMCPlacement"
 )
 
 // DefaultFeatureGate exposes the upstream feature gate, but with our gate setting applied.
@@ -113,6 +135,44 @@ func (f *kcpFeatureGate) Type() string {
 	return "mapStringBool"
 }
 
+// TMC Feature Flag Utilities
+
+// TMCEnabled returns true if the master TMC feature flag is enabled.
+// This is the primary gate that must be enabled for any TMC functionality.
+func TMCEnabled() bool {
+	return utilfeature.DefaultFeatureGate.Enabled(TMCFeature)
+}
+
+// TMCAPIsEnabled returns true if TMC APIs feature flag is enabled.
+// This controls whether TMC API types (ClusterRegistration, WorkloadPlacement) are available.
+// Requires TMCFeature to be enabled.
+func TMCAPIsEnabled() bool {
+	return TMCEnabled() && utilfeature.DefaultFeatureGate.Enabled(TMCAPIs)
+}
+
+// TMCControllersEnabled returns true if TMC controllers feature flag is enabled.
+// This controls whether TMC controllers for cluster registration and workload placement are active.
+// Requires TMCFeature to be enabled.
+func TMCControllersEnabled() bool {
+	return TMCEnabled() && utilfeature.DefaultFeatureGate.Enabled(TMCControllers)
+}
+
+// TMCPlacementEnabled returns true if TMC placement engine feature flag is enabled.
+// This controls whether advanced workload placement strategies are available.
+// Requires TMCFeature to be enabled.
+func TMCPlacementEnabled() bool {
+	return TMCEnabled() && utilfeature.DefaultFeatureGate.Enabled(TMCPlacement)
+}
+
+// TMCAnyEnabled returns true if any TMC feature is enabled.
+// This can be used for general TMC-related initialization checks.
+func TMCAnyEnabled() bool {
+	return TMCEnabled() || 
+		utilfeature.DefaultFeatureGate.Enabled(TMCAPIs) ||
+		utilfeature.DefaultFeatureGate.Enabled(TMCControllers) ||
+		utilfeature.DefaultFeatureGate.Enabled(TMCPlacement)
+}
+
 // defaultGenericControlPlaneFeatureGates consists of all known Kubernetes-specific feature keys
 // in the generic control plane code. To add a new feature, define a key for it above and add it
 // here. The Version field should be set to whatever is specified in
@@ -128,6 +188,20 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 	},
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+	},
+
+	// TMC Feature Flags
+	TMCFeature: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCAPIs: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCControllers: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCPlacement: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
 	// unintentionally on either side:
