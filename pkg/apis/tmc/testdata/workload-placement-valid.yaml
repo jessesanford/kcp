@@ -1,0 +1,27 @@
+# Example valid WorkloadPlacement for testing
+# This will be updated when the actual TMC API is available
+apiVersion: tmc.kcp.io/v1alpha1
+kind: WorkloadPlacement
+metadata:
+  name: example-placement
+  namespace: default
+spec:
+  strategy: RoundRobin
+  locationSelector:
+    matchLabels:
+      region: us-west
+  capabilityRequirements:
+    - type: compute
+      required: true
+    - type: storage
+      required: false
+status:
+  conditions:
+    - type: Ready
+      status: "True"
+      lastTransitionTime: "2024-01-01T00:00:00Z"
+      reason: PlacementReady
+      message: "Placement policy is ready"
+  selectedClusters:
+    - name: example-cluster
+      reason: "Best match for requirements"

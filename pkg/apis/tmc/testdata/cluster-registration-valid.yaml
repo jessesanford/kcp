@@ -1,0 +1,24 @@
+# Example valid ClusterRegistration for testing
+# This will be updated when the actual TMC API is available
+apiVersion: tmc.kcp.io/v1alpha1
+kind: ClusterRegistration
+metadata:
+  name: example-cluster
+  namespace: default
+spec:
+  location: us-west-2
+  capabilities:
+    - type: compute
+      available: true
+    - type: storage
+      available: true
+    - type: networking
+      available: true
+status:
+  conditions:
+    - type: Ready
+      status: "True"
+      lastTransitionTime: "2024-01-01T00:00:00Z"
+      reason: ClusterHealthy
+      message: "Cluster is healthy and ready"
+  lastHeartbeat: "2024-01-01T00:00:00Z"
