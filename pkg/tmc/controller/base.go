@@ -26,6 +26,8 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
+	"github.com/kcp-dev/logicalcluster/v3"
+	"github.com/kcp-dev/kcp/pkg/reconciler/committer"
 )
 
 // BaseController provides common controller patterns and functionality
@@ -45,16 +47,39 @@ type BaseController interface {
 	Name() string
 }
 
+// Reconciler defines the interface that specific controllers must implement
+// following KCP patterns with support for the committer pattern.
+type Reconciler interface {
+	// Reconcile handles a single reconciliation request with proper error handling.
+	// The key follows KCP's format: cluster|namespace/name or cluster|name for cluster-scoped resources.
+	Reconcile(ctx context.Context, key string) error
+}
+
+// ReconcilerWithCommit extends Reconciler with committer pattern support for efficient patching.
+type ReconcilerWithCommit[Sp any, St any] interface {
+	Reconciler
+	
+	// GetCommitFunc returns a commit function for the specific resource type.
+	// This enables efficient patching following KCP's committer pattern.
+	GetCommitFunc() committer.CommitFunc[Sp, St]
+}
+
 // BaseControllerConfig contains configuration for a base controller instance.
 type BaseControllerConfig struct {
 	// Name is the controller name for logging and metrics
 	Name string
+	
+	// Workspace is the logical cluster workspace for isolation
+	Workspace logicalcluster.Name
 	
 	// ResyncPeriod controls how often the controller resyncs
 	ResyncPeriod time.Duration
 	
 	// WorkerCount controls the number of worker goroutines
 	WorkerCount int
+	
+	// Reconciler implements the business logic for the controller
+	Reconciler Reconciler
 	
 	// Metrics provides metrics collection for the controller
 	Metrics *ManagerMetrics
@@ -64,15 +89,20 @@ type BaseControllerConfig struct {
 }
 
 // baseControllerImpl implements BaseController with common patterns
-// used across all TMC controllers.
+// used across all TMC controllers. It follows KCP architectural patterns
+// including typed workqueues and proper workspace isolation.
 type baseControllerImpl struct {
 	// Configuration
 	name         string
 	workerCount  int
 	resyncPeriod time.Duration
+	workspace    logicalcluster.Name
 	
-	// Work queue management
-	queue workqueue.RateLimitingInterface
+	// Work queue management - uses KCP typed workqueue
+	queue workqueue.TypedRateLimitingInterface[string]
+	
+	// Business logic reconciler following KCP patterns
+	reconciler Reconciler
 	
 	// Metrics and observability
 	metrics *ManagerMetrics
@@ -83,29 +113,41 @@ type baseControllerImpl struct {
 	stopping bool
 	healthy  bool
 	
-	// Informer factory
+	// Informer factory for workspace-aware informers
 	informerFactory kcpinformers.SharedInformerFactory
 }
 
 // NewBaseController creates a new base controller with the given configuration.
 // This provides the foundation for all TMC controllers with consistent patterns
-// for work queue management, error handling, and observability.
+// for work queue management, error handling, and observability following KCP patterns.
 func NewBaseController(config *BaseControllerConfig) BaseController {
 	if config == nil {
 		panic("BaseControllerConfig cannot be nil")
 	}
 	
-	// Create rate limiting queue
-	queue := workqueue.NewNamedRateLimitingQueue(
-		workqueue.DefaultControllerRateLimiter(),
-		config.Name,
+	if config.Workspace.Empty() {
+		panic("Workspace cannot be empty - workspace isolation is required")
+	}
+	
+	if config.Reconciler == nil {
+		panic("Reconciler cannot be nil - business logic implementation required")
+	}
+	
+	// Create KCP typed rate limiting queue
+	queue := workqueue.NewTypedRateLimitingQueueWithConfig(
+		workqueue.DefaultTypedControllerRateLimiter[string](),
+		workqueue.TypedRateLimitingQueueConfig[string]{
+			Name: config.Name,
+		},
 	)
 	
 	return &baseControllerImpl{
 		name:            config.Name,
+		workspace:       config.Workspace,
 		workerCount:     config.WorkerCount,
 		resyncPeriod:    config.ResyncPeriod,
 		queue:           queue,
+		reconciler:      config.Reconciler,
 		metrics:         config.Metrics,
 		informerFactory: config.InformerFactory,
 		healthy:         true, // Start healthy
@@ -204,6 +246,17 @@ func (c *baseControllerImpl) Name() string {
 	return c.name
 }
 
+// GetWorkspace returns the logical cluster workspace for this controller
+func (c *baseControllerImpl) GetWorkspace() logicalcluster.Name {
+	return c.workspace
+}
+
+// GetReconciler returns the reconciler implementation for this controller.
+// This can be used to check for committer pattern support.
+func (c *baseControllerImpl) GetReconciler() Reconciler {
+	return c.reconciler
+}
+
 // runWorker processes items from the work queue
 func (c *baseControllerImpl) runWorker(ctx context.Context, workerID int) {
 	klog.V(4).InfoS("Starting worker", "controller", c.name, "worker", workerID)
@@ -220,6 +273,7 @@ func (c *baseControllerImpl) runWorker(ctx context.Context, workerID int) {
 }
 
 // processNextWorkItem processes a single work item from the queue
+// using KCP typed workqueue patterns for type safety and better error handling.
 func (c *baseControllerImpl) processNextWorkItem(ctx context.Context) bool {
 	key, quit := c.queue.Get()
 	if quit {
@@ -227,8 +281,8 @@ func (c *baseControllerImpl) processNextWorkItem(ctx context.Context) bool {
 	}
 	defer c.queue.Done(key)
 
-	// Process the item (placeholder for actual reconciliation)
-	err := c.processItem(ctx, key.(string))
+	// Process the item with proper workspace context
+	err := c.processItem(ctx, key)
 
 	if err == nil {
 		// Success - forget the item
@@ -237,33 +291,34 @@ func (c *baseControllerImpl) processNextWorkItem(ctx context.Context) bool {
 		return true
 	}
 
-	// Handle error
+	// Handle error with typed queue
 	c.handleError(err, key)
 	return true
 }
 
-// processItem is a placeholder for actual item processing
-// This will be overridden by specific controller implementations
+// processItem delegates to the configured reconciler for actual business logic.
+// This follows KCP patterns by passing the key to the reconciler implementation.
 func (c *baseControllerImpl) processItem(ctx context.Context, key string) error {
-	// This is the base controller, so just log the key
-	klog.V(6).InfoS("Processing base controller item", 
-		"controller", c.name, 
+	klog.V(6).InfoS("Processing item", 
+		"controller", c.name,
+		"workspace", c.workspace,
 		"key", key)
 	
-	// Simulate some work
-	time.Sleep(10 * time.Millisecond)
-	return nil
+	// Delegate to the reconciler implementation
+	return c.reconciler.Reconcile(ctx, key)
 }
 
-// handleError handles errors from work item processing
-func (c *baseControllerImpl) handleError(err error, key interface{}) {
+// handleError handles errors from work item processing using KCP patterns
+// for proper error tracking and exponential backoff with typed queue.
+func (c *baseControllerImpl) handleError(err error, key string) {
 	// Record error metrics
 	c.metrics.reconcileTotal.WithLabelValues(c.name, "error").Inc()
 
-	// Implement exponential backoff
+	// Implement exponential backoff with workspace context
 	if c.queue.NumRequeues(key) < 10 {
 		klog.V(4).InfoS("Error processing item, retrying", 
 			"controller", c.name,
+			"workspace", c.workspace,
 			"key", key, 
 			"error", err,
 			"retries", c.queue.NumRequeues(key))
@@ -275,6 +330,7 @@ func (c *baseControllerImpl) handleError(err error, key interface{}) {
 	// Too many retries, drop the item
 	klog.ErrorS(err, "Dropping item after too many retries", 
 		"controller", c.name,
+		"workspace", c.workspace,
 		"key", key,
 		"retries", c.queue.NumRequeues(key))
 	
@@ -307,7 +363,8 @@ func (c *baseControllerImpl) EnqueueKey(key string) {
 	c.queue.Add(key)
 }
 
-// EnqueueObject adds an object to the work queue using the standard key function
+// EnqueueObject adds an object to the work queue using the KCP key function.
+// This respects workspace isolation by including the logical cluster in the key.
 func (c *baseControllerImpl) EnqueueObject(obj interface{}) {
 	key, err := kcpcache.DeletionHandlingMetaClusterNamespaceKeyFunc(obj)
 	if err != nil {
@@ -322,7 +379,7 @@ func (c *baseControllerImpl) EnqueueAfter(key string, after time.Duration) {
 	c.queue.AddAfter(key, after)
 }
 
-// GetQueue returns the controller's work queue (for advanced usage)
-func (c *baseControllerImpl) GetQueue() workqueue.RateLimitingInterface {
+// GetQueue returns the controller's typed work queue (for advanced usage)
+func (c *baseControllerImpl) GetQueue() workqueue.TypedRateLimitingInterface[string] {
 	return c.queue
 }
