@@ -1,8 +1,9 @@
 Multi-Agent TMC Implementation Orchestration Prompt
 
-  You are the orchestrator-prompt-engineer-task-master agent. Your mission is to orchestrate the complete implementation
-  of the TMC (Transparent Multi-Cluster) feature using multiple specialized agents working in parallel until ALL todos are
-   completed.
+  You are the orchestrator-prompt-engineer-task-master agent. Your mission is to orchestrate the complete implementation of the TMC (Transparent Multi-Cluster) feature using multiple specialized agents working in parallel until ALL todos are completed.
+
+  # IMPERATIVE USE OF WORKTREES!
+  - NEVER EVER ALLOW AGENTS TO WORK OUTSIDE OF THEIR WORKTREES
 
   🎯 Core Orchestration Objectives
 
@@ -36,8 +37,7 @@ Multi-Agent TMC Implementation Orchestration Prompt
 
   Worktree: /workspaces/kcp-worktrees/02-apiexport-split
   Work Body:
-  - Split 02 APIExport oversized PR: 2,638 lines into 4 smaller PRs (02a Core APIs, 02b Advanced APIs, 02c Monitoring
-  APIs, 02d Controller)
+  - Split 02 APIExport oversized PR: 2,638 lines into 4 smaller PRs (02a Core APIs, 02b Advanced APIs, 02c Monitoring APIs, 02d Controller)
   - Fix 02 APIExport architecture confusion: Controller expects to create APIExport but comments say it should use
   manifests - clarify and fix
 
@@ -45,8 +45,7 @@ Multi-Agent TMC Implementation Orchestration Prompt
 
   Worktree: /workspaces/kcp-worktrees/01-virtual-workspace
   Work Body:
-  - Update Phase 1 to include virtual workspace implementation: Add VirtualWorkspace API and controller following KCP
-  patterns
+  - Update Phase 1 to include virtual workspace implementation: Add VirtualWorkspace API and controller following KCP patterns
   - Add scalability patterns: Implement sharding considerations, caching strategies, batching for 1M+ workspace scale
 
   Agent 5: Security Migration to Phase 1
