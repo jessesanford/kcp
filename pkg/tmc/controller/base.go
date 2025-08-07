@@ -413,7 +413,7 @@ func (c *baseControllerImpl) ExtractWorkspaceFromKey(key string) (logicalcluster
 	// Parse the cluster-aware key format: "cluster|namespace/name" or "cluster|name"
 	parts := strings.SplitN(key, "|", 2)
 	if len(parts) != 2 {
-		return logicalcluster.Name{}, "", fmt.Errorf("invalid cluster-aware key format: %s", key)
+		return logicalcluster.Name(""), "", fmt.Errorf("invalid cluster-aware key format: %s", key)
 	}
 	
 	workspace := logicalcluster.Name(parts[0])
@@ -421,7 +421,7 @@ func (c *baseControllerImpl) ExtractWorkspaceFromKey(key string) (logicalcluster
 	
 	// Validate workspace access
 	if err := c.ValidateWorkspaceAccess(workspace); err != nil {
-		return logicalcluster.Name{}, "", fmt.Errorf("workspace validation failed for key %s: %w", key, err)
+		return logicalcluster.Name(""), "", fmt.Errorf("workspace validation failed for key %s: %w", key, err)
 	}
 	
 	return workspace, resourceKey, nil
@@ -430,12 +430,26 @@ func (c *baseControllerImpl) ExtractWorkspaceFromKey(key string) (logicalcluster
 // ValidateObjectWorkspace validates that an object belongs to an allowed workspace.
 // This prevents processing objects from unauthorized workspaces.
 func (c *baseControllerImpl) ValidateObjectWorkspace(obj runtime.Object) error {
-	// Extract logical cluster from object
-	cluster := logicalcluster.From(obj)
-	if cluster.Empty() {
+	// For now, we'll extract the logical cluster from annotations
+	// This is a simplified approach - in a real implementation we'd use the proper KCP methods
+	objectMeta, ok := obj.(interface{
+		GetAnnotations() map[string]string
+	})
+	if !ok {
+		return fmt.Errorf("object does not support annotations")
+	}
+	
+	annotations := objectMeta.GetAnnotations()
+	if annotations == nil {
+		return fmt.Errorf("object missing annotations")
+	}
+	
+	clusterAnnotation, ok := annotations["kcp.io/logical-cluster"]
+	if !ok || clusterAnnotation == "" {
 		return fmt.Errorf("object missing logical cluster annotation")
 	}
 	
+	cluster := logicalcluster.Name(clusterAnnotation)
 	return c.ValidateWorkspaceAccess(cluster)
 }
 

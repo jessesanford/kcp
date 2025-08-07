@@ -25,16 +25,18 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/util/workqueue"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 func TestNewBaseController(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
 		metrics := createTestMetrics("test_new_controller_valid")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  5,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   5,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -80,10 +82,11 @@ func TestBaseController_Start_Lifecycle(t *testing.T) {
 	t.Run("lifecycle state management", func(t *testing.T) {
 		metrics := createTestMetrics("test_lifecycle_state")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -119,10 +122,11 @@ func TestBaseController_Start_Lifecycle(t *testing.T) {
 	t.Run("already started error", func(t *testing.T) {
 		metrics := createTestMetrics("test_already_started_error")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -147,10 +151,11 @@ func TestBaseController_HealthChecking(t *testing.T) {
 	t.Run("unhealthy by default (not started)", func(t *testing.T) {
 		metrics := createTestMetrics("test_health_default")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -161,10 +166,11 @@ func TestBaseController_HealthChecking(t *testing.T) {
 	t.Run("unhealthy when not started", func(t *testing.T) {
 		metrics := createTestMetrics("test_health_not_started")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -181,10 +187,11 @@ func TestBaseController_HealthChecking(t *testing.T) {
 	t.Run("unhealthy when stopping", func(t *testing.T) {
 		metrics := createTestMetrics("test_health_stopping")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -204,10 +211,11 @@ func TestBaseController_QueueManagement(t *testing.T) {
 	t.Run("enqueue key", func(t *testing.T) {
 		metrics := createTestMetrics("test_queue_enqueue_key")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -227,10 +235,11 @@ func TestBaseController_QueueManagement(t *testing.T) {
 	t.Run("enqueue after", func(t *testing.T) {
 		metrics := createTestMetrics("test_queue_enqueue_after")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -250,10 +259,11 @@ func TestBaseController_QueueManagement(t *testing.T) {
 	t.Run("get queue", func(t *testing.T) {
 		metrics := createTestMetrics("test_queue_get_queue")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -269,10 +279,11 @@ func TestBaseController_Shutdown(t *testing.T) {
 	t.Run("graceful shutdown", func(t *testing.T) {
 		metrics := createTestMetrics("test_shutdown_graceful")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  2,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   2,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -298,10 +309,11 @@ func TestBaseController_Shutdown(t *testing.T) {
 	t.Run("shutdown not started controller", func(t *testing.T) {
 		metrics := createTestMetrics("test_shutdown_not_started")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -316,10 +328,11 @@ func TestBaseController_Shutdown(t *testing.T) {
 	t.Run("shutdown already stopping", func(t *testing.T) {
 		metrics := createTestMetrics("test_shutdown_already_stopping")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -344,10 +357,11 @@ func TestBaseController_ErrorHandling(t *testing.T) {
 	t.Run("handle error with retries", func(t *testing.T) {
 		metrics := createTestMetrics("test_error_handle_retries")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -370,10 +384,11 @@ func TestBaseController_ErrorHandling(t *testing.T) {
 	t.Run("handle error too many retries", func(t *testing.T) {
 		metrics := createTestMetrics("test_error_too_many_retries")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  1,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   1,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)
@@ -403,10 +418,11 @@ func TestBaseController_ConcurrentWorkers(t *testing.T) {
 	t.Run("multiple workers configuration", func(t *testing.T) {
 		metrics := createTestMetrics("test_concurrent_workers")
 		config := &BaseControllerConfig{
-			Name:         "test-controller",
-			ResyncPeriod: 30 * time.Second,
-			WorkerCount:  3,
-			Metrics:      metrics,
+			Name:          "test-controller",
+			ResyncPeriod:  30 * time.Second,
+			WorkerCount:   3,
+			Metrics:       metrics,
+			WorkspaceRoot: logicalcluster.Name("root:test"),
 		}
 
 		controller := NewBaseController(config)

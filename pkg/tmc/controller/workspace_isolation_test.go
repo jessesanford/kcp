@@ -15,7 +15,6 @@
 package controller
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -233,8 +232,8 @@ func TestManagerWorkspaceIsolation(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			// Create mock config
-			config := &Config{
+			// Create mock config  
+			_ = &Config{
 				KCPConfig: &rest.Config{
 					Host: "https://mock-kcp-server",
 				},
