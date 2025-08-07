@@ -17,15 +17,18 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 // BaseController provides common controller patterns and functionality
@@ -61,6 +64,14 @@ type BaseControllerConfig struct {
 	
 	// InformerFactory provides shared informers
 	InformerFactory kcpinformers.SharedInformerFactory
+	
+	// WorkspaceRoot is the root logical cluster this controller operates in
+	// This provides workspace isolation and security boundaries
+	WorkspaceRoot logicalcluster.Name
+	
+	// AllowedWorkspaces defines the specific workspaces this controller can access
+	// If empty, controller is restricted to WorkspaceRoot only
+	AllowedWorkspaces []logicalcluster.Name
 }
 
 // baseControllerImpl implements BaseController with common patterns
@@ -85,14 +96,26 @@ type baseControllerImpl struct {
 	
 	// Informer factory
 	informerFactory kcpinformers.SharedInformerFactory
+	
+	// Workspace isolation
+	workspaceRoot     logicalcluster.Name
+	allowedWorkspaces map[logicalcluster.Name]bool
 }
 
 // NewBaseController creates a new base controller with the given configuration.
 // This provides the foundation for all TMC controllers with consistent patterns
 // for work queue management, error handling, and observability.
+// 
+// The controller enforces workspace isolation by validating all operations
+// against the configured workspace boundaries.
 func NewBaseController(config *BaseControllerConfig) BaseController {
 	if config == nil {
 		panic("BaseControllerConfig cannot be nil")
+	}
+	
+	// Validate workspace configuration
+	if config.WorkspaceRoot.Empty() {
+		panic("WorkspaceRoot cannot be empty - required for workspace isolation")
 	}
 	
 	// Create rate limiting queue
@@ -101,14 +124,25 @@ func NewBaseController(config *BaseControllerConfig) BaseController {
 		config.Name,
 	)
 	
+	// Build allowed workspaces map for fast lookup
+	allowedWorkspaces := make(map[logicalcluster.Name]bool)
+	allowedWorkspaces[config.WorkspaceRoot] = true
+	for _, workspace := range config.AllowedWorkspaces {
+		if !workspace.Empty() {
+			allowedWorkspaces[workspace] = true
+		}
+	}
+	
 	return &baseControllerImpl{
-		name:            config.Name,
-		workerCount:     config.WorkerCount,
-		resyncPeriod:    config.ResyncPeriod,
-		queue:           queue,
-		metrics:         config.Metrics,
-		informerFactory: config.InformerFactory,
-		healthy:         true, // Start healthy
+		name:              config.Name,
+		workerCount:       config.WorkerCount,
+		resyncPeriod:      config.ResyncPeriod,
+		queue:             queue,
+		metrics:           config.Metrics,
+		informerFactory:   config.InformerFactory,
+		workspaceRoot:     config.WorkspaceRoot,
+		allowedWorkspaces: allowedWorkspaces,
+		healthy:           true, // Start healthy
 	}
 }
 
@@ -245,10 +279,16 @@ func (c *baseControllerImpl) processNextWorkItem(ctx context.Context) bool {
 // processItem is a placeholder for actual item processing
 // This will be overridden by specific controller implementations
 func (c *baseControllerImpl) processItem(ctx context.Context, key string) error {
-	// This is the base controller, so just log the key
+	// Validate workspace access for the key
+	workspace, resourceKey, err := c.ExtractWorkspaceFromKey(key)
+	if err != nil {
+		return fmt.Errorf("workspace validation failed for key %s: %w", key, err)
+	}
+	
 	klog.V(6).InfoS("Processing base controller item", 
 		"controller", c.name, 
-		"key", key)
+		"workspace", workspace,
+		"key", resourceKey)
 	
 	// Simulate some work
 	time.Sleep(10 * time.Millisecond)
@@ -308,12 +348,35 @@ func (c *baseControllerImpl) EnqueueKey(key string) {
 }
 
 // EnqueueObject adds an object to the work queue using the standard key function
+// This method includes workspace validation to prevent cross-tenant operations.
 func (c *baseControllerImpl) EnqueueObject(obj interface{}) {
+	// First validate workspace access if object has runtime.Object interface
+	if runtimeObj, ok := obj.(runtime.Object); ok {
+		if err := c.ValidateObjectWorkspace(runtimeObj); err != nil {
+			klog.V(4).InfoS("Skipping object due to workspace validation failure",
+				"controller", c.name,
+				"error", err)
+			c.metrics.reconcileTotal.WithLabelValues(c.name, "workspace_denied").Inc()
+			return
+		}
+	}
+	
 	key, err := kcpcache.DeletionHandlingMetaClusterNamespaceKeyFunc(obj)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %v", obj, err))
 		return
 	}
+	
+	// Additional validation using the key
+	if _, _, err := c.ExtractWorkspaceFromKey(key); err != nil {
+		klog.V(4).InfoS("Skipping object due to key workspace validation failure",
+			"controller", c.name,
+			"key", key,
+			"error", err)
+		c.metrics.reconcileTotal.WithLabelValues(c.name, "key_workspace_denied").Inc()
+		return
+	}
+	
 	c.queue.Add(key)
 }
 
@@ -325,4 +388,75 @@ func (c *baseControllerImpl) EnqueueAfter(key string, after time.Duration) {
 // GetQueue returns the controller's work queue (for advanced usage)
 func (c *baseControllerImpl) GetQueue() workqueue.RateLimitingInterface {
 	return c.queue
+}
+
+// WorkspaceIsolationHelpers provides workspace isolation and security validation
+
+// ValidateWorkspaceAccess validates that the controller can access the specified workspace.
+// This is a critical security check that prevents cross-tenant data leakage.
+func (c *baseControllerImpl) ValidateWorkspaceAccess(workspace logicalcluster.Name) error {
+	if workspace.Empty() {
+		return fmt.Errorf("workspace cannot be empty")
+	}
+	
+	// Check if workspace is in allowed list
+	if !c.allowedWorkspaces[workspace] {
+		return fmt.Errorf("access denied: workspace %s not in allowed workspaces for controller %s", workspace, c.name)
+	}
+	
+	return nil
+}
+
+// ExtractWorkspaceFromKey safely extracts the workspace from a cache key
+// and validates workspace access permissions.
+func (c *baseControllerImpl) ExtractWorkspaceFromKey(key string) (logicalcluster.Name, string, error) {
+	// Parse the cluster-aware key format: "cluster|namespace/name" or "cluster|name"
+	parts := strings.SplitN(key, "|", 2)
+	if len(parts) != 2 {
+		return logicalcluster.Name{}, "", fmt.Errorf("invalid cluster-aware key format: %s", key)
+	}
+	
+	workspace := logicalcluster.Name(parts[0])
+	resourceKey := parts[1]
+	
+	// Validate workspace access
+	if err := c.ValidateWorkspaceAccess(workspace); err != nil {
+		return logicalcluster.Name{}, "", fmt.Errorf("workspace validation failed for key %s: %w", key, err)
+	}
+	
+	return workspace, resourceKey, nil
+}
+
+// ValidateObjectWorkspace validates that an object belongs to an allowed workspace.
+// This prevents processing objects from unauthorized workspaces.
+func (c *baseControllerImpl) ValidateObjectWorkspace(obj runtime.Object) error {
+	// Extract logical cluster from object
+	cluster := logicalcluster.From(obj)
+	if cluster.Empty() {
+		return fmt.Errorf("object missing logical cluster annotation")
+	}
+	
+	return c.ValidateWorkspaceAccess(cluster)
+}
+
+// IsWorkspaceAllowed checks if a workspace is in the allowed list
+func (c *baseControllerImpl) IsWorkspaceAllowed(workspace logicalcluster.Name) bool {
+	if workspace.Empty() {
+		return false
+	}
+	return c.allowedWorkspaces[workspace]
+}
+
+// GetWorkspaceRoot returns the root workspace for this controller
+func (c *baseControllerImpl) GetWorkspaceRoot() logicalcluster.Name {
+	return c.workspaceRoot
+}
+
+// GetAllowedWorkspaces returns a copy of all allowed workspaces
+func (c *baseControllerImpl) GetAllowedWorkspaces() []logicalcluster.Name {
+	workspaces := make([]logicalcluster.Name, 0, len(c.allowedWorkspaces))
+	for workspace := range c.allowedWorkspaces {
+		workspaces = append(workspaces, workspace)
+	}
+	return workspaces
 }
