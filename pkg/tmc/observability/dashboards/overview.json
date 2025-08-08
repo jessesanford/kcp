@@ -1,0 +1,26 @@
+{
+  "dashboard": {
+    "title": "TMC Overview",
+    "tags": ["kcp", "tmc"],
+    "panels": [
+      {
+        "id": 1,
+        "title": "Placement Decisions",
+        "type": "stat",
+        "targets": [{"expr": "rate(tmc_placement_decisions_total[5m])"}]
+      },
+      {
+        "id": 2,
+        "title": "Active Clusters", 
+        "type": "stat",
+        "targets": [{"expr": "count(tmc_cluster_health_score > 0)"}]
+      },
+      {
+        "id": 3,
+        "title": "Controller Reconciles",
+        "type": "timeseries",
+        "targets": [{"expr": "rate(tmc_controller_reconciles_total[5m])"}]
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "dashboard": {
+    "title": "TMC Cluster Health",
+    "tags": ["kcp", "tmc", "clusters"],
+    "panels": [
+      {
+        "id": 1,
+        "title": "Health Scores",
+        "type": "table",
+        "targets": [{"expr": "tmc_cluster_health_score"}]
+      },
+      {
+        "id": 2,
+        "title": "Resource Utilization",
+        "type": "timeseries", 
+        "targets": [{"expr": "tmc_cluster_resource_utilization_percent"}]
+      }
+    ]
+  }
+}
