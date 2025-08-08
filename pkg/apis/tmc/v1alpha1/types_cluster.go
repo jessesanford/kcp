@@ -109,6 +109,10 @@ type ClusterRegistrationStatus struct {
 	// AllocatedResources tracks the resources currently allocated on this cluster
 	// +optional
 	AllocatedResources *ClusterResourceUsage `json:"allocatedResources,omitempty"`
+
+	// Capabilities contains the detected capabilities of the cluster
+	// +optional
+	Capabilities *ClusterCapabilities `json:"capabilities,omitempty"`
 }
 
 // ClusterResourceUsage tracks resource usage on a cluster
@@ -124,6 +128,33 @@ type ClusterResourceUsage struct {
 	// Pod count
 	// +optional
 	Pods *int32 `json:"pods,omitempty"`
+}
+
+// ClusterCapabilities contains the detected capabilities of a cluster
+type ClusterCapabilities struct {
+	// KubernetesVersion is the detected Kubernetes version
+	// +optional
+	KubernetesVersion string `json:"kubernetesVersion,omitempty"`
+
+	// SupportedAPIVersions lists the API versions supported by the cluster
+	// +optional
+	SupportedAPIVersions []string `json:"supportedAPIVersions,omitempty"`
+
+	// AvailableResources lists the resource types available in the cluster
+	// +optional
+	AvailableResources []string `json:"availableResources,omitempty"`
+
+	// NodeCount is the number of nodes in the cluster
+	// +optional
+	NodeCount *int32 `json:"nodeCount,omitempty"`
+
+	// Features contains detected cluster features
+	// +optional
+	Features []string `json:"features,omitempty"`
+
+	// LastDetected is the timestamp when capabilities were last detected
+	// +optional
+	LastDetected *metav1.Time `json:"lastDetected,omitempty"`
 }
 
 // ClusterRegistrationList is a list of ClusterRegistration resources
