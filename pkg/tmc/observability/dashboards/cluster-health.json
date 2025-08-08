@@ -14,12 +14,6 @@
         "title": "Resource Utilization",
         "type": "timeseries", 
         "targets": [{"expr": "tmc_cluster_resource_utilization_percent"}]
-      },
-      {
-        "id": 3,
-        "title": "Cache Performance",
-        "type": "timeseries",
-        "targets": [{"expr": "tmc_cache_hit_rate_percent"}]
       }
     ]
   }

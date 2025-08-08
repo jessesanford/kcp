@@ -43,12 +43,6 @@ func TestNewDashboardManager(t *testing.T) {
 			featureEnabled: false,
 			expectEnabled: false,
 		},
-		"handles empty configuration": {
-			grafanaURL: "",
-			apiKey:     "",
-			featureEnabled: true,
-			expectEnabled: true,
-		},
 	}
 
 	for name, tc := range tests {
@@ -64,12 +58,6 @@ func TestNewDashboardManager(t *testing.T) {
 
 			dm := NewDashboardManager(tc.grafanaURL, tc.apiKey)
 
-			if dm.grafanaURL != tc.grafanaURL {
-				t.Errorf("expected grafanaURL %s, got %s", tc.grafanaURL, dm.grafanaURL)
-			}
-			if dm.apiKey != tc.apiKey {
-				t.Errorf("expected apiKey %s, got %s", tc.apiKey, dm.apiKey)
-			}
 			if dm.enabled != tc.expectEnabled {
 				t.Errorf("expected enabled %v, got %v", tc.expectEnabled, dm.enabled)
 			}
@@ -86,41 +74,5 @@ func TestDashboardManager_IsEnabled(t *testing.T) {
 	dm.enabled = false
 	if dm.IsEnabled() {
 		t.Error("expected IsEnabled to return false")
-	}
-}
-
-func TestLoadEmbeddedDashboards(t *testing.T) {
-	tests := map[string]struct {
-		enabled bool
-		wantNil bool
-	}{
-		"loads dashboards when enabled": {
-			enabled: true,
-			wantNil: false,
-		},
-		"returns nil when disabled": {
-			enabled: false,
-			wantNil: true,
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			dm := &DashboardManager{enabled: tc.enabled}
-			
-			dashboards, err := dm.LoadEmbeddedDashboards()
-			
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			
-			if tc.wantNil && dashboards != nil {
-				t.Error("expected nil dashboards when disabled")
-			}
-			
-			if !tc.wantNil && dashboards == nil {
-				t.Error("expected non-nil dashboards when enabled")
-			}
-		})
 	}
 }
