@@ -1,6 +1,6 @@
 ## Summary
 
-Implement advanced decision engine foundation for TMC workload placement with sophisticated constraint evaluation and candidate filtering. This PR provides the core infrastructure for intelligent placement decisions while keeping scoring and selection strategies for a follow-up PR.
+Implement core decision engine for TMC workload placement with advanced constraint evaluation, multi-criteria scoring, and basic selection. This PR provides the foundation for intelligent placement decisions at exactly 700 lines, with advanced selection strategies reserved for a follow-up PR.
 
 ## What Type of PR Is This?
 
@@ -22,18 +22,17 @@ Implement advanced decision engine foundation for TMC workload placement with so
 - **Weighted score combination**: Smart aggregation of multiple scoring factors
 - **Human-readable scoring reasons**: Detailed explanations for placement decisions
 
-### Selection Strategies (`selection.go` - 265 lines)
-- **Four selection strategies**: Balanced, packed, spread, and score-based selection
-- **Geographic distribution**: Zone and region awareness for balanced placement
-- **Cluster consolidation**: Packed strategy for resource efficiency
-- **Maximum spread**: Geographic diversity optimization
-- **Score-based selection**: Pure performance-based placement
+### Basic Selection Logic (inline in `decision.go`)
+- **Score-based selection**: Simple highest-score selection for this PR
+- **Cluster count handling**: Respects NumberOfClusters specification
+- **Sorted candidate selection**: Efficient O(n log n) selection algorithm
+- **Future strategy support**: Architecture ready for advanced strategies in follow-up PR
 
-### Comprehensive Test Coverage (`decision_test.go` - 333 lines)
-- **Strategy testing**: All four selection strategies with realistic scenarios
+### Comprehensive Test Coverage (`decision_test.go` - 325 lines)
+- **Core functionality testing**: Decision engine with realistic placement scenarios  
 - **Constraint validation**: Label selector and affinity constraint testing
 - **Edge cases**: Empty location sets and invalid configurations
-- **Scoring validation**: Individual scoring component testing
+- **Scoring validation**: Individual scoring component testing with capacity annotations
 - **Integration testing**: End-to-end placement decision workflows
 
 ## Technical Architecture
@@ -41,19 +40,19 @@ Implement advanced decision engine foundation for TMC workload placement with so
 ### Decision Flow
 1. **Constraint Filtering**: Hard constraint evaluation (selectors, affinity)
 2. **Candidate Scoring**: Multi-criteria scoring with configurable weights
-3. **Strategy Selection**: Apply configured selection strategy (balanced/packed/spread/score)
+3. **Score-Based Selection**: Sort by score and select highest-scoring candidates  
 4. **Decision Creation**: Convert candidates to placement decisions
 
 ### Key Design Decisions
 - **Modular scoring**: Separate scoring components for maintainability
-- **Strategy pattern**: Pluggable selection strategies for different use cases
+- **Simple selection**: Score-based selection in this PR, advanced strategies in follow-up
 - **Comprehensive error handling**: Detailed constraint failure reasons
 - **KCP integration**: Proper workspace isolation and logical cluster support
 
 ## Testing Strategy
 
 - **Unit tests**: All core functions with table-driven tests
-- **Strategy testing**: Each selection strategy with realistic location sets
+- **Core decision testing**: Score-based selection with realistic location sets
 - **Constraint validation**: Label selector operators (In, NotIn, Exists, DoesNotExist)
 - **Edge case handling**: Empty inputs, invalid configurations, constraint failures
 
@@ -73,10 +72,10 @@ Implement advanced decision engine foundation for TMC workload placement with so
 
 ## Future Enhancements (Separate PRs)
 
+- **Advanced selection strategies**: Balanced, packed, and spread selection algorithms
 - **Resource-aware scoring**: Actual cluster capacity integration
-- **Network topology**: Real latency measurements
+- **Network topology**: Real latency measurements  
 - **Workload spread tracking**: Current placement distribution analysis
-- **Custom scoring plugins**: Extensible scoring framework
 
 ## Related Issue(s)
 
@@ -85,7 +84,7 @@ Part of TMC Reimplementation Plan 2 - Phase 5A2b (Decision Engine Components)
 ## Release Notes
 
 ```
-Add advanced placement decision engine with multi-criteria scoring and strategy-based selection for TMC workload placement controller. Supports sophisticated constraint evaluation, configurable scoring weights, and four placement strategies (balanced, packed, spread, score-based).
+Add core placement decision engine with multi-criteria scoring and score-based selection for TMC workload placement controller. Supports sophisticated constraint evaluation, configurable scoring weights, and foundation for advanced placement strategies.
 ```
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
