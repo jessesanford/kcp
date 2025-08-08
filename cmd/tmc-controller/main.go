@@ -27,7 +27,6 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"github.com/kcp-dev/kcp/cmd/tmc-controller/options"
 	"github.com/kcp-dev/kcp/pkg/features"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
@@ -37,7 +36,6 @@ func main() {
 	fs := pflag.NewFlagSet("", pflag.ExitOnError)
 	fs.Var(features.NewFlagValue(), "feature-gates", "A set of key=value pairs that describe feature gates for alpha/experimental features.")
 
-	var opts *options.TMCControllerOptions
 	cmd := &cobra.Command{
 		Use:   "tmc-controller",
 		Short: "TMC (Transparent Multi-Cluster) controller manages workload placement and cluster synchronization",
@@ -50,13 +48,11 @@ func main() {
 The controller integrates with KCP's workspace system to provide
 multi-tenant, workspace-aware multi-cluster management.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return run(cmd.Context(), opts)
+			return run(cmd.Context())
 		},
 		SilenceUsage: true,
 	}
 
-	opts = options.NewTMCControllerOptions()
-	opts.AddFlags(cmd.Flags())
 	fs.AddGoFlagSet(flag.CommandLine)
 	cmd.Flags().AddFlagSet(fs)
 
@@ -67,7 +63,7 @@ multi-tenant, workspace-aware multi-cluster management.`,
 	}
 }
 
-func run(ctx context.Context, opts *options.TMCControllerOptions) error {
+func run(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 
 	// Check if TMC feature flag is enabled
@@ -77,23 +73,13 @@ func run(ctx context.Context, opts *options.TMCControllerOptions) error {
 
 	logger.Info("Starting TMC controller", "version", "v0.1.0", "build", "dev")
 
-	// Validate options
-	if err := opts.Validate(); err != nil {
-		return fmt.Errorf("invalid options: %w", err)
-	}
-
-	// Complete configuration
-	if err := opts.Complete(); err != nil {
-		return fmt.Errorf("failed to complete options: %w", err)
-	}
-
-	logger.Info("TMC controller configuration completed", 
-		"kubeconfig", opts.KubeConfig,
-		"workspaces", opts.Workspaces,
-		"leaderElection", opts.LeaderElection)
+	// TODO: In the 03b-controller-config PR, add:
+	// - Options validation and completion
+	// - Configuration parsing
+	// - Command line flag handling
 
 	// Initialize and start controllers
-	if err := startControllers(ctx, opts); err != nil {
+	if err := startControllers(ctx); err != nil {
 		return fmt.Errorf("failed to start controllers: %w", err)
 	}
 
@@ -107,7 +93,7 @@ func run(ctx context.Context, opts *options.TMCControllerOptions) error {
 }
 
 // startControllers initializes and starts all TMC controllers
-func startControllers(ctx context.Context, opts *options.TMCControllerOptions) error {
+func startControllers(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 	
 	// For this foundation PR, we create a placeholder informer
