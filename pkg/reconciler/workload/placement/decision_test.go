@@ -34,7 +34,7 @@ func TestDecisionEngine_MakeAdvancedPlacementDecisions(t *testing.T) {
 		expectedCount   int
 		wantError       bool
 	}{
-		"successful placement with balanced strategy": {
+		"successful placement with score strategy": {
 			placement: &workloadv1alpha1.Placement{
 				ObjectMeta: metav1.ObjectMeta{Name: "test-placement"},
 				Spec: workloadv1alpha1.PlacementSpec{
@@ -67,7 +67,7 @@ func TestDecisionEngine_MakeAdvancedPlacementDecisions(t *testing.T) {
 				},
 			},
 			config: DecisionConfig{
-				Strategy:       SelectionStrategyBalanced,
+				Strategy:       SelectionStrategyScore,
 				ScoringWeights: DefaultScoringWeights(),
 			},
 			expectedCount: 2,
@@ -179,7 +179,7 @@ func TestDecisionEngine_MakeAdvancedPlacementDecisions(t *testing.T) {
 	}
 }
 
-func TestDecisionEngine_SelectionStrategies(t *testing.T) {
+func TestDecisionEngine_SimpleSelection(t *testing.T) {
 	locations := []*workloadv1alpha1.Location{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -187,6 +187,9 @@ func TestDecisionEngine_SelectionStrategies(t *testing.T) {
 				Labels: map[string]string{
 					"topology.kubernetes.io/region": "us-west",
 					"topology.kubernetes.io/zone":   "us-west-1a",
+				},
+				Annotations: map[string]string{
+					"workload.kcp.io/capacity": "high",
 				},
 			},
 		},
@@ -196,6 +199,9 @@ func TestDecisionEngine_SelectionStrategies(t *testing.T) {
 				Labels: map[string]string{
 					"topology.kubernetes.io/region": "us-east",
 					"topology.kubernetes.io/zone":   "us-east-1a",
+				},
+				Annotations: map[string]string{
+					"workload.kcp.io/capacity": "low",
 				},
 			},
 		},
@@ -209,47 +215,33 @@ func TestDecisionEngine_SelectionStrategies(t *testing.T) {
 				Kind:       "Deployment",
 				Name:       "test-app",
 			},
-			NumberOfClusters: func() *int32 { n := int32(2); return &n }(),
+			NumberOfClusters: func() *int32 { n := int32(1); return &n }(),
 		},
-	}
-
-	strategies := []SelectionStrategy{
-		SelectionStrategyBalanced,
-		SelectionStrategyPacked,
-		SelectionStrategySpread,
-		SelectionStrategyScore,
 	}
 
 	ctx := context.Background()
 	logger := klog.NewKlogr().WithName("test")
 	engine := NewDecisionEngine(logger)
 
-	for _, strategy := range strategies {
-		t.Run(string(strategy), func(t *testing.T) {
-			config := DecisionConfig{
-				Strategy:       strategy,
-				ScoringWeights: DefaultScoringWeights(),
-			}
+	config := DecisionConfig{
+		Strategy:       SelectionStrategyScore,
+		ScoringWeights: DefaultScoringWeights(),
+	}
 
-			decisions, err := engine.MakeAdvancedPlacementDecisions(ctx, placement, locations, config)
-			if err != nil {
-				t.Errorf("unexpected error for strategy %s: %v", strategy, err)
-				return
-			}
+	decisions, err := engine.MakeAdvancedPlacementDecisions(ctx, placement, locations, config)
+	if err != nil {
+		t.Errorf("unexpected error: %v", err)
+		return
+	}
 
-			if len(decisions) != 2 {
-				t.Errorf("expected 2 decisions for strategy %s, got %d", strategy, len(decisions))
-			}
+	if len(decisions) != 1 {
+		t.Errorf("expected 1 decision, got %d", len(decisions))
+		return
+	}
 
-			// Verify unique locations are selected
-			locationSet := make(map[string]bool)
-			for _, decision := range decisions {
-				if locationSet[decision.Location] {
-					t.Errorf("duplicate location %s in decisions for strategy %s", decision.Location, strategy)
-				}
-				locationSet[decision.Location] = true
-			}
-		})
+	// Should select the high-capacity location (higher score)
+	if decisions[0].Location != "location-us-west-1" {
+		t.Errorf("expected location-us-west-1 (high capacity) to be selected, got %s", decisions[0].Location)
 	}
 }
 

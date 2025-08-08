@@ -396,3 +396,79 @@ func (e *DecisionEngine) evaluateTolerations(
 	// in the Location API first. For now, assume all tolerations pass.
 	return nil
 }
+
+// selectLocationsByStrategy applies a simple score-based selection strategy.
+// Advanced strategies (balanced, packed, spread) will be implemented in a follow-up PR.
+func (e *DecisionEngine) selectLocationsByStrategy(
+	placement *workloadv1alpha1.Placement,
+	candidates []*LocationCandidate,
+	config DecisionConfig,
+) []*LocationCandidate {
+
+	// Determine desired cluster count
+	desiredCount := e.getDesiredClusterCount(placement, len(candidates))
+	if desiredCount >= len(candidates) {
+		return candidates
+	}
+
+	// Sort by score (highest first)
+	sort.Slice(candidates, func(i, j int) bool {
+		return candidates[i].Score > candidates[j].Score
+	})
+
+	// For now, use simple score-based selection
+	// Advanced strategies will be added in follow-up PR
+	return candidates[:desiredCount]
+}
+
+// getDesiredClusterCount determines the target number of clusters for placement.
+func (e *DecisionEngine) getDesiredClusterCount(
+	placement *workloadv1alpha1.Placement,
+	availableCount int,
+) int {
+	if placement.Spec.NumberOfClusters != nil {
+		desired := int(*placement.Spec.NumberOfClusters)
+		if desired > availableCount {
+			return availableCount
+		}
+		return desired
+	}
+
+	// Default: place on 1 cluster if not specified
+	if availableCount > 0 {
+		return 1
+	}
+	return 0
+}
+
+// createPlacementDecisions converts location candidates to placement decisions.
+func (e *DecisionEngine) createPlacementDecisions(
+	candidates []*LocationCandidate,
+) []workloadv1alpha1.PlacementDecision {
+	
+	var decisions []workloadv1alpha1.PlacementDecision
+
+	for _, candidate := range candidates {
+		decision := workloadv1alpha1.PlacementDecision{
+			ClusterName: fmt.Sprintf("cluster-%s", candidate.Location.Name),
+			Location:    candidate.Location.Name,
+			Reason:      fmt.Sprintf("Decision engine placement (score: %d)", candidate.Score),
+			Score:       &candidate.Score,
+		}
+
+		// Add detailed reasons if available
+		if len(candidate.Reasons) > 0 {
+			for j, reason := range candidate.Reasons {
+				if j == 0 {
+					decision.Reason += fmt.Sprintf(": %s", reason)
+				} else {
+					decision.Reason += fmt.Sprintf(", %s", reason)
+				}
+			}
+		}
+
+		decisions = append(decisions, decision)
+	}
+
+	return decisions
+}
