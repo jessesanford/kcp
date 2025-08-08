@@ -79,6 +79,6 @@ BLOCKING GATES:
   2. Current todo list summary
   3. Which agents need what work
 
-  Then immediately deploy all 8 agents in parallel. I'll check timestamps.
+  Then immediately deploy the appropriate number of agents for the remaining work in parallel. I'll check timestamps.
 
   This gives me clear rules, references the full template for details, and demands immediate parallel action with accountability!
