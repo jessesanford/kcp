@@ -22,20 +22,19 @@ import (
 	fmt "fmt"
 	http "net/http"
 
-	discovery "k8s.io/client-go/discovery"
-	rest "k8s.io/client-go/rest"
-	flowcontrol "k8s.io/client-go/util/flowcontrol"
-
 	kcpclient "github.com/kcp-dev/apimachinery/v2/pkg/client"
-	"github.com/kcp-dev/logicalcluster/v3"
-
 	client "github.com/kcp-dev/kcp/sdk/client/clientset/versioned"
 	apisv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/apis/v1alpha1"
 	apisv1alpha2 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/apis/v1alpha2"
 	cachev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/cache/v1alpha1"
 	corev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/core/v1alpha1"
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/tenancy/v1alpha1"
+	tmcv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/tmc/v1alpha1"
 	topologyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/topology/v1alpha1"
+	"github.com/kcp-dev/logicalcluster/v3"
+	discovery "k8s.io/client-go/discovery"
+	rest "k8s.io/client-go/rest"
+	flowcontrol "k8s.io/client-go/util/flowcontrol"
 )
 
 type ClusterInterface interface {
@@ -46,6 +45,7 @@ type ClusterInterface interface {
 	CacheV1alpha1() cachev1alpha1.CacheV1alpha1ClusterInterface
 	CoreV1alpha1() corev1alpha1.CoreV1alpha1ClusterInterface
 	TenancyV1alpha1() tenancyv1alpha1.TenancyV1alpha1ClusterInterface
+	TmcV1alpha1() tmcv1alpha1.TmcV1alpha1ClusterInterface
 	TopologyV1alpha1() topologyv1alpha1.TopologyV1alpha1ClusterInterface
 }
 
@@ -58,6 +58,7 @@ type ClusterClientset struct {
 	cacheV1alpha1    *cachev1alpha1.CacheV1alpha1ClusterClient
 	coreV1alpha1     *corev1alpha1.CoreV1alpha1ClusterClient
 	tenancyV1alpha1  *tenancyv1alpha1.TenancyV1alpha1ClusterClient
+	tmcV1alpha1      *tmcv1alpha1.TmcV1alpha1ClusterClient
 	topologyV1alpha1 *topologyv1alpha1.TopologyV1alpha1ClusterClient
 }
 
@@ -92,6 +93,11 @@ func (c *ClusterClientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1ClusterInterf
 // TenancyV1alpha1 retrieves the TenancyV1alpha1ClusterClient.
 func (c *ClusterClientset) TenancyV1alpha1() tenancyv1alpha1.TenancyV1alpha1ClusterInterface {
 	return c.tenancyV1alpha1
+}
+
+// TmcV1alpha1 retrieves the TmcV1alpha1ClusterClient.
+func (c *ClusterClientset) TmcV1alpha1() tmcv1alpha1.TmcV1alpha1ClusterInterface {
+	return c.tmcV1alpha1
 }
 
 // TopologyV1alpha1 retrieves the TopologyV1alpha1ClusterClient.
@@ -171,6 +177,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*ClusterCli
 	if err != nil {
 		return nil, err
 	}
+	cs.tmcV1alpha1, err = tmcv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 	cs.topologyV1alpha1, err = topologyv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
 		return nil, err
@@ -201,6 +211,7 @@ func New(c *rest.Config) *ClusterClientset {
 	cs.cacheV1alpha1 = cachev1alpha1.NewForConfigOrDie(c)
 	cs.coreV1alpha1 = corev1alpha1.NewForConfigOrDie(c)
 	cs.tenancyV1alpha1 = tenancyv1alpha1.NewForConfigOrDie(c)
+	cs.tmcV1alpha1 = tmcv1alpha1.NewForConfigOrDie(c)
 	cs.topologyV1alpha1 = topologyv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)

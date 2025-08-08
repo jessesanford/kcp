@@ -19,13 +19,8 @@ limitations under the License.
 package fake
 
 import (
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/discovery"
-
 	kcpfakediscovery "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/discovery/fake"
 	kcptesting "github.com/kcp-dev/client-go/third_party/k8s.io/client-go/testing"
-	"github.com/kcp-dev/logicalcluster/v3"
-
 	kcpapplyconfiguration "github.com/kcp-dev/kcp/sdk/client/applyconfiguration"
 	clientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned"
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
@@ -40,6 +35,8 @@ import (
 	kcpfakecorev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/core/v1alpha1/fake"
 	kcptenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/tenancy/v1alpha1"
 	kcpfaketenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/tenancy/v1alpha1/fake"
+	kcptmcv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/tmc/v1alpha1"
+	kcpfaketmcv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/tmc/v1alpha1/fake"
 	kcptopologyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/topology/v1alpha1"
 	kcpfaketopologyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/topology/v1alpha1/fake"
 	apisv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/apis/v1alpha1"
@@ -47,7 +44,11 @@ import (
 	cachev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/cache/v1alpha1"
 	corev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/core/v1alpha1"
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/tenancy/v1alpha1"
+	tmcv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/tmc/v1alpha1"
 	topologyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/topology/v1alpha1"
+	"github.com/kcp-dev/logicalcluster/v3"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -126,6 +127,11 @@ func (c *ClusterClientset) TenancyV1alpha1() kcptenancyv1alpha1.TenancyV1alpha1C
 	return &kcpfaketenancyv1alpha1.TenancyV1alpha1ClusterClient{Fake: &c.Fake}
 }
 
+// TmcV1alpha1 retrieves the TmcV1alpha1ClusterClient
+func (c *ClusterClientset) TmcV1alpha1() kcptmcv1alpha1.TmcV1alpha1ClusterInterface {
+	return &kcpfaketmcv1alpha1.TmcV1alpha1ClusterClient{Fake: &c.Fake}
+}
+
 // TopologyV1alpha1 retrieves the TopologyV1alpha1ClusterClient
 func (c *ClusterClientset) TopologyV1alpha1() kcptopologyv1alpha1.TopologyV1alpha1ClusterInterface {
 	return &kcpfaketopologyv1alpha1.TopologyV1alpha1ClusterClient{Fake: &c.Fake}
@@ -197,6 +203,11 @@ func (c *Clientset) CoreV1alpha1() corev1alpha1.CoreV1alpha1Interface {
 // TenancyV1alpha1 retrieves the TenancyV1alpha1Client
 func (c *Clientset) TenancyV1alpha1() tenancyv1alpha1.TenancyV1alpha1Interface {
 	return &kcpfaketenancyv1alpha1.TenancyV1alpha1Client{Fake: c.Fake, ClusterPath: c.clusterPath}
+}
+
+// TmcV1alpha1 retrieves the TmcV1alpha1Client
+func (c *Clientset) TmcV1alpha1() tmcv1alpha1.TmcV1alpha1Interface {
+	return &kcpfaketmcv1alpha1.TmcV1alpha1Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 
 // TopologyV1alpha1 retrieves the TopologyV1alpha1Client

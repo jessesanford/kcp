@@ -23,14 +23,7 @@ import (
 	sync "sync"
 	time "time"
 
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
-	schema "k8s.io/apimachinery/pkg/runtime/schema"
-	cache "k8s.io/client-go/tools/cache"
-
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
-	logicalcluster "github.com/kcp-dev/logicalcluster/v3"
-
 	kcpversioned "github.com/kcp-dev/kcp/sdk/client/clientset/versioned"
 	kcpcluster "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 	kcpapis "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/apis"
@@ -38,7 +31,13 @@ import (
 	kcpcore "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/core"
 	kcpinternalinterfaces "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/internalinterfaces"
 	kcptenancy "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/tenancy"
+	kcptmc "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/tmc"
 	kcptopology "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/topology"
+	logicalcluster "github.com/kcp-dev/logicalcluster/v3"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	runtime "k8s.io/apimachinery/pkg/runtime"
+	schema "k8s.io/apimachinery/pkg/runtime/schema"
+	cache "k8s.io/client-go/tools/cache"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.
@@ -284,6 +283,7 @@ type SharedInformerFactory interface {
 	Cache() kcpexternalversionscache.ClusterInterface
 	Core() kcpcore.ClusterInterface
 	Tenancy() kcptenancy.ClusterInterface
+	Tmc() kcptmc.ClusterInterface
 	Topology() kcptopology.ClusterInterface
 }
 
@@ -301,6 +301,10 @@ func (f *sharedInformerFactory) Core() kcpcore.ClusterInterface {
 
 func (f *sharedInformerFactory) Tenancy() kcptenancy.ClusterInterface {
 	return kcptenancy.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Tmc() kcptmc.ClusterInterface {
+	return kcptmc.New(f, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Topology() kcptopology.ClusterInterface {
@@ -455,6 +459,7 @@ type SharedScopedInformerFactory interface {
 	Cache() kcpexternalversionscache.Interface
 	Core() kcpcore.Interface
 	Tenancy() kcptenancy.Interface
+	Tmc() kcptmc.Interface
 	Topology() kcptopology.Interface
 }
 
@@ -472,6 +477,10 @@ func (f *sharedScopedInformerFactory) Core() kcpcore.Interface {
 
 func (f *sharedScopedInformerFactory) Tenancy() kcptenancy.Interface {
 	return kcptenancy.NewScoped(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedScopedInformerFactory) Tmc() kcptmc.Interface {
+	return kcptmc.NewScoped(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedScopedInformerFactory) Topology() kcptopology.Interface {
