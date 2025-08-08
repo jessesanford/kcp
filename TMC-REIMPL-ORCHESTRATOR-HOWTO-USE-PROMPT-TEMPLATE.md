@@ -19,18 +19,18 @@
   Pick specific sections based on current needs:
 
   For starting fresh:
-  Read sections "Quick Copy-Paste Prompt" and "Initial Orchestration Setup" from TMC-REIMPL-ORCHESTRATOR-PROMPT-TEMPLATE.md
+  Read sections "Quick Copy-Paste Prompt" and "Initial Orchestration Setup" from /workspaces/kcp-worktrees/tmc-planning/TMC-REIMPL-ORCHESTRATOR-PROMPT-TEMPLATE.md
 
   Begin by deploying all 8 agents in parallel.
 
   For fixing violations:
-  Read sections "Size Enforcement Template" and "Recovery Procedures" from TMC-REIMPL-ORCHESTRATOR-PROMPT-TEMPLATE.md
+  Read sections "Size Enforcement Template" and "Recovery Procedures" from /workspaces/kcp-worktrees/tmc-planning/TMC-REIMPL-ORCHESTRATOR-PROMPT-TEMPLATE.md
 
   Several agents have >700 line PRs. Execute recovery protocol now.
 
   Option 3: Full Template (For Complex Situations)
 
-  Read the entire TMC-REIMPL-ORCHESTRATOR-PROMPT-TEMPLATE.md file and follow all protocols.
+  Read the entire /workspaces/kcp-worktrees/tmc-planning/TMC-REIMPL-ORCHESTRATOR-PROMPT-TEMPLATE.md file and follow all protocols.
 
   Current situation: [describe issues]
   Priority: [what needs immediate attention]
@@ -50,7 +50,7 @@
 
   Example Perfect Prompt:
 
-You are the orchestrator-prompt-engineer-task-master for TMC Reimplementation.
+You are the agent-orchestrator-prompt-engineer-task-master for TMC Reimplementation.
 
 MANDATORY RULES (I will grade your performance):
 1. Deploy ALL agents in ONE message using parallel Task invocations (I'll check timestamps)
@@ -80,5 +80,3 @@ BLOCKING GATES:
   3. Which agents need what work
 
   Then immediately deploy the appropriate number of agents for the remaining work in parallel. I'll check timestamps.
-
-  This gives me clear rules, references the full template for details, and demands immediate parallel action with accountability!

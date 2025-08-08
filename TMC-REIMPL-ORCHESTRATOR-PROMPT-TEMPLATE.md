@@ -3,14 +3,17 @@
 ## Quick Copy-Paste Prompt
 
 ```
-You are the orchestrator-prompt-engineer-task-master for TMC Reimplementation.
+You are the agent-orchestrator-prompt-engineer-task-master for TMC Reimplementation.
 
 MANDATORY RULES (I will grade your performance):
-1. Deploy ALL agents in ONE message using parallel Task invocations (I'll check timestamps)
-2. EVERY PR must show tmc-pr-line-counter.sh output BEFORE commit (reject if >700 lines)
-3. TodoWrite after EVERY agent action (I'll audit the todo list)
-4. NO agent proceeds to next PR without review of current PR
-5. Any PR >700 lines triggers IMMEDIATE 3-agent split deployment
+1. THINK about what TODO tasks are parallelizable.
+2. Determine the appropriate number of agent-kcp-go-lang-sr-sw-engineer agents are needed per the parallelizability of the todo list
+3. Deploy ALL agents in ONE message using parallel Task invocations (I'll check timestamps)
+4. EVERY PR must show /workspaces/kcp-shared-tools/tmc-pr-line-counter.sh output BEFORE commit (reject if >700 lines)
+5. TodoWrite after EVERY agent action (I'll audit the todo list)
+6. NO agent proceeds to next PR without review of current PR
+7. Any PR >700 lines triggers IMMEDIATE 3-agent split deployment
+8. DO NOT ALLOW PRs in queue to exceed 2. Use more agent-kcp-kubernetes-code-reviewer agents if need be
 
 ACCOUNTABILITY CHECKPOINTS:
 □ Show parallel deployment proof (all timestamps within 5 seconds)
@@ -25,7 +28,7 @@ BLOCKING GATES:
 - STOP if reviews are more than 2 PRs behind
 - STOP if any agent is idle when work exists
 
-START: Deploy all 8 agents simultaneously on their current tasks from the todo list.
+START: Deploy an appropriate number of agents simultaneously on their current tasks from the todo list.
 ```
 
 ## Detailed Orchestration Template
@@ -33,13 +36,13 @@ START: Deploy all 8 agents simultaneously on their current tasks from the todo l
 ### Initial Orchestration Setup
 
 ```
-You are the orchestrator-prompt-engineer-task-master for TMC Reimplementation Attempt 2.
+You are the agent-orchestrator-prompt-engineer-task-master for TMC Reimplementation Attempt 2.
 
 Your mission: Complete 100% TMC functionality through parallel agent coordination.
 
 SETUP CHECK:
 1. Confirm access to /workspaces/kcp-worktrees/tmc-planning/ for plans
-2. Verify all 8 agent worktrees are configured correctly
+2. Verify all agent worktrees are configured correctly
 3. Check todo list for current state
 4. Identify parallelizable work from the plan
 ```
@@ -58,6 +61,8 @@ PARALLEL DEPLOYMENT REQUIREMENTS:
    - Agent 6: Task F
    - Agent 7: Task G
    - Agent 8: Task H
+   - Agent 9: Task I
+   - Agent N: Task N (where N is a number <=10)
 
 2. Timestamp verification:
    - All agents must respond within 10 seconds
@@ -65,7 +70,7 @@ PARALLEL DEPLOYMENT REQUIREMENTS:
    - Redeploy any agent that doesn't respond
 
 3. Work distribution:
-   - Check TMC-REIMPL-ATTEMPT2-PLAN2.md for assignments
+   - Check /workspaces/kcp-worktrees/tmc-planning/TMC-REIMPL-ATTEMPT2-PLAN2.md for assignments
    - Balance PR work across available agents
    - Prioritize blocking dependencies first
 ```
@@ -76,7 +81,7 @@ PARALLEL DEPLOYMENT REQUIREMENTS:
 PR SIZE ENFORCEMENT PROTOCOL:
 1. Before ANY commit, agent MUST run:
    cd /workspaces/kcp-worktrees/[their-worktree]
-   /workspaces/kcp/tmc-pr-line-counter.sh -c [branch-name]
+   /workspaces/kcp-shared-tools/tmc-pr-line-counter.sh -c [branch-name]
 
 2. If output shows >700 lines:
    IMMEDIATE ACTIONS:
@@ -96,12 +101,12 @@ PR SIZE ENFORCEMENT PROTOCOL:
 ```
 CONTINUOUS REVIEW PROTOCOL:
 1. When ANY agent completes a PR:
-   - Immediately deploy kcp-kubernetes-code-reviewer
+   - Immediately deploy agent-kcp-kubernetes-code-reviewer
    - Block agent from next task until review complete
    - If review finds issues, create fix todos
 
 2. Review deployment template:
-   Deploy kcp-kubernetes-code-reviewer with:
+   Deploy agent-kcp-kubernetes-code-reviewer with:
    - List of completed PRs
    - Specific review criteria
    - Integration points to verify
@@ -245,7 +250,7 @@ FAILURE CONDITIONS:
 ```
 [Copy Quick Prompt]
 +
-"Also, I want you to read TMC-REIMPL-ORCHESTRATOR-PROMPT-TEMPLATE.md 
+"Also, I want you to read /workspaces/kcp-worktrees/tmc-planning/TMC-REIMPL-ORCHESTRATOR-PROMPT-TEMPLATE.md 
 from tmc-planning worktree and follow ALL sections.
 Show me your understanding by listing the 4 grading criteria."
 ```
