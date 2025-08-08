@@ -1,0 +1,20 @@
+{
+  "dashboard": {
+    "title": "TMC Overview",
+    "tags": ["kcp", "tmc"],
+    "panels": [
+      {
+        "id": 1,
+        "title": "Placement Decisions",
+        "type": "stat",
+        "targets": [{"expr": "rate(tmc_placement_decisions_total[5m])"}]
+      },
+      {
+        "id": 2,
+        "title": "Active Clusters", 
+        "type": "stat",
+        "targets": [{"expr": "count(tmc_cluster_health_score > 0)"}]
+      }
+    ]
+  }
+}

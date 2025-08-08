@@ -1,0 +1,10 @@
+groups:
+  - name: tmc.alerts
+    rules:
+      - alert: TMCPlacementFailures
+        expr: rate(tmc_placement_decisions_total{result="failed"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High TMC placement failure rate"
