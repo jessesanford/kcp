@@ -1,0 +1,26 @@
+groups:
+  - name: tmc.alerts
+    rules:
+      - alert: TMCPlacementFailures
+        expr: rate(tmc_placement_decisions_total{result="failed"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High TMC placement failure rate"
+          
+      - alert: TMCClusterUnhealthy
+        expr: tmc_cluster_health_score < 30
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "TMC cluster critically unhealthy"
+          
+      - alert: TMCControllerErrors
+        expr: rate(tmc_controller_errors_total[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High TMC controller error rate"
