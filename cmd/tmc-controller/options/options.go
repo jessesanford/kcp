@@ -51,12 +51,6 @@ type TMCControllerOptions struct {
 	// LeaderElectionID is the identifier for leader election
 	LeaderElectionID string
 
-	// ClusterHealthCheckInterval is how often to check cluster health
-	ClusterHealthCheckInterval time.Duration
-
-	// MaxConcurrentReconciles is the maximum number of concurrent reconciles
-	MaxConcurrentReconciles int
-
 	// LogLevel sets the verbosity of logging
 	LogLevel int
 
@@ -71,11 +65,9 @@ func NewTMCControllerOptions() *TMCControllerOptions {
 		Workspaces:                 []string{},
 		ResyncPeriod:               10 * time.Minute,
 		LeaderElection:             true,
-		LeaderElectionNamespace:    "kcp-system",
-		LeaderElectionID:           "tmc-controller",
-		ClusterHealthCheckInterval: 30 * time.Second,
-		MaxConcurrentReconciles:    10,
-		LogLevel:                   2,
+		LeaderElectionNamespace: "kcp-system",
+		LeaderElectionID:        "tmc-controller",
+		LogLevel:                2,
 	}
 }
 
@@ -99,12 +91,6 @@ func (o *TMCControllerOptions) AddFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&o.LeaderElectionID, "leader-election-id", o.LeaderElectionID,
 		"Identifier for leader election")
 
-	fs.DurationVar(&o.ClusterHealthCheckInterval, "cluster-health-check-interval", o.ClusterHealthCheckInterval,
-		"Interval for checking cluster health")
-
-	fs.IntVar(&o.MaxConcurrentReconciles, "max-concurrent-reconciles", o.MaxConcurrentReconciles,
-		"Maximum number of concurrent reconciles")
-
 	fs.IntVar(&o.LogLevel, "log-level", o.LogLevel,
 		"Log level verbosity (0-10)")
 }
@@ -113,14 +99,6 @@ func (o *TMCControllerOptions) AddFlags(fs *pflag.FlagSet) {
 func (o *TMCControllerOptions) Validate() error {
 	if o.ResyncPeriod <= 0 {
 		return fmt.Errorf("resync-period must be positive, got %v", o.ResyncPeriod)
-	}
-
-	if o.ClusterHealthCheckInterval <= 0 {
-		return fmt.Errorf("cluster-health-check-interval must be positive, got %v", o.ClusterHealthCheckInterval)
-	}
-
-	if o.MaxConcurrentReconciles <= 0 {
-		return fmt.Errorf("max-concurrent-reconciles must be positive, got %d", o.MaxConcurrentReconciles)
 	}
 
 	if o.LogLevel < 0 || o.LogLevel > 10 {

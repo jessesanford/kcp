@@ -108,17 +108,11 @@ func NewTMCController(opts TMCControllerOptions) (*TMCController, error) {
 		return nil, fmt.Errorf("sync handler is required")
 	}
 
-	if opts.HealthCheckInterval <= 0 {
-		opts.HealthCheckInterval = 30 * time.Second
-	}
-
 	c := &TMCController{
-		name:                opts.Name,
-		queue:               workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), opts.Name),
-		healthCheckInterval: opts.HealthCheckInterval,
-		informer:            opts.Informer,
-		syncHandler:         opts.SyncHandler,
-		healthChecker:       opts.HealthChecker,
+		name:        opts.Name,
+		queue:       workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), opts.Name),
+		informer:    opts.Informer,
+		syncHandler: opts.SyncHandler,
 	}
 
 	// Set up event handlers for the informer
@@ -159,11 +153,6 @@ func (c *TMCController) Start(ctx context.Context, workers int) {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 	}
 
-	// Start periodic health checks if health checker is provided
-	if c.healthChecker != nil {
-		go wait.UntilWithContext(ctx, c.runHealthChecks, c.healthCheckInterval)
-	}
-
 	logger.Info("TMC controller started")
 	<-ctx.Done()
 	logger.Info("TMC controller stopping")
@@ -201,23 +190,6 @@ func (c *TMCController) processNextWorkItem(ctx context.Context) bool {
 
 	c.queue.Forget(obj)
 	return true
-}
-
-// runHealthChecks periodically runs health checks if a health checker is configured.
-func (c *TMCController) runHealthChecks(ctx context.Context) {
-	logger := klog.FromContext(ctx).WithName(c.name + "-health")
-	
-	healthy, err := c.healthChecker(ctx)
-	if err != nil {
-		logger.Error(err, "Health check failed")
-		return
-	}
-
-	if healthy {
-		logger.V(4).Info("Health check passed")
-	} else {
-		logger.Info("Health check failed - system is unhealthy")
-	}
 }
 
 // enqueue adds an object to the controller's work queue.
