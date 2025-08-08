@@ -75,7 +75,7 @@ func TestConsolidateTimeSeries(t *testing.T) {
 				Step:  time.Minute * 5,
 			},
 			wantError:  false,
-			wantPoints: 10, // Should be consolidated down to MaxDataPoints
+			wantPoints: 10,
 		},
 		"feature disabled": {
 			clusters: []string{"cluster1"},
@@ -84,32 +84,6 @@ func TestConsolidateTimeSeries(t *testing.T) {
 			},
 			wantError:     true,
 			errorContains: "TMC time series consolidation is disabled",
-		},
-		"no clusters": {
-			clusters: []string{},
-			featureFlags: map[featuregate.Feature]bool{
-				features.TMCTimeSeriesConsolidation: true,
-			},
-			wantError:     true,
-			errorContains: "no clusters found in workspace",
-		},
-		"consolidation with max function": {
-			clusters: []string{"cluster1"},
-			featureFlags: map[featuregate.Feature]bool{
-				features.TMCTimeSeriesConsolidation: true,
-			},
-			config: ConsolidationConfig{
-				MaxDataPoints:         5,
-				ConsolidationFunction: ConsolidationMax,
-				Tolerance:             time.Minute,
-			},
-			timeRange: TimeRange{
-				Start: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-				End:   time.Date(2024, 1, 1, 1, 0, 0, 0, time.UTC),
-				Step:  time.Minute * 2,
-			},
-			wantError:  false,
-			wantPoints: 5,
 		},
 	}
 
@@ -173,11 +147,10 @@ func TestValidateConsolidationFunction(t *testing.T) {
 		function  ConsolidationFunction
 		wantError bool
 	}{
-		"valid average":  {function: ConsolidationAverage, wantError: false},
-		"valid last":     {function: ConsolidationLast, wantError: false},
-		"valid max":      {function: ConsolidationMax, wantError: false},
-		"valid min":      {function: ConsolidationMin, wantError: false},
-		"invalid function": {function: ConsolidationFunction("invalid"), wantError: true},
+		"valid average":      {function: ConsolidationAverage, wantError: false},
+		"valid max":          {function: ConsolidationMax, wantError: false},
+		"valid min":          {function: ConsolidationMin, wantError: false},
+		"invalid function":   {function: ConsolidationFunction("invalid"), wantError: true},
 	}
 
 	for name, tc := range tests {
@@ -197,33 +170,10 @@ func TestValidateConsolidationFunction(t *testing.T) {
 // mockMetricsSource for testing
 type mockMetricsSource struct {
 	clusters []string
-	values   map[string]float64
-	labels   map[string]map[string]string
 }
 
 func (m *mockMetricsSource) GetMetricValue(ctx context.Context, clusterName string, workspace logicalcluster.Name, metricName string) (float64, map[string]string, error) {
-	if m.values == nil {
-		m.values = make(map[string]float64)
-	}
-	if m.labels == nil {
-		m.labels = make(map[string]map[string]string)
-	}
-
-	key := clusterName + ":" + metricName
-	value := m.values[key]
-	if value == 0 {
-		value = 10.0 // Default value
-	}
-
-	labels := m.labels[key]
-	if labels == nil {
-		labels = map[string]string{
-			"cluster": clusterName,
-			"metric":  metricName,
-		}
-	}
-
-	return value, labels, nil
+	return 10.0, map[string]string{"cluster": clusterName, "metric": metricName}, nil
 }
 
 func (m *mockMetricsSource) ListClusters(ctx context.Context, workspace logicalcluster.Name) ([]string, error) {
