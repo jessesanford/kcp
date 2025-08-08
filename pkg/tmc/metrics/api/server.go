@@ -23,8 +23,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -333,4 +331,84 @@ func (s *MetricsAPIServer) handleOpenAPISpec(w http.ResponseWriter, r *http.Requ
 		},
 	}
 	s.writeJSONResponse(w, http.StatusOK, spec)
+}
+
+// Placeholder methods - these will be implemented in the helpers package
+func (s *MetricsAPIServer) parseQuery(r *http.Request) (*MetricQuery, error) {
+	// TODO: This will be implemented in the helpers package
+	return &MetricQuery{}, fmt.Errorf("not implemented - parseQuery")
+}
+
+func (s *MetricsAPIServer) parseQueryRange(r *http.Request) (*MetricQuery, error) {
+	// TODO: This will be implemented in the helpers package
+	return &MetricQuery{}, fmt.Errorf("not implemented - parseQueryRange")
+}
+
+func (s *MetricsAPIServer) parsePrometheusQuery(r *http.Request) (*MetricQuery, error) {
+	// TODO: This will be implemented in the helpers package
+	return &MetricQuery{}, fmt.Errorf("not implemented - parsePrometheusQuery")
+}
+
+func (s *MetricsAPIServer) parsePrometheusQueryRange(r *http.Request) (*MetricQuery, error) {
+	// TODO: This will be implemented in the helpers package
+	return &MetricQuery{}, fmt.Errorf("not implemented - parsePrometheusQueryRange")
+}
+
+func (s *MetricsAPIServer) getAuthContext(r *http.Request) *AuthContext {
+	// TODO: This will be implemented in the helpers package
+	return &AuthContext{}
+}
+
+func (s *MetricsAPIServer) convertToPrometheusFormat(series []MetricSeries) interface{} {
+	// TODO: This will be implemented in the helpers package
+	return map[string]interface{}{"result": []interface{}{}}
+}
+
+func (s *MetricsAPIServer) convertToPrometheusRangeFormat(series []MetricSeries) interface{} {
+	// TODO: This will be implemented in the helpers package
+	return map[string]interface{}{"result": []interface{}{}}
+}
+
+func (s *MetricsAPIServer) writeJSONResponse(w http.ResponseWriter, status int, data interface{}) {
+	// TODO: This will be implemented in the helpers package
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		klog.ErrorS(err, "Failed to encode JSON response")
+	}
+}
+
+func (s *MetricsAPIServer) writeErrorResponse(w http.ResponseWriter, status int, errorType, message string) {
+	// TODO: This will be implemented in the helpers package
+	response := &MetricResponse{Status: "error", ErrorType: errorType, Error: message}
+	s.writeJSONResponse(w, status, response)
+}
+
+func (s *MetricsAPIServer) writePrometheusError(w http.ResponseWriter, status int, message string) {
+	// TODO: This will be implemented in the helpers package
+	response := &PrometheusResponse{Status: "error", Error: message}
+	s.writeJSONResponse(w, status, response)
+}
+
+func (s *MetricsAPIServer) authMiddleware(next http.Handler) http.Handler {
+	// TODO: This will be implemented in the helpers package
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Skip authentication for health checks and OpenAPI spec
+		if r.URL.Path == "/healthz" || r.URL.Path == "/openapi.json" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func (s *MetricsAPIServer) loggingMiddleware(next http.Handler) http.Handler {
+	// TODO: This will be implemented in the helpers package
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		next.ServeHTTP(w, r)
+		klog.InfoS("HTTP request completed",
+			"method", r.Method, "path", r.URL.Path, 
+			"duration", time.Since(start))
+	})
 }
