@@ -59,6 +59,16 @@ const (
 	// Enables TMC (Transparent Multi-Cluster) APIs and controllers for workload placement across clusters.
 	// This feature provides advanced placement policies, cluster registration, and workload distribution capabilities.
 	TMCAPIs featuregate.Feature = "TMCAPIs"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables TMC metrics aggregation across clusters with basic sum strategy.
+	TMCMetricsAggregation featuregate.Feature = "TMCMetricsAggregation"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables advanced TMC aggregation strategies (avg, max, min) beyond basic sum.
+	TMCAdvancedAggregation featuregate.Feature = "TMCAdvancedAggregation"
 )
 
 // DefaultFeatureGate exposes the upstream feature gate, but with our gate setting applied.
@@ -94,6 +104,12 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 	},
 	TMCAPIs: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCMetricsAggregation: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCAdvancedAggregation: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
 	// unintentionally on either side:
