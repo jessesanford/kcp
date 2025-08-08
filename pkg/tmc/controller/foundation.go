@@ -40,10 +40,6 @@ const (
 // returns an error if reconciliation fails.
 type SyncHandler func(ctx context.Context, key string) error
 
-// HealthChecker defines the function signature for performing health checks.
-// It receives a context and returns true if healthy, false otherwise, plus any error.
-type HealthChecker func(ctx context.Context) (bool, error)
-
 // TMCController provides a foundation for TMC controllers that manage
 // resources following KCP patterns for workspace-aware operations.
 // This serves as the base controller infrastructure that will be extended
@@ -55,17 +51,11 @@ type TMCController struct {
 	// queue holds work items for processing
 	queue workqueue.RateLimitingInterface
 
-	// healthCheckInterval defines how often to perform health checks
-	healthCheckInterval time.Duration
-
 	// informer provides event notifications for watched resources
 	informer cache.SharedIndexInformer
 
 	// syncHandler handles the reconciliation of individual resources
 	syncHandler SyncHandler
-
-	// healthChecker performs periodic health checks (optional)
-	healthChecker HealthChecker
 }
 
 // TMCControllerOptions contains configuration options for creating a TMC controller.
@@ -78,12 +68,6 @@ type TMCControllerOptions struct {
 
 	// SyncHandler handles reconciliation of individual resources
 	SyncHandler SyncHandler
-
-	// HealthChecker performs periodic health checks (optional)
-	HealthChecker HealthChecker
-
-	// HealthCheckInterval defines how often to perform health checks
-	HealthCheckInterval time.Duration
 }
 
 // NewTMCController creates a new TMC controller foundation following KCP patterns.

@@ -35,8 +35,6 @@ func TestNewTMCControllerOptions(t *testing.T) {
 	assert.True(t, opts.LeaderElection)
 	assert.Equal(t, "kcp-system", opts.LeaderElectionNamespace)
 	assert.Equal(t, "tmc-controller", opts.LeaderElectionID)
-	assert.Equal(t, 30*time.Second, opts.ClusterHealthCheckInterval)
-	assert.Equal(t, 10, opts.MaxConcurrentReconciles)
 	assert.Equal(t, 2, opts.LogLevel)
 	assert.Nil(t, opts.Config)
 }
@@ -62,14 +60,6 @@ func TestTMCControllerOptions_AddFlags(t *testing.T) {
 	flag = fs.Lookup("leader-election")
 	require.NotNil(t, flag)
 	assert.Equal(t, "true", flag.DefValue)
-	
-	flag = fs.Lookup("cluster-health-check-interval")
-	require.NotNil(t, flag)
-	assert.Equal(t, "30s", flag.DefValue)
-	
-	flag = fs.Lookup("max-concurrent-reconciles")
-	require.NotNil(t, flag)
-	assert.Equal(t, "10", flag.DefValue)
 	
 	flag = fs.Lookup("log-level")
 	require.NotNil(t, flag)
@@ -105,33 +95,6 @@ func TestTMCControllerOptions_Validate(t *testing.T) {
 			},
 			wantError:   true,
 			errorString: "resync-period must be positive",
-		},
-		"negative health check interval": {
-			opts: func() *TMCControllerOptions {
-				opts := NewTMCControllerOptions()
-				opts.ClusterHealthCheckInterval = -1 * time.Second
-				return opts
-			},
-			wantError:   true,
-			errorString: "cluster-health-check-interval must be positive",
-		},
-		"zero max concurrent reconciles": {
-			opts: func() *TMCControllerOptions {
-				opts := NewTMCControllerOptions()
-				opts.MaxConcurrentReconciles = 0
-				return opts
-			},
-			wantError:   true,
-			errorString: "max-concurrent-reconciles must be positive",
-		},
-		"negative max concurrent reconciles": {
-			opts: func() *TMCControllerOptions {
-				opts := NewTMCControllerOptions()
-				opts.MaxConcurrentReconciles = -1
-				return opts
-			},
-			wantError:   true,
-			errorString: "max-concurrent-reconciles must be positive",
 		},
 		"log level too low": {
 			opts: func() *TMCControllerOptions {
