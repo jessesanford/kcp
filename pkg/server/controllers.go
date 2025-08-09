@@ -95,6 +95,7 @@ import (
 	"github.com/kcp-dev/kcp/pkg/reconciler/tenancy/workspacemounts"
 	"github.com/kcp-dev/kcp/pkg/reconciler/tenancy/workspacetype"
 	"github.com/kcp-dev/kcp/pkg/reconciler/topology/partitionset"
+	"github.com/kcp-dev/kcp/pkg/reconciler/workload/placement"
 	initializingworkspacesbuilder "github.com/kcp-dev/kcp/pkg/virtual/initializingworkspaces/builder"
 	corev1alpha1 "github.com/kcp-dev/kcp/sdk/apis/core/v1alpha1"
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tenancy/v1alpha1"
@@ -1863,4 +1864,47 @@ func (s *Server) addIndexersToInformers(_ context.Context) map[schema.GroupVersi
 		s.KubeSharedInformerFactory,
 		s.CacheKubeSharedInformerFactory,
 	)
+}
+
+// installWorkloadPlacementController installs the TMC workload placement controller.
+// This controller implements the placement decision engine for KCP's TMC system,
+// managing workload placement across available clusters based on placement specifications.
+func (s *Server) installWorkloadPlacementController(ctx context.Context, config *rest.Config) error {
+	controllerName := "tmc-workload-placement"
+	
+	// Check if TMC features are enabled
+	if !kcpfeatures.DefaultFeatureGate.Enabled(kcpfeatures.TMCAPIs) {
+		klog.V(2).Infof("%s controller disabled via feature gate", controllerName)
+		return nil
+	}
+
+	config = rest.AddUserAgent(rest.CopyConfig(config), controllerName)
+	
+	kcpClusterClient, err := kcpclientset.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("failed to create KCP cluster client: %w", err)
+	}
+
+	placementController, err := placement.NewController(
+		kcpClusterClient,
+		s.KcpSharedInformerFactory.Workload().V1alpha1().Placements(),
+		s.KcpSharedInformerFactory.Workload().V1alpha1().Locations(),
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create placement controller: %w", err)
+	}
+
+	return s.registerController(&controllerWrapper{
+		Name: controllerName,
+		Wait: func(ctx context.Context, s *Server) error {
+			return wait.PollUntilContextCancel(ctx, waitPollInterval, true, func(ctx context.Context) (bool, error) {
+				workloadInformers := s.KcpSharedInformerFactory.Workload().V1alpha1()
+				return workloadInformers.Placements().Informer().HasSynced() &&
+					workloadInformers.Locations().Informer().HasSynced(), nil
+			})
+		},
+		Runner: func(ctx context.Context) {
+			placementController.Start(ctx, 2)
+		},
+	})
 }
