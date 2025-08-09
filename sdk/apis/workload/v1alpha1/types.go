@@ -68,7 +68,7 @@ type WorkloadReference struct {
 	APIVersion string `json:"apiVersion"`
 
 	// Kind of the referenced workload.
-	// +required  
+	// +required
 	Kind string `json:"kind"`
 
 	// Name of the referenced workload.
@@ -245,7 +245,7 @@ const (
 	PlacementReadyReason = "Ready"
 
 	// PlacementValidReason indicates valid placement specification.
-	PlacementValidReason = "Valid" 
+	PlacementValidReason = "Valid"
 
 	// PlacementScheduledReason indicates successful scheduling decisions.
 	PlacementScheduledReason = "Scheduled"
@@ -261,7 +261,7 @@ const (
 // These minimal definitions allow the placement controller to compile and function.
 
 // +genclient
-// +genclient:nonNamespaced  
+// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:resource:scope=Cluster,categories=kcp
 
@@ -269,7 +269,7 @@ const (
 type Location struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-	
+
 	Spec   LocationSpec   `json:"spec,omitempty"`
 	Status LocationStatus `json:"status,omitempty"`
 }

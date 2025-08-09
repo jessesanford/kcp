@@ -18,8 +18,8 @@ package features
 
 import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	genericfeatures "k8s.io/apiserver/pkg/util/feature"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
 	"k8s.io/component-base/version"
 )
