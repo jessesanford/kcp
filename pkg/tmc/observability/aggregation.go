@@ -19,7 +19,6 @@ package observability
 import (
 	"context"
 	"fmt"
-	"sort"
 	"sync"
 	"time"
 
@@ -75,6 +74,22 @@ type TimeRange struct {
 	Start time.Time     `json:"start"`
 	End   time.Time     `json:"end"`
 	Step  time.Duration `json:"step,omitempty"`
+}
+
+// WorkspaceAwareMetricsCollector defines the interface for collecting metrics from clusters within workspaces.
+type WorkspaceAwareMetricsCollector interface {
+	// ListClusters returns the list of cluster names in a workspace
+	ListClusters(ctx context.Context, workspace logicalcluster.Name) ([]string, error)
+	
+	// CollectClusterMetrics collects metrics from a specific cluster in a workspace
+	CollectClusterMetrics(ctx context.Context, clusterName string, workspace logicalcluster.Name) (*ClusterMetrics, error)
+}
+
+// ClusterMetrics represents metrics collected from a single cluster.
+type ClusterMetrics struct {
+	Metrics   map[string]float64 `json:"metrics"`
+	Labels    map[string]string  `json:"labels"`
+	Timestamp time.Time          `json:"timestamp"`
 }
 
 // MetricsAggregator defines the interface for metrics aggregation.
