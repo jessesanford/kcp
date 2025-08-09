@@ -71,6 +71,12 @@ const (
 	// Enables TMC dashboard provisioning and management for Grafana integration.
 	// This feature provides automatic dashboard provisioning for TMC monitoring.
 	TMCDashboards featuregate.Feature = "TMCDashboards"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables TMC time series consolidation for historical data.
+	// This feature provides advanced time-series data processing and consolidation.
+	TMCTimeSeriesConsolidation featuregate.Feature = "TMCTimeSeriesConsolidation"
 )
 
 // DefaultFeatureGate exposes the upstream feature gate, but with our gate setting applied.
@@ -155,6 +161,9 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 	},
 	TMCDashboards: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCTimeSeriesConsolidation: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
 	// unintentionally on either side:
