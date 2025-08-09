@@ -1,0 +1,220 @@
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  creationTimestamp: null
+  name: v250807-d363e5fd.clusterregistrations.tmc.kcp.io
+spec:
+  group: tmc.kcp.io
+  names:
+    kind: ClusterRegistration
+    listKind: ClusterRegistrationList
+    plural: clusterregistrations
+    singular: clusterregistration
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.location
+      name: Location
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      description: |-
+        ClusterRegistration represents a cluster that has been registered with the TMC system.
+        It contains cluster metadata, configuration, and status information needed for
+        workload placement and cluster management decisions.
+      properties:
+        apiVersion:
+          description: |-
+            APIVersion defines the versioned schema of this representation of an object.
+            Servers should convert recognized schemas to the latest internal value, and
+            may reject unrecognized values.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+          type: string
+        kind:
+          description: |-
+            Kind is a string value representing the REST resource this object represents.
+            Servers may infer this from the endpoint the client submits requests to.
+            Cannot be updated.
+            In CamelCase.
+            More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: ClusterRegistrationSpec defines the desired state of a registered
+            cluster.
+          properties:
+            capabilities:
+              description: |-
+                Capabilities describes the capabilities and features available in this cluster.
+                This information is used for workload placement decisions.
+              properties:
+                compute:
+                  description: Compute describes the computational resources available.
+                  properties:
+                    architecture:
+                      description: Architecture specifies the CPU architecture (e.g.,
+                        "amd64", "arm64").
+                      type: string
+                    maxCPU:
+                      description: MaxCPU is the maximum CPU capacity available in
+                        the cluster.
+                      type: string
+                    maxMemory:
+                      description: MaxMemory is the maximum memory capacity available
+                        in the cluster.
+                      type: string
+                  type: object
+                network:
+                  description: Network describes the networking capabilities available.
+                  properties:
+                    ingressSupport:
+                      description: IngressSupport indicates if the cluster supports
+                        Ingress resources.
+                      type: boolean
+                    loadBalancerSupport:
+                      description: LoadBalancerSupport indicates if the cluster supports
+                        LoadBalancer services.
+                      type: boolean
+                  type: object
+                storage:
+                  description: Storage describes the storage capabilities available.
+                  properties:
+                    maxStorage:
+                      description: MaxStorage is the maximum storage capacity available.
+                      type: string
+                    storageClasses:
+                      description: StorageClasses lists the available storage classes.
+                      items:
+                        type: string
+                      type: array
+                  type: object
+              type: object
+            labels:
+              additionalProperties:
+                type: string
+              description: |-
+                Labels are additional labels to be applied to workloads placed on this cluster.
+                These labels can be used for scheduling, monitoring, and policy enforcement.
+              type: object
+            location:
+              description: |-
+                Location specifies the geographic or logical location of the cluster.
+                This is used by location-aware placement policies.
+              type: string
+            taints:
+              description: |-
+                Taints represent restrictions that prevent certain workloads from being placed
+                on this cluster unless they have matching tolerations.
+              items:
+                description: ClusterTaint represents a restriction on workload placement.
+                properties:
+                  effect:
+                    description: |-
+                      Effect indicates the effect of the taint on workloads that do not tolerate it.
+                      Valid effects are NoSchedule, PreferNoSchedule, and NoExecute.
+                    enum:
+                    - NoSchedule
+                    - PreferNoSchedule
+                    - NoExecute
+                    type: string
+                  key:
+                    description: Key is the taint key to be applied to the cluster.
+                    type: string
+                  value:
+                    description: Value is the taint value corresponding to the taint
+                      key.
+                    type: string
+                required:
+                - effect
+                - key
+                type: object
+              type: array
+          required:
+          - location
+          type: object
+        status:
+          description: ClusterRegistrationStatus represents the observed state of
+            a ClusterRegistration.
+          properties:
+            conditions:
+              description: Conditions represent the latest available observations
+                of the cluster's state.
+              items:
+                description: Condition defines an observation of a object operational
+                  state.
+                properties:
+                  lastTransitionTime:
+                    description: |-
+                      Last time the condition transitioned from one status to another.
+                      This should be when the underlying condition changed. If that is not known, then using the time when
+                      the API field changed is acceptable.
+                    format: date-time
+                    type: string
+                  message:
+                    description: |-
+                      A human readable message indicating details about the transition.
+                      This field may be empty.
+                    type: string
+                  reason:
+                    description: |-
+                      The reason for the condition's last transition in CamelCase.
+                      The specific API may choose whether or not this field is considered a guaranteed API.
+                      This field may not be empty.
+                    type: string
+                  severity:
+                    description: |-
+                      Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                      understand the current situation and act accordingly.
+                      The Severity field MUST be set only when Status=False.
+                    type: string
+                  status:
+                    description: Status of the condition, one of True, False, Unknown.
+                    type: string
+                  type:
+                    description: |-
+                      Type of condition in CamelCase or in foo.example.com/CamelCase.
+                      Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                      can be useful (see .node.status.conditions), the ability to deconflict is important.
+                    type: string
+                required:
+                - lastTransitionTime
+                - status
+                - type
+                type: object
+              type: array
+            lastHeartbeatTime:
+              description: LastHeartbeatTime is the last time the cluster sent a heartbeat.
+              format: date-time
+              type: string
+            resourceUsage:
+              description: ResourceUsage provides information about current resource
+                utilization.
+              properties:
+                cpu:
+                  description: CPU usage as a percentage of total capacity.
+                  type: string
+                memory:
+                  description: Memory usage as a percentage of total capacity.
+                  type: string
+                storage:
+                  description: Storage usage as a percentage of total capacity.
+                  type: string
+              type: object
+            workloadCount:
+              description: WorkloadCount is the current number of workloads running
+                on this cluster.
+              format: int32
+              type: integer
+          type: object
+      type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

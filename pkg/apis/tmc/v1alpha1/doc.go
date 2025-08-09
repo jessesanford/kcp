@@ -16,13 +16,11 @@ limitations under the License.
 
 // Package v1alpha1 contains API Schema definitions for the TMC (Transparent Multi-Cluster) v1alpha1 API group.
 //
-// The TMC API provides primitives for managing workload placement and cluster registration
-// in a transparent multi-cluster environment. It follows KCP patterns for workspace-aware
-// resource management and API export integration.
+// The TMC API provides primitives for managing cluster registration in a transparent multi-cluster environment.
+// It follows KCP patterns for workspace-aware resource management and API export integration.
 //
 // Core Resources:
-//   - ClusterRegistration: Represents cluster membership and health in the TMC system
-//   - WorkloadPlacement: Defines policies for placing workloads across clusters
+//   - ClusterRegistration: Represents cluster membership and capabilities in the TMC system
 //
 // +k8s:deepcopy-gen=package
 // +groupName=tmc.kcp.io
