@@ -1,0 +1,467 @@
+# TMC APIResourceSchemas for KCP
+# These define the schema for TMC (Transparent Multi-Cluster) APIs within KCP
+
+---
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  name: v1alpha1.clusterregistrations.tmc.kcp.io
+  labels:
+    app.kubernetes.io/managed-by: "kcp-tmc"
+    tmc.kcp.io/managed: "true"
+spec:
+  group: tmc.kcp.io
+  names:
+    categories:
+    - tmc
+    kind: ClusterRegistration
+    listKind: ClusterRegistrationList
+    plural: clusterregistrations
+    singular: clusterregistration
+    shortNames:
+    - cr
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      description: "ClusterRegistration represents a physical cluster registered with the TMC for workload management."
+      type: object
+      required:
+      - spec
+      properties:
+        apiVersion:
+          description: "APIVersion defines the versioned schema of this representation of an object."
+          type: string
+        kind:
+          description: "Kind is a string value representing the REST resource this object represents."
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: "ClusterRegistrationSpec holds the desired state of the ClusterRegistration."
+          type: object
+          required:
+          - location
+          - clusterEndpoint
+          properties:
+            location:
+              description: "Location specifies the geographical location of the cluster"
+              type: string
+            clusterEndpoint:
+              description: "ClusterEndpoint defines how to connect to the cluster"
+              type: object
+              required:
+              - serverURL
+              properties:
+                serverURL:
+                  description: "ServerURL is the URL of the Kubernetes API server"
+                  type: string
+                  format: uri
+                caBundle:
+                  description: "CABundle contains the certificate authority bundle for the cluster"
+                  type: string
+                  format: byte
+                tlsConfig:
+                  description: "TLSConfig contains additional TLS configuration"
+                  type: object
+                  properties:
+                    insecureSkipVerify:
+                      description: "InsecureSkipVerify controls whether to skip certificate verification"
+                      type: boolean
+                      default: false
+            capacity:
+              description: "Capacity defines the advertised capacity of the cluster"
+              type: object
+              properties:
+                cpu:
+                  description: "CPU is the total CPU capacity of the cluster in milliCPU"
+                  type: integer
+                  format: int64
+                memory:
+                  description: "Memory is the total memory capacity of the cluster in bytes"
+                  type: integer
+                  format: int64
+                maxPods:
+                  description: "MaxPods is the maximum number of pods that can be scheduled on this cluster"
+                  type: integer
+                  format: int32
+        status:
+          description: "ClusterRegistrationStatus communicates the observed state of the ClusterRegistration."
+          type: object
+          properties:
+            conditions:
+              description: "Conditions represent the latest available observations of the cluster's state"
+              type: array
+              items:
+                type: object
+                required:
+                - type
+                - status
+                - lastTransitionTime
+                properties:
+                  type:
+                    description: "Type of condition"
+                    type: string
+                  status:
+                    description: "Status of the condition"
+                    type: string
+                  lastTransitionTime:
+                    description: "Last time the condition transitioned"
+                    type: string
+                    format: date-time
+                  reason:
+                    description: "Reason for the condition"
+                    type: string
+                  message:
+                    description: "Message with details about the transition"
+                    type: string
+            lastHeartbeat:
+              description: "LastHeartbeat is the timestamp of the last successful cluster heartbeat"
+              type: string
+              format: date-time
+            allocatedResources:
+              description: "AllocatedResources tracks the resources currently allocated on this cluster"
+              type: object
+              properties:
+                cpu:
+                  description: "CPU usage in milliCPU"
+                  type: integer
+                  format: int64
+                memory:
+                  description: "Memory usage in bytes"
+                  type: integer
+                  format: int64
+                pods:
+                  description: "Pod count"
+                  type: integer
+                  format: int32
+            capabilities:
+              description: "Capabilities contains the detected capabilities of the cluster"
+              type: object
+              properties:
+                kubernetesVersion:
+                  description: "KubernetesVersion is the detected Kubernetes version"
+                  type: string
+                supportedAPIVersions:
+                  description: "SupportedAPIVersions lists the API versions supported by the cluster"
+                  type: array
+                  items:
+                    type: string
+                availableResources:
+                  description: "AvailableResources lists the resource types available in the cluster"
+                  type: array
+                  items:
+                    type: string
+                nodeCount:
+                  description: "NodeCount is the number of nodes in the cluster"
+                  type: integer
+                  format: int32
+                features:
+                  description: "Features contains detected cluster features"
+                  type: array
+                  items:
+                    type: string
+                lastDetected:
+                  description: "LastDetected is the timestamp when capabilities were last detected"
+                  type: string
+                  format: date-time
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Location
+      type: string
+      jsonPath: .spec.location
+    - name: Server
+      type: string
+      jsonPath: .spec.clusterEndpoint.serverURL
+    - name: Ready
+      type: string
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+
+---
+apiVersion: apis.kcp.io/v1alpha1
+kind: APIResourceSchema
+metadata:
+  name: v1alpha1.workloadplacements.tmc.kcp.io
+  labels:
+    app.kubernetes.io/managed-by: "kcp-tmc"
+    tmc.kcp.io/managed: "true"
+spec:
+  group: tmc.kcp.io
+  names:
+    categories:
+    - tmc
+    kind: WorkloadPlacement
+    listKind: WorkloadPlacementList
+    plural: workloadplacements
+    singular: workloadplacement
+    shortNames:
+    - wp
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      description: "WorkloadPlacement represents a policy for placing workloads across clusters."
+      type: object
+      required:
+      - spec
+      properties:
+        apiVersion:
+          description: "APIVersion defines the versioned schema of this representation of an object."
+          type: string
+        kind:
+          description: "Kind is a string value representing the REST resource this object represents."
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: "WorkloadPlacementSpec holds the desired state of the WorkloadPlacement."
+          type: object
+          required:
+          - workloadSelector
+          - clusterSelector
+          properties:
+            workloadSelector:
+              description: "WorkloadSelector selects the workloads this placement applies to"
+              type: object
+              properties:
+                labelSelector:
+                  description: "LabelSelector selects workloads based on labels"
+                  type: object
+                  properties:
+                    matchLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    matchExpressions:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                        - key
+                        - operator
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                          values:
+                            type: array
+                            items:
+                              type: string
+                workloadTypes:
+                  description: "WorkloadTypes specifies the types of workloads to select"
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - apiVersion
+                    - kind
+                    properties:
+                      apiVersion:
+                        type: string
+                      kind:
+                        type: string
+                namespaceSelector:
+                  description: "NamespaceSelector selects workloads from specific namespaces"
+                  type: object
+                  properties:
+                    matchLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    matchExpressions:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                        - key
+                        - operator
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                          values:
+                            type: array
+                            items:
+                              type: string
+            clusterSelector:
+              description: "ClusterSelector defines how to select target clusters"
+              type: object
+              properties:
+                labelSelector:
+                  description: "LabelSelector selects clusters based on labels"
+                  type: object
+                  properties:
+                    matchLabels:
+                      type: object
+                      additionalProperties:
+                        type: string
+                    matchExpressions:
+                      type: array
+                      items:
+                        type: object
+                        required:
+                        - key
+                        - operator
+                        properties:
+                          key:
+                            type: string
+                          operator:
+                            type: string
+                          values:
+                            type: array
+                            items:
+                              type: string
+                locationSelector:
+                  description: "LocationSelector selects clusters from specific locations"
+                  type: array
+                  items:
+                    type: string
+                clusterNames:
+                  description: "ClusterNames explicitly lists cluster names to target"
+                  type: array
+                  items:
+                    type: string
+            placementPolicy:
+              description: "PlacementPolicy defines the placement strategy"
+              type: string
+              enum:
+              - RoundRobin
+              - LeastLoaded
+              - Random
+              - LocationAware
+              default: RoundRobin
+            numberOfClusters:
+              description: "NumberOfClusters specifies how many clusters to place workloads on"
+              type: integer
+              format: int32
+              minimum: 1
+              default: 1
+        status:
+          description: "WorkloadPlacementStatus communicates the observed state of the WorkloadPlacement."
+          type: object
+          properties:
+            conditions:
+              description: "Conditions represent the latest available observations of the placement's state"
+              type: array
+              items:
+                type: object
+                required:
+                - type
+                - status
+                - lastTransitionTime
+                properties:
+                  type:
+                    description: "Type of condition"
+                    type: string
+                  status:
+                    description: "Status of the condition"
+                    type: string
+                  lastTransitionTime:
+                    description: "Last time the condition transitioned"
+                    type: string
+                    format: date-time
+                  reason:
+                    description: "Reason for the condition"
+                    type: string
+                  message:
+                    description: "Message with details about the transition"
+                    type: string
+            selectedClusters:
+              description: "SelectedClusters lists the clusters selected for workload placement"
+              type: array
+              items:
+                type: string
+            placedWorkloads:
+              description: "PlacedWorkloads tracks the workloads that have been placed"
+              type: array
+              items:
+                type: object
+                required:
+                - workloadRef
+                - clusterName
+                - placementTime
+                properties:
+                  workloadRef:
+                    description: "WorkloadRef references the placed workload"
+                    type: object
+                    required:
+                    - apiVersion
+                    - kind
+                    - name
+                    properties:
+                      apiVersion:
+                        type: string
+                      kind:
+                        type: string
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                  clusterName:
+                    description: "ClusterName is the name of the cluster where the workload was placed"
+                    type: string
+                  placementTime:
+                    description: "PlacementTime is when the workload was placed"
+                    type: string
+                    format: date-time
+                  status:
+                    description: "Status indicates the current status of the placed workload"
+                    type: string
+                    enum:
+                    - Pending
+                    - Placed
+                    - Failed
+                    - Removed
+                    default: Pending
+            lastPlacementTime:
+              description: "LastPlacementTime is the timestamp of the last placement decision"
+              type: string
+              format: date-time
+            placementDecisions:
+              description: "PlacementDecisions tracks the current placement decisions"
+              type: array
+              items:
+                type: object
+                required:
+                - clusterName
+                - decisionTime
+                properties:
+                  clusterName:
+                    description: "ClusterName is the name of the selected cluster"
+                    type: string
+                  reason:
+                    description: "Reason provides the rationale for this placement decision"
+                    type: string
+                  score:
+                    description: "Score represents the placement score for this cluster (higher is better)"
+                    type: integer
+                    format: int32
+                  decisionTime:
+                    description: "DecisionTime is when this placement decision was made"
+                    type: string
+                    format: date-time
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Policy
+      type: string
+      jsonPath: .spec.placementPolicy
+    - name: Clusters
+      type: integer
+      jsonPath: .spec.numberOfClusters
+    - name: Selected
+      type: string
+      jsonPath: .status.selectedClusters[*]
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
