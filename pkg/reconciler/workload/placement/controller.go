@@ -29,6 +29,7 @@ import (
 	"github.com/kcp-dev/kcp/pkg/reconciler/committer"
 	workloadv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/workload/v1alpha1"
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
+	workloadclientv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/workload/v1alpha1"
 	workloadinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/workload/v1alpha1"
 	workloadlisters "github.com/kcp-dev/kcp/sdk/client/listers/workload/v1alpha1"
 
@@ -37,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/tools/cache"
@@ -51,6 +53,21 @@ const (
 	// DefaultResyncPeriod is the default time period for resyncing placement resources.
 	DefaultResyncPeriod = 10 * time.Hour
 )
+
+// PlacementQueueKey represents a typed workqueue key for placement resources.
+type PlacementQueueKey struct {
+	ClusterName logicalcluster.Name
+	Namespace   string
+	Name        string
+}
+
+// String returns a string representation of the queue key.
+func (k PlacementQueueKey) String() string {
+	if k.Namespace != "" {
+		return fmt.Sprintf("%s/%s/%s", k.ClusterName, k.Namespace, k.Name)
+	}
+	return fmt.Sprintf("%s/%s", k.ClusterName, k.Name)
+}
 
 // placementControllerConfig contains the configuration for the placement controller.
 type placementControllerConfig struct {
@@ -68,7 +85,7 @@ type placementControllerConfig struct {
 // It implements the placement decision engine that selects appropriate
 // clusters for workload placement based on placement specifications.
 type placementController struct {
-	queue workqueue.RateLimitingInterface
+	queue workqueue.TypedRateLimitingInterface[PlacementQueueKey]
 
 	// Client and listers for KCP resources
 	kcpClusterClient kcpclientset.ClusterInterface
@@ -80,8 +97,8 @@ type placementController struct {
 	locationLister workloadlisters.LocationClusterLister
 	locationSynced cache.InformerSynced
 
-	// Committer handles status updates
-	committer committer.Committer[*Placement]
+	// Committer handles batch status updates with proper resource management
+	commit committer.CommitFunc[workloadv1alpha1.PlacementSpec, workloadv1alpha1.PlacementStatus]
 }
 
 // newPlacementController creates a new placement controller instance.
@@ -97,9 +114,11 @@ type placementController struct {
 func newPlacementController(config placementControllerConfig) (*placementController, error) {
 	logger := klog.Background().WithValues("controller", ControllerName)
 
-	queue := workqueue.NewNamedRateLimitingQueue(
-		workqueue.DefaultControllerRateLimiter(),
-		ControllerName,
+	queue := workqueue.NewTypedRateLimitingQueueWithConfig(
+		workqueue.DefaultTypedControllerRateLimiter[PlacementQueueKey](),
+		workqueue.TypedRateLimitingQueueConfig[PlacementQueueKey]{
+			Name: ControllerName,
+		},
 	)
 
 	c := &placementController{
@@ -113,7 +132,12 @@ func newPlacementController(config placementControllerConfig) (*placementControl
 		locationLister: config.locationInformer.Lister(),
 		locationSynced: config.locationInformer.Informer().HasSynced,
 
-		committer: committer.NewStatusless[*Placement](),
+		commit: committer.NewCommitter[
+			*workloadv1alpha1.Placement,
+			workloadclientv1alpha1.PlacementInterface,
+			workloadv1alpha1.PlacementSpec,
+			workloadv1alpha1.PlacementStatus,
+		](config.kcpClusterClient.WorkloadV1alpha1().Placements()),
 	}
 
 	// Configure placement informer event handlers
@@ -169,13 +193,28 @@ func newPlacementController(config placementControllerConfig) (*placementControl
 
 // enqueuePlacement adds a placement resource to the work queue for processing.
 func (c *placementController) enqueuePlacement(logger klog.Logger, obj interface{}, action string) {
-	key, err := kcpcache.DeletionHandlingMetaClusterNamespaceKeyFunc(obj)
-	if err != nil {
-		runtime.HandleError(fmt.Errorf("failed to get key for placement %v: %w", obj, err))
-		return
+	placement, ok := obj.(*workloadv1alpha1.Placement)
+	if !ok {
+		// Handle deletion state
+		if deleted, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+			placement, ok = deleted.Obj.(*workloadv1alpha1.Placement)
+			if !ok {
+				runtime.HandleError(fmt.Errorf("expected Placement, got %T", deleted.Obj))
+				return
+			}
+		} else {
+			runtime.HandleError(fmt.Errorf("expected Placement, got %T", obj))
+			return
+		}
 	}
 
-	logger.V(4).Info("enqueueing placement", "key", key, "action", action)
+	key := PlacementQueueKey{
+		ClusterName: logicalcluster.From(placement),
+		Namespace:   placement.Namespace,
+		Name:        placement.Name,
+	}
+
+	logger.V(4).Info("enqueueing placement", "key", key.String(), "action", action)
 	c.queue.Add(key)
 }
 
@@ -208,12 +247,12 @@ func (c *placementController) handleLocationChange(logger klog.Logger, obj inter
 
 	// Enqueue affected placements for re-processing
 	for _, placement := range placements {
-		key, err := kcpcache.MetaClusterNamespaceKeyFunc(placement)
-		if err != nil {
-			runtime.HandleError(fmt.Errorf("failed to get key for placement %v: %w", placement, err))
-			continue
+		key := PlacementQueueKey{
+			ClusterName: logicalcluster.From(placement),
+			Namespace:   placement.Namespace,
+			Name:        placement.Name,
 		}
-		logger.V(5).Info("enqueueing placement due to location change", "placement", placement.Name, "key", key)
+		logger.V(5).Info("enqueueing placement due to location change", "placement", placement.Name, "key", key.String())
 		c.queue.Add(key)
 	}
 }
@@ -266,7 +305,7 @@ func (c *placementController) processNextWorkItem(ctx context.Context, logger kl
 	defer c.queue.Done(key)
 
 	// Process the item
-	err := c.processWorkItem(ctx, key.(string))
+	err := c.processWorkItem(ctx, key)
 	if err == nil {
 		// Item processed successfully, remove from queue
 		c.queue.Forget(key)
@@ -274,7 +313,7 @@ func (c *placementController) processNextWorkItem(ctx context.Context, logger kl
 	}
 
 	// Handle processing error
-	runtime.HandleError(fmt.Errorf("failed to process key %q: %w", key, err))
+	runtime.HandleError(fmt.Errorf("failed to process key %q: %w", key.String(), err))
 
 	// Add back to queue with rate limiting
 	c.queue.AddRateLimited(key)
@@ -283,40 +322,41 @@ func (c *placementController) processNextWorkItem(ctx context.Context, logger kl
 }
 
 // processWorkItem processes a single work item identified by the given key.
-func (c *placementController) processWorkItem(ctx context.Context, key string) error {
-	logger := logging.WithReconciler(klog.FromContext(ctx), ControllerName).WithValues("key", key)
+func (c *placementController) processWorkItem(ctx context.Context, key PlacementQueueKey) error {
+	logger := logging.WithReconciler(klog.FromContext(ctx), ControllerName).WithValues("key", key.String())
 
-	// Parse the key to get cluster and name
-	clusterName, _, name, err := kcpcache.SplitMetaClusterNamespaceKey(key)
-	if err != nil {
-		return fmt.Errorf("invalid key format: %w", err)
-	}
+	// Use the structured key directly
+	clusterName := key.ClusterName
+	name := key.Name
 
 	logger = logger.WithValues("cluster", clusterName, "placement", name)
 
-	// Get the placement resource
+	// Get the placement resource with proper cluster scoping
 	placement, err := c.placementLister.Cluster(clusterName).Get(name)
 	if errors.IsNotFound(err) {
 		logger.V(2).Info("placement has been deleted")
 		return nil
 	}
 	if err != nil {
-		return fmt.Errorf("failed to get placement: %w", err)
+		return fmt.Errorf("failed to get placement from cluster %s: %w", clusterName, err)
 	}
 
-	// Create a deep copy for reconciliation
+	// Verify placement belongs to the expected logical cluster for security
+	actualCluster := logicalcluster.From(placement)
+	if actualCluster != clusterName {
+		return fmt.Errorf("placement cluster mismatch: expected %s, got %s", clusterName, actualCluster)
+	}
+
+	// Create a deep copy for reconciliation to avoid mutation of cached object
 	placementCopy := placement.DeepCopy()
 
-	// Delegate to reconciler
+	// Delegate to reconciler with proper cluster context
 	if err := c.reconcile(ctx, placementCopy); err != nil {
-		return fmt.Errorf("reconciliation failed: %w", err)
+		return fmt.Errorf("reconciliation failed for placement %s in cluster %s: %w", name, clusterName, err)
 	}
 
 	return nil
 }
-
-// Placement is a type alias to avoid import cycles and simplify committer usage.
-type Placement = workloadv1alpha1.Placement
 
 // NewController creates a new TMC placement controller following KCP patterns.
 // It integrates with the workload API system and maintains logical cluster isolation.
