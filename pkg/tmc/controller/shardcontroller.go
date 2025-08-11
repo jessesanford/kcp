@@ -79,16 +79,9 @@ type ShardHealthMetrics struct {
 	LastHealthCheck  time.Time
 	WorkloadCount    int64
 	AverageLatency   time.Duration
-	P95Latency       time.Duration
-	P99Latency       time.Duration
 	ErrorRate        float64
-	RequestsPerSecond float64
 	CPUUtilization    float64
 	MemoryUtilization float64
-	StorageUtilization float64
-	NetworkLatency   time.Duration
-	NetworkErrors    int64
-	NetworkThroughput float64
 	SuccessfulChecks int64
 	FailedChecks     int64
 	UptimePercentage float64
@@ -319,10 +312,8 @@ func (c *TMCShardHealthController) updateShardCapacityMetrics(health *ShardHealt
 		health.MemoryUtilization = 35.0 + (float64(health.WorkloadCount)/float64(health.MaxCapacity))*40.0
 		health.AverageLatency = time.Duration(50+health.WorkloadCount/1000) * time.Millisecond
 		health.ErrorRate = 0.01 + (float64(health.WorkloadCount)/float64(health.MaxCapacity))*0.05
-		health.RequestsPerSecond = 1000.0 - (float64(health.WorkloadCount)/float64(health.MaxCapacity))*200.0
 	} else {
 		health.ErrorRate = 0.5
-		health.RequestsPerSecond = 0.0
 		health.AverageLatency = 5 * time.Second
 	}
 }
@@ -402,7 +393,6 @@ func (c *TMCShardHealthController) cleanupOldMetrics() {
 	defer c.healthMutex.Unlock()
 	
 	cutoffTime := time.Now().Add(-ShardMetricsRetentionPeriod)
-	
 	for shardName, history := range c.healthHistory {
 		filteredHistory := make([]*ShardHealthSnapshot, 0)
 		for _, snapshot := range history {
@@ -412,8 +402,6 @@ func (c *TMCShardHealthController) cleanupOldMetrics() {
 		}
 		c.healthHistory[shardName] = filteredHistory
 	}
-	
-	klog.V(4).InfoS("Completed metrics cleanup", "retentionPeriod", ShardMetricsRetentionPeriod)
 }
 
 // GetComprehensiveShardMetrics returns detailed health metrics for all shards
@@ -423,23 +411,15 @@ func (c *TMCShardHealthController) GetComprehensiveShardMetrics() map[string]*Sh
 	
 	result := make(map[string]*ShardHealthMetrics)
 	for name, metrics := range c.shardHealth {
-		// Return a deep copy to prevent race conditions
 		result[name] = &ShardHealthMetrics{
 			ShardName:         metrics.ShardName,
 			Healthy:           metrics.Healthy,
 			LastHealthCheck:   metrics.LastHealthCheck,
 			WorkloadCount:     metrics.WorkloadCount,
 			AverageLatency:    metrics.AverageLatency,
-			P95Latency:        metrics.P95Latency,
-			P99Latency:        metrics.P99Latency,
 			ErrorRate:         metrics.ErrorRate,
-			RequestsPerSecond: metrics.RequestsPerSecond,
 			CPUUtilization:    metrics.CPUUtilization,
 			MemoryUtilization: metrics.MemoryUtilization,
-			StorageUtilization: metrics.StorageUtilization,
-			NetworkLatency:    metrics.NetworkLatency,
-			NetworkErrors:     metrics.NetworkErrors,
-			NetworkThroughput: metrics.NetworkThroughput,
 			SuccessfulChecks:  metrics.SuccessfulChecks,
 			FailedChecks:      metrics.FailedChecks,
 			UptimePercentage:  metrics.UptimePercentage,
@@ -448,33 +428,5 @@ func (c *TMCShardHealthController) GetComprehensiveShardMetrics() map[string]*Sh
 			AvailableCapacity: metrics.AvailableCapacity,
 		}
 	}
-	
-	return result
-}
-
-// GetShardHealthHistory returns historical health data for a specific shard
-func (c *TMCShardHealthController) GetShardHealthHistory(shardName string) []*ShardHealthSnapshot {
-	c.healthMutex.RLock()
-	defer c.healthMutex.RUnlock()
-	
-	history, exists := c.healthHistory[shardName]
-	if !exists {
-		return nil
-	}
-	
-	// Return a copy to prevent race conditions
-	result := make([]*ShardHealthSnapshot, len(history))
-	for i, snapshot := range history {
-		result[i] = &ShardHealthSnapshot{
-			Timestamp:     snapshot.Timestamp,
-			Healthy:       snapshot.Healthy,
-			WorkloadCount: snapshot.WorkloadCount,
-			Latency:       snapshot.Latency,
-			ErrorRate:     snapshot.ErrorRate,
-			CPUUsage:      snapshot.CPUUsage,
-			MemoryUsage:   snapshot.MemoryUsage,
-		}
-	}
-	
 	return result
 }
