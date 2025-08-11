@@ -23,9 +23,9 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 
-	"github.com/kcp-dev/logicalcluster/v3"
 	kcpclientsetfake "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/fake"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -124,17 +124,17 @@ func TestNewAdvancedClusterController(t *testing.T) {
 
 func TestAdvancedClusterController_PerformComprehensiveHealthCheck(t *testing.T) {
 	tests := []struct {
-		name        string
-		setupClient func() *fake.Clientset
-		wantHealthy bool
-		wantError   bool
+		name          string
+		setupClient   func() *fake.Clientset
+		wantHealthy   bool
+		wantError     bool
 		wantNodeCount int
 	}{
 		{
 			name: "healthy cluster with ready nodes",
 			setupClient: func() *fake.Clientset {
 				client := fake.NewSimpleClientset()
-				
+
 				// Add ready nodes
 				readyNode := &corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
@@ -160,7 +160,7 @@ func TestAdvancedClusterController_PerformComprehensiveHealthCheck(t *testing.T)
 				}
 				client.CoreV1().Nodes().Create(context.TODO(), readyNode, metav1.CreateOptions{})
 				client.CoreV1().Nodes().Create(context.TODO(), notReadyNode, metav1.CreateOptions{})
-				
+
 				// Add some pods and namespaces for metrics
 				pod := &corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
@@ -169,12 +169,12 @@ func TestAdvancedClusterController_PerformComprehensiveHealthCheck(t *testing.T)
 					},
 				}
 				client.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
-				
+
 				namespace := &corev1.Namespace{
 					ObjectMeta: metav1.ObjectMeta{Name: "test-ns"},
 				}
 				client.CoreV1().Namespaces().Create(context.TODO(), namespace, metav1.CreateOptions{})
-				
+
 				// Set up fake discovery client
 				fakeDiscovery, ok := client.Discovery().(*fakediscovery.FakeDiscovery)
 				if ok {
@@ -184,7 +184,7 @@ func TestAdvancedClusterController_PerformComprehensiveHealthCheck(t *testing.T)
 						GitVersion: "v1.28.0",
 					}
 				}
-				
+
 				return client
 			},
 			wantHealthy:   true,
@@ -195,7 +195,7 @@ func TestAdvancedClusterController_PerformComprehensiveHealthCheck(t *testing.T)
 			name: "unhealthy cluster with no ready nodes",
 			setupClient: func() *fake.Clientset {
 				client := fake.NewSimpleClientset()
-				
+
 				// Add only not-ready nodes
 				notReadyNode := &corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{Name: "node-1"},
@@ -209,7 +209,7 @@ func TestAdvancedClusterController_PerformComprehensiveHealthCheck(t *testing.T)
 					},
 				}
 				client.CoreV1().Nodes().Create(context.TODO(), notReadyNode, metav1.CreateOptions{})
-				
+
 				// Set up fake discovery client
 				fakeDiscovery, ok := client.Discovery().(*fakediscovery.FakeDiscovery)
 				if ok {
@@ -219,7 +219,7 @@ func TestAdvancedClusterController_PerformComprehensiveHealthCheck(t *testing.T)
 						GitVersion: "v1.28.0",
 					}
 				}
-				
+
 				return client
 			},
 			wantHealthy:   false,
@@ -297,7 +297,7 @@ func TestAdvancedClusterController_CollectClusterMetrics(t *testing.T) {
 
 	// Set up fake client with resources
 	client := fake.NewSimpleClientset()
-	
+
 	// Add pods
 	for i := 0; i < 3; i++ {
 		pod := &corev1.Pod{
@@ -308,7 +308,7 @@ func TestAdvancedClusterController_CollectClusterMetrics(t *testing.T) {
 		}
 		client.CoreV1().Pods("default").Create(context.TODO(), pod, metav1.CreateOptions{})
 	}
-	
+
 	// Add services
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -317,13 +317,13 @@ func TestAdvancedClusterController_CollectClusterMetrics(t *testing.T) {
 		},
 	}
 	client.CoreV1().Services("default").Create(context.TODO(), service, metav1.CreateOptions{})
-	
+
 	// Add namespaces
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{Name: "test-ns"},
 	}
 	client.CoreV1().Namespaces().Create(context.TODO(), namespace, metav1.CreateOptions{})
-	
+
 	// Set up fake discovery
 	fakeDiscovery, ok := client.Discovery().(*fakediscovery.FakeDiscovery)
 	if ok {
@@ -495,7 +495,7 @@ func TestAdvancedClusterController_UpdateFailureStatus(t *testing.T) {
 
 	// Update failure status again
 	controller.updateFailureStatus("test-cluster", testErr)
-	
+
 	health, exists = controller.GetAdvancedClusterHealth("test-cluster")
 	if !exists {
 		t.Fatal("expected test-cluster to exist after second failure")

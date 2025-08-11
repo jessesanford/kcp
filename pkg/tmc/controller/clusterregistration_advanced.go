@@ -28,13 +28,13 @@ import (
 	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 
-	"github.com/kcp-dev/logicalcluster/v3"
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 // ClusterSpec represents the core cluster configuration
@@ -52,15 +52,15 @@ type AdvancedClusterHealthStatus struct {
 	Healthy   bool      `json:"healthy"`
 	LastCheck time.Time `json:"lastCheck"`
 	Error     string    `json:"error,omitempty"`
-	
+
 	// Advanced metrics
-	NodeCount       int                           `json:"nodeCount"`
-	Version         string                        `json:"version"`
-	APIServerStatus string                        `json:"apiServerStatus"`
-	Conditions      []ClusterHealthCondition      `json:"conditions,omitempty"`
-	Metrics         *ClusterMetrics               `json:"metrics,omitempty"`
-	Capabilities    []ClusterCapability           `json:"capabilities,omitempty"`
-	
+	NodeCount       int                      `json:"nodeCount"`
+	Version         string                   `json:"version"`
+	APIServerStatus string                   `json:"apiServerStatus"`
+	Conditions      []ClusterHealthCondition `json:"conditions,omitempty"`
+	Metrics         *ClusterMetrics          `json:"metrics,omitempty"`
+	Capabilities    []ClusterCapability      `json:"capabilities,omitempty"`
+
 	// Status tracking
 	ConsecutiveFailures int       `json:"consecutiveFailures"`
 	LastHealthyTime     time.Time `json:"lastHealthyTime,omitempty"`
@@ -68,12 +68,12 @@ type AdvancedClusterHealthStatus struct {
 
 // ClusterHealthCondition represents advanced health conditions
 type ClusterHealthCondition struct {
-	Type               string             `json:"type"`
+	Type               string                 `json:"type"`
 	Status             metav1.ConditionStatus `json:"status"`
-	Reason             string             `json:"reason,omitempty"`
-	Message            string             `json:"message,omitempty"`
-	LastTransitionTime metav1.Time        `json:"lastTransitionTime"`
-	ObservedGeneration int64              `json:"observedGeneration,omitempty"`
+	Reason             string                 `json:"reason,omitempty"`
+	Message            string                 `json:"message,omitempty"`
+	LastTransitionTime metav1.Time            `json:"lastTransitionTime"`
+	ObservedGeneration int64                  `json:"observedGeneration,omitempty"`
 }
 
 // ClusterMetrics holds cluster performance metrics
@@ -97,29 +97,29 @@ type ClusterCapability struct {
 type AdvancedClusterController struct {
 	// Core components
 	queue workqueue.RateLimitingInterface
-	
+
 	// KCP integration
 	kcpClusterClient kcpclientset.ClusterInterface
 	informerFactory  kcpinformers.SharedInformerFactory
-	
+
 	// Cluster management
 	clusterClients map[string]kubernetes.Interface
-	
+
 	// Configuration
 	workspace    logicalcluster.Name
 	resyncPeriod time.Duration
 	workerCount  int
-	
+
 	// Advanced health tracking with thread safety
 	healthMutex   sync.RWMutex
 	clusterHealth map[string]*AdvancedClusterHealthStatus
-	
+
 	// Advanced features
 	metricsCollector    *MetricsCollector
 	capabilityDetector  *CapabilityDetector
 	healthCheckInterval time.Duration
 	maxFailureCount     int
-	
+
 	// Status update function (simplified for this version)
 	statusUpdater func(clusterName string, status *AdvancedClusterHealthStatus) error
 }
@@ -145,15 +145,15 @@ func NewAdvancedClusterController(
 	resyncPeriod time.Duration,
 	workerCount int,
 ) (*AdvancedClusterController, error) {
-	
+
 	if len(clusterConfigs) == 0 {
 		return nil, fmt.Errorf("at least one cluster configuration is required")
 	}
-	
+
 	// Build cluster clients and initialize health status
 	clusterClients := make(map[string]kubernetes.Interface)
 	clusterHealth := make(map[string]*AdvancedClusterHealthStatus)
-	
+
 	for name, config := range clusterConfigs {
 		client, err := kubernetes.NewForConfig(config)
 		if err != nil {
@@ -175,21 +175,21 @@ func NewAdvancedClusterController(
 				},
 			},
 		}
-		
+
 		klog.V(2).InfoS("Configured advanced cluster client", "cluster", name)
 	}
-	
+
 	// Create simple status updater (will be replaced with real committer later)
 	statusUpdater := func(clusterName string, status *AdvancedClusterHealthStatus) error {
 		// For now, just log the status update
 		klog.V(4).InfoS("Status update", "cluster", clusterName, "healthy", status.Healthy)
 		return nil
 	}
-	
+
 	// Initialize advanced components
 	metricsCollector := &MetricsCollector{enabled: true}
 	capabilityDetector := &CapabilityDetector{enabled: true}
-	
+
 	c := &AdvancedClusterController{
 		queue: workqueue.NewNamedRateLimitingQueue(
 			workqueue.DefaultControllerRateLimiter(),
@@ -207,14 +207,14 @@ func NewAdvancedClusterController(
 		maxFailureCount:     3,
 		statusUpdater:       statusUpdater,
 	}
-	
+
 	klog.InfoS("Created advanced cluster controller",
 		"workspace", workspace,
 		"clusters", len(clusterConfigs),
 		"resyncPeriod", resyncPeriod,
 		"healthCheckInterval", c.healthCheckInterval,
 		"maxFailureCount", c.maxFailureCount)
-	
+
 	return c, nil
 }
 
@@ -222,28 +222,28 @@ func NewAdvancedClusterController(
 func (c *AdvancedClusterController) Start(ctx context.Context) error {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
-	
-	klog.InfoS("Starting AdvancedClusterController", 
+
+	klog.InfoS("Starting AdvancedClusterController",
 		"workspace", c.workspace,
 		"clusters", len(c.clusterClients))
 	defer klog.InfoS("Shutting down AdvancedClusterController")
-	
+
 	// Start continuous health monitoring
 	go c.startContinuousHealthMonitoring(ctx)
-	
+
 	// Start metrics collection
 	go c.startMetricsCollection(ctx)
-	
+
 	// Start workers for processing health updates
 	for i := 0; i < c.workerCount; i++ {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 	}
-	
+
 	// Trigger initial health checks
 	for clusterName := range c.clusterClients {
 		c.queue.Add(clusterName)
 	}
-	
+
 	<-ctx.Done()
 	return nil
 }
@@ -261,14 +261,14 @@ func (c *AdvancedClusterController) processNextWorkItem(ctx context.Context) boo
 		return false
 	}
 	defer c.queue.Done(obj)
-	
+
 	clusterName := obj.(string)
 	if err := c.syncAdvancedCluster(ctx, clusterName); err != nil {
 		utilruntime.HandleError(fmt.Errorf("error syncing advanced cluster %s: %w", clusterName, err))
 		c.queue.AddRateLimited(obj)
 		return true
 	}
-	
+
 	c.queue.Forget(obj)
 	return true
 }
@@ -276,17 +276,17 @@ func (c *AdvancedClusterController) processNextWorkItem(ctx context.Context) boo
 // syncAdvancedCluster performs comprehensive cluster health assessment
 func (c *AdvancedClusterController) syncAdvancedCluster(ctx context.Context, clusterName string) error {
 	klog.V(4).InfoS("Syncing advanced cluster", "cluster", clusterName)
-	
+
 	client, exists := c.clusterClients[clusterName]
 	if !exists {
 		return fmt.Errorf("cluster client not found: %s", clusterName)
 	}
-	
+
 	// Get current health status with lock (for future committer use)
 	c.healthMutex.RLock()
 	_ = c.clusterHealth[clusterName] // currentHealth for future committer pattern
 	c.healthMutex.RUnlock()
-	
+
 	// Perform comprehensive health check
 	healthStatus, err := c.performComprehensiveHealthCheck(ctx, clusterName, client)
 	if err != nil {
@@ -295,7 +295,7 @@ func (c *AdvancedClusterController) syncAdvancedCluster(ctx context.Context, clu
 		c.updateFailureStatus(clusterName, err)
 		return err
 	}
-	
+
 	// Collect metrics if enabled
 	if c.metricsCollector.enabled {
 		metrics, err := c.collectClusterMetrics(ctx, clusterName, client)
@@ -305,7 +305,7 @@ func (c *AdvancedClusterController) syncAdvancedCluster(ctx context.Context, clu
 			healthStatus.Metrics = metrics
 		}
 	}
-	
+
 	// Detect capabilities if enabled
 	if c.capabilityDetector.enabled {
 		capabilities, err := c.detectClusterCapabilities(ctx, clusterName, client)
@@ -315,30 +315,30 @@ func (c *AdvancedClusterController) syncAdvancedCluster(ctx context.Context, clu
 			healthStatus.Capabilities = capabilities
 		}
 	}
-	
+
 	// Update health status with lock
 	c.healthMutex.Lock()
 	c.clusterHealth[clusterName] = healthStatus
 	c.healthMutex.Unlock()
-	
+
 	// Update status using the status updater
 	if err := c.statusUpdater(clusterName, healthStatus); err != nil {
 		klog.ErrorS(err, "Failed to update health status", "cluster", clusterName)
 		return fmt.Errorf("failed to update health status for cluster %s: %w", clusterName, err)
 	}
-	
+
 	if healthStatus.Healthy {
-		klog.V(2).InfoS("Advanced cluster health check passed", 
+		klog.V(2).InfoS("Advanced cluster health check passed",
 			"cluster", clusterName,
 			"nodes", healthStatus.NodeCount,
 			"version", healthStatus.Version)
 	} else {
-		klog.V(2).InfoS("Advanced cluster health check failed", 
-			"cluster", clusterName, 
+		klog.V(2).InfoS("Advanced cluster health check failed",
+			"cluster", clusterName,
 			"error", healthStatus.Error,
 			"consecutiveFailures", healthStatus.ConsecutiveFailures)
 	}
-	
+
 	return nil
 }
 
@@ -346,7 +346,7 @@ func (c *AdvancedClusterController) syncAdvancedCluster(ctx context.Context, clu
 func (c *AdvancedClusterController) startContinuousHealthMonitoring(ctx context.Context) {
 	ticker := time.NewTicker(c.healthCheckInterval)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -366,7 +366,7 @@ func (c *AdvancedClusterController) startMetricsCollection(ctx context.Context) 
 	// Metrics collection runs less frequently than health checks
 	ticker := time.NewTicker(c.resyncPeriod)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():

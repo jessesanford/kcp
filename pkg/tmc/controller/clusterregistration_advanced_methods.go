@@ -28,16 +28,16 @@ import (
 // performComprehensiveHealthCheck conducts detailed cluster health assessment
 func (c *AdvancedClusterController) performComprehensiveHealthCheck(ctx context.Context, clusterName string, client kubernetes.Interface) (*AdvancedClusterHealthStatus, error) {
 	startTime := time.Now()
-	
+
 	healthStatus := &AdvancedClusterHealthStatus{
 		Name:      clusterName,
 		LastCheck: startTime,
 	}
-	
+
 	// Test 1: API Server connectivity and response time
 	version, err := client.Discovery().ServerVersion()
 	responseTime := time.Since(startTime).Milliseconds()
-	
+
 	if err != nil {
 		healthStatus.Healthy = false
 		healthStatus.Error = fmt.Sprintf("API server unreachable: %v", err)
@@ -53,10 +53,10 @@ func (c *AdvancedClusterController) performComprehensiveHealthCheck(ctx context.
 		}
 		return healthStatus, nil
 	}
-	
+
 	healthStatus.Version = version.String()
 	healthStatus.APIServerStatus = "Healthy"
-	
+
 	// Test 2: Node availability and health
 	nodeList, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
@@ -73,9 +73,9 @@ func (c *AdvancedClusterController) performComprehensiveHealthCheck(ctx context.
 		}
 		return healthStatus, nil
 	}
-	
+
 	healthStatus.NodeCount = len(nodeList.Items)
-	
+
 	// Count ready nodes
 	readyNodes := 0
 	for _, node := range nodeList.Items {
@@ -86,21 +86,21 @@ func (c *AdvancedClusterController) performComprehensiveHealthCheck(ctx context.
 			}
 		}
 	}
-	
+
 	// Test 3: Namespace access (basic RBAC test)
 	namespaceList, err := client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{Limit: 5})
 	if err != nil {
 		klog.V(4).InfoS("Failed to list namespaces", "cluster", clusterName, "error", err)
 		// This is not a critical failure, just log it
 	}
-	
+
 	// Test 4: Pod access test
 	podList, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{Limit: 10})
 	if err != nil {
 		klog.V(4).InfoS("Failed to list pods", "cluster", clusterName, "error", err)
 		// This is not a critical failure, just log it
 	}
-	
+
 	// Determine overall health
 	if readyNodes > 0 {
 		healthStatus.Healthy = true
@@ -111,7 +111,7 @@ func (c *AdvancedClusterController) performComprehensiveHealthCheck(ctx context.
 		healthStatus.Healthy = false
 		healthStatus.Error = fmt.Sprintf("No ready nodes found (total: %d)", healthStatus.NodeCount)
 	}
-	
+
 	// Build conditions
 	conditions := []ClusterHealthCondition{
 		{
@@ -122,7 +122,7 @@ func (c *AdvancedClusterController) performComprehensiveHealthCheck(ctx context.
 			LastTransitionTime: metav1.Now(),
 		},
 		{
-			Type:   "NodesReady",
+			Type: "NodesReady",
 			Status: func() metav1.ConditionStatus {
 				if readyNodes > 0 {
 					return metav1.ConditionTrue
@@ -139,7 +139,7 @@ func (c *AdvancedClusterController) performComprehensiveHealthCheck(ctx context.
 			LastTransitionTime: metav1.Now(),
 		},
 	}
-	
+
 	// Add namespace condition if we got data
 	if namespaceList != nil {
 		conditions = append(conditions, ClusterHealthCondition{
@@ -150,7 +150,7 @@ func (c *AdvancedClusterController) performComprehensiveHealthCheck(ctx context.
 			LastTransitionTime: metav1.Now(),
 		})
 	}
-	
+
 	// Add pod condition if we got data
 	if podList != nil {
 		conditions = append(conditions, ClusterHealthCondition{
@@ -161,9 +161,9 @@ func (c *AdvancedClusterController) performComprehensiveHealthCheck(ctx context.
 			LastTransitionTime: metav1.Now(),
 		})
 	}
-	
+
 	healthStatus.Conditions = conditions
-	
+
 	klog.V(4).InfoS("Comprehensive health check completed",
 		"cluster", clusterName,
 		"healthy", healthStatus.Healthy,
@@ -171,74 +171,74 @@ func (c *AdvancedClusterController) performComprehensiveHealthCheck(ctx context.
 		"nodes", healthStatus.NodeCount,
 		"readyNodes", readyNodes,
 		"version", healthStatus.Version)
-	
+
 	return healthStatus, nil
 }
 
 // collectClusterMetrics gathers performance and utilization metrics
 func (c *AdvancedClusterController) collectClusterMetrics(ctx context.Context, clusterName string, client kubernetes.Interface) (*ClusterMetrics, error) {
 	metrics := &ClusterMetrics{}
-	
+
 	// Collect pod count across all namespaces
 	podList, err := client.CoreV1().Pods("").List(ctx, metav1.ListOptions{})
 	if err == nil {
 		metrics.PodCount = len(podList.Items)
 	}
-	
+
 	// Collect service count
 	serviceList, err := client.CoreV1().Services("").List(ctx, metav1.ListOptions{})
 	if err == nil {
 		metrics.ServiceCount = len(serviceList.Items)
 	}
-	
+
 	// Collect namespace count
 	namespaceList, err := client.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
 	if err == nil {
 		metrics.NamespaceCount = len(namespaceList.Items)
 	}
-	
+
 	// Basic response time test
 	start := time.Now()
 	_, err = client.Discovery().ServerVersion()
 	if err == nil {
 		metrics.ResponseTime = time.Since(start).Milliseconds()
 	}
-	
+
 	klog.V(4).InfoS("Collected cluster metrics",
 		"cluster", clusterName,
 		"pods", metrics.PodCount,
 		"services", metrics.ServiceCount,
 		"namespaces", metrics.NamespaceCount,
 		"responseTime", metrics.ResponseTime)
-	
+
 	return metrics, nil
 }
 
 // detectClusterCapabilities determines what the cluster supports
 func (c *AdvancedClusterController) detectClusterCapabilities(ctx context.Context, clusterName string, client kubernetes.Interface) ([]ClusterCapability, error) {
 	var capabilities []ClusterCapability
-	
+
 	// Check for metrics server
 	_, err := client.AppsV1().Deployments("kube-system").Get(ctx, "metrics-server", metav1.GetOptions{})
 	capabilities = append(capabilities, ClusterCapability{
 		Name:      "MetricsServer",
 		Supported: err == nil,
 	})
-	
+
 	// Check for ingress support
 	ingressList, err := client.NetworkingV1().Ingresses("").List(ctx, metav1.ListOptions{Limit: 1})
 	capabilities = append(capabilities, ClusterCapability{
 		Name:      "Ingress",
 		Supported: err == nil && ingressList != nil,
 	})
-	
+
 	// Check for storage classes
 	storageList, err := client.StorageV1().StorageClasses().List(ctx, metav1.ListOptions{Limit: 1})
 	capabilities = append(capabilities, ClusterCapability{
 		Name:      "StorageClasses",
 		Supported: err == nil && len(storageList.Items) > 0,
 	})
-	
+
 	// Check Kubernetes version capabilities
 	version, err := client.Discovery().ServerVersion()
 	if err == nil {
@@ -248,11 +248,11 @@ func (c *AdvancedClusterController) detectClusterCapabilities(ctx context.Contex
 			Version:   version.String(),
 		})
 	}
-	
+
 	klog.V(4).InfoS("Detected cluster capabilities",
 		"cluster", clusterName,
 		"capabilities", len(capabilities))
-	
+
 	return capabilities, nil
 }
 
@@ -260,13 +260,13 @@ func (c *AdvancedClusterController) detectClusterCapabilities(ctx context.Contex
 func (c *AdvancedClusterController) updateFailureStatus(clusterName string, err error) {
 	c.healthMutex.Lock()
 	defer c.healthMutex.Unlock()
-	
+
 	if health, exists := c.clusterHealth[clusterName]; exists {
 		health.Healthy = false
 		health.Error = err.Error()
 		health.LastCheck = time.Now()
 		health.ConsecutiveFailures++
-		
+
 		// Add failure condition
 		health.Conditions = append(health.Conditions, ClusterHealthCondition{
 			Type:               "HealthCheckFailed",
@@ -275,7 +275,7 @@ func (c *AdvancedClusterController) updateFailureStatus(clusterName string, err 
 			Message:            fmt.Sprintf("Health check failed: %v", err),
 			LastTransitionTime: metav1.Now(),
 		})
-		
+
 		klog.V(4).InfoS("Updated failure status",
 			"cluster", clusterName,
 			"consecutiveFailures", health.ConsecutiveFailures,
@@ -283,17 +283,16 @@ func (c *AdvancedClusterController) updateFailureStatus(clusterName string, err 
 	}
 }
 
-
 // GetAdvancedClusterHealth returns comprehensive health status for a cluster
 func (c *AdvancedClusterController) GetAdvancedClusterHealth(clusterName string) (*AdvancedClusterHealthStatus, bool) {
 	c.healthMutex.RLock()
 	defer c.healthMutex.RUnlock()
-	
+
 	health, exists := c.clusterHealth[clusterName]
 	if !exists {
 		return nil, false
 	}
-	
+
 	// Return a deep copy to avoid race conditions
 	return &AdvancedClusterHealthStatus{
 		Name:                health.Name,
@@ -315,9 +314,9 @@ func (c *AdvancedClusterController) GetAdvancedClusterHealth(clusterName string)
 func (c *AdvancedClusterController) GetAllAdvancedClusterHealth() map[string]*AdvancedClusterHealthStatus {
 	c.healthMutex.RLock()
 	defer c.healthMutex.RUnlock()
-	
+
 	result := make(map[string]*AdvancedClusterHealthStatus)
-	
+
 	for name, health := range c.clusterHealth {
 		result[name] = &AdvancedClusterHealthStatus{
 			Name:                health.Name,
@@ -334,7 +333,7 @@ func (c *AdvancedClusterController) GetAllAdvancedClusterHealth() map[string]*Ad
 			LastHealthyTime:     health.LastHealthyTime,
 		}
 	}
-	
+
 	return result
 }
 
@@ -342,7 +341,7 @@ func (c *AdvancedClusterController) GetAllAdvancedClusterHealth() map[string]*Ad
 func (c *AdvancedClusterController) IsClusterHealthy(clusterName string) bool {
 	c.healthMutex.RLock()
 	defer c.healthMutex.RUnlock()
-	
+
 	if health, exists := c.clusterHealth[clusterName]; exists {
 		return health.Healthy && health.ConsecutiveFailures == 0
 	}
@@ -353,7 +352,7 @@ func (c *AdvancedClusterController) IsClusterHealthy(clusterName string) bool {
 func (c *AdvancedClusterController) GetClusterMetrics(clusterName string) (*ClusterMetrics, bool) {
 	c.healthMutex.RLock()
 	defer c.healthMutex.RUnlock()
-	
+
 	if health, exists := c.clusterHealth[clusterName]; exists && health.Metrics != nil {
 		// Return copy of metrics
 		return &ClusterMetrics{
