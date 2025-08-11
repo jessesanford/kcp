@@ -1871,7 +1871,7 @@ func (s *Server) addIndexersToInformers(_ context.Context) map[schema.GroupVersi
 // managing workload placement across available clusters based on placement specifications.
 func (s *Server) installWorkloadPlacementController(ctx context.Context, config *rest.Config) error {
 	controllerName := "tmc-workload-placement"
-	
+
 	// Check if TMC features are enabled
 	if !kcpfeatures.DefaultFeatureGate.Enabled(kcpfeatures.TMCAPIs) {
 		klog.V(2).Infof("%s controller disabled via feature gate", controllerName)
@@ -1879,7 +1879,7 @@ func (s *Server) installWorkloadPlacementController(ctx context.Context, config 
 	}
 
 	config = rest.AddUserAgent(rest.CopyConfig(config), controllerName)
-	
+
 	kcpClusterClient, err := kcpclientset.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("failed to create KCP cluster client: %w", err)
