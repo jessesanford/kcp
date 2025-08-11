@@ -2,7 +2,7 @@ apiVersion: apis.kcp.io/v1alpha1
 kind: APIResourceSchema
 metadata:
   creationTimestamp: null
-  name: v241020-fce06d31d.logicalclusters.core.kcp.io
+  name: v250811-ff890e78.logicalclusters.core.kcp.io
 spec:
   group: core.kcp.io
   names:
@@ -186,6 +186,10 @@ spec:
                 pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(:[a-z0-9]([-a-z0-9]*[a-z0-9])?)*(:[a-z0-9][a-z0-9]([-a-z0-9]*[a-z0-9])?))|(system:.+)$
                 type: string
               type: array
+            logicalCluster:
+              description: LogicalCluster is the logical cluster this status belongs
+                to
+              type: string
             phase:
               default: Scheduling
               description: Phase of the logical cluster (Initializing, Ready).
