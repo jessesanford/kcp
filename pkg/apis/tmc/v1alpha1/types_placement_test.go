@@ -120,10 +120,10 @@ func TestWorkloadPlacementStatus(t *testing.T) {
 func TestPlacementDecision(t *testing.T) {
 	now := metav1.Now()
 	decision := PlacementDecision{
-		ClusterName:   "cluster-1",
-		Reason:        "Least loaded cluster",
-		Score:         int32Ptr(95),
-		DecisionTime:  now,
+		ClusterName:  "cluster-1",
+		Reason:       "Least loaded cluster",
+		Score:        int32Ptr(95),
+		DecisionTime: now,
 	}
 
 	if decision.ClusterName != "cluster-1" {

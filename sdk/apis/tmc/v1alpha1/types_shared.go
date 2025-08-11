@@ -61,24 +61,6 @@ type ClusterSelector struct {
 	ClusterNames []string `json:"clusterNames,omitempty"`
 }
 
-// PlacementPolicy defines the placement strategy
-// +kubebuilder:validation:Enum=RoundRobin;LeastLoaded;Random;LocationAware
-type PlacementPolicy string
-
-const (
-	// PlacementPolicyRoundRobin distributes workloads evenly across clusters
-	PlacementPolicyRoundRobin PlacementPolicy = "RoundRobin"
-
-	// PlacementPolicyLeastLoaded places workloads on the least loaded cluster
-	PlacementPolicyLeastLoaded PlacementPolicy = "LeastLoaded"
-
-	// PlacementPolicyRandom randomly selects target clusters
-	PlacementPolicyRandom PlacementPolicy = "Random"
-
-	// PlacementPolicyLocationAware considers cluster location for placement
-	PlacementPolicyLocationAware PlacementPolicy = "LocationAware"
-)
-
 // WorkloadReference references a Kubernetes workload
 type WorkloadReference struct {
 	// APIVersion is the API version of the workload
@@ -98,20 +80,20 @@ type WorkloadReference struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
-// PlacedWorkloadStatus represents the status of a placed workload
-// +kubebuilder:validation:Enum=Pending;Placed;Failed;Removed
-type PlacedWorkloadStatus string
+// PlacementPolicy defines the placement strategy
+// +kubebuilder:validation:Enum=RoundRobin;LeastLoaded;Random;LocationAware
+type PlacementPolicy string
 
 const (
-	// PlacedWorkloadStatusPending indicates the workload is waiting to be placed
-	PlacedWorkloadStatusPending PlacedWorkloadStatus = "Pending"
+	// PlacementPolicyRoundRobin distributes workloads evenly across clusters
+	PlacementPolicyRoundRobin PlacementPolicy = "RoundRobin"
 
-	// PlacedWorkloadStatusPlaced indicates the workload has been successfully placed
-	PlacedWorkloadStatusPlaced PlacedWorkloadStatus = "Placed"
+	// PlacementPolicyLeastLoaded places workloads on the least loaded cluster
+	PlacementPolicyLeastLoaded PlacementPolicy = "LeastLoaded"
 
-	// PlacedWorkloadStatusFailed indicates the workload placement failed
-	PlacedWorkloadStatusFailed PlacedWorkloadStatus = "Failed"
+	// PlacementPolicyRandom randomly selects target clusters
+	PlacementPolicyRandom PlacementPolicy = "Random"
 
-	// PlacedWorkloadStatusRemoved indicates the workload has been removed
-	PlacedWorkloadStatusRemoved PlacedWorkloadStatus = "Removed"
+	// PlacementPolicyLocationAware considers cluster location for placement
+	PlacementPolicyLocationAware PlacementPolicy = "LocationAware"
 )
