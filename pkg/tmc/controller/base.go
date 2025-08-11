@@ -20,15 +20,31 @@ import (
 	"sync"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
+	kcpthirdpartyinformers "github.com/kcp-dev/apimachinery/v2/third_party/informers"
 	"github.com/kcp-dev/logicalcluster/v3"
 	"github.com/kcp-dev/kcp/pkg/reconciler/committer"
 )
+
+// Request represents a typed reconciliation request that includes workspace context
+type Request struct {
+	// Key is the cluster-aware object key in format: cluster|namespace/name or cluster|name
+	Key string
+	
+	// Workspace is the logical cluster workspace for this request
+	Workspace logicalcluster.Name
+	
+	// Priority indicates the priority of this reconciliation request
+	Priority int
+}
 
 // BaseController provides common controller patterns and functionality
 // that can be shared across all TMC controllers. This includes work queue
@@ -42,6 +58,9 @@ type BaseController interface {
 	
 	// IsHealthy returns true if the controller is healthy
 	IsHealthy() bool
+	
+	// HasSynced returns true if the controller's informers have synced
+	HasSynced() bool
 	
 	// Name returns the controller name
 	Name() string
@@ -98,8 +117,12 @@ type baseControllerImpl struct {
 	resyncPeriod time.Duration
 	workspace    logicalcluster.Name
 	
-	// Work queue management - uses KCP typed workqueue
-	queue workqueue.TypedRateLimitingInterface[string]
+	// Work queue management - uses KCP typed workqueue with Request type
+	queue workqueue.TypedRateLimitingInterface[Request]
+	
+	// Informers and their HasSynced functions for startup synchronization
+	informers []cache.SharedIndexInformer
+	hasSyncedFuncs []cache.InformerSynced
 	
 	// Business logic reconciler following KCP patterns
 	reconciler Reconciler
@@ -133,10 +156,10 @@ func NewBaseController(config *BaseControllerConfig) BaseController {
 		panic("Reconciler cannot be nil - business logic implementation required")
 	}
 	
-	// Create KCP typed rate limiting queue
+	// Create KCP typed rate limiting queue with Request type
 	queue := workqueue.NewTypedRateLimitingQueueWithConfig(
-		workqueue.DefaultTypedControllerRateLimiter[string](),
-		workqueue.TypedRateLimitingQueueConfig[string]{
+		workqueue.DefaultTypedControllerRateLimiter[Request](),
+		workqueue.TypedRateLimitingQueueConfig[Request]{
 			Name: config.Name,
 		},
 	)
@@ -151,6 +174,8 @@ func NewBaseController(config *BaseControllerConfig) BaseController {
 		metrics:         config.Metrics,
 		informerFactory: config.InformerFactory,
 		healthy:         true, // Start healthy
+		informers:       make([]cache.SharedIndexInformer, 0),
+		hasSyncedFuncs:  make([]cache.InformerSynced, 0),
 	}
 }
 
@@ -168,6 +193,13 @@ func (c *baseControllerImpl) Start(ctx context.Context) error {
 	defer c.queue.ShutDown()
 
 	klog.InfoS("Starting controller", "controller", c.name)
+
+	// Wait for informer caches to sync
+	klog.InfoS("Waiting for informer caches to sync", "controller", c.name)
+	if !cache.WaitForCacheSync(ctx.Done(), c.hasSyncedFuncs...) {
+		return fmt.Errorf("failed to wait for caches to sync")
+	}
+	klog.InfoS("Informer caches synced", "controller", c.name)
 
 	// Start metrics collection
 	c.startMetricsCollection()
@@ -241,6 +273,21 @@ func (c *baseControllerImpl) IsHealthy() bool {
 	return c.healthy
 }
 
+// HasSynced implements BaseController.HasSynced
+func (c *baseControllerImpl) HasSynced() bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	
+	// Wait for all registered informers to sync
+	for _, hasSynced := range c.hasSyncedFuncs {
+		if !hasSynced() {
+			return false
+		}
+	}
+	
+	return true
+}
+
 // Name implements BaseController.Name
 func (c *baseControllerImpl) Name() string {
 	return c.name
@@ -275,66 +322,67 @@ func (c *baseControllerImpl) runWorker(ctx context.Context, workerID int) {
 // processNextWorkItem processes a single work item from the queue
 // using KCP typed workqueue patterns for type safety and better error handling.
 func (c *baseControllerImpl) processNextWorkItem(ctx context.Context) bool {
-	key, quit := c.queue.Get()
+	req, quit := c.queue.Get()
 	if quit {
 		return false
 	}
-	defer c.queue.Done(key)
+	defer c.queue.Done(req)
 
 	// Process the item with proper workspace context
-	err := c.processItem(ctx, key)
+	err := c.processItem(ctx, req)
 
 	if err == nil {
 		// Success - forget the item
-		c.queue.Forget(key)
+		c.queue.Forget(req)
 		c.metrics.reconcileTotal.WithLabelValues(c.name, "success").Inc()
 		return true
 	}
 
 	// Handle error with typed queue
-	c.handleError(err, key)
+	c.handleError(err, req)
 	return true
 }
 
 // processItem delegates to the configured reconciler for actual business logic.
 // This follows KCP patterns by passing the key to the reconciler implementation.
-func (c *baseControllerImpl) processItem(ctx context.Context, key string) error {
+func (c *baseControllerImpl) processItem(ctx context.Context, req Request) error {
 	klog.V(6).InfoS("Processing item", 
 		"controller", c.name,
-		"workspace", c.workspace,
-		"key", key)
+		"workspace", req.Workspace,
+		"key", req.Key,
+		"priority", req.Priority)
 	
-	// Delegate to the reconciler implementation
-	return c.reconciler.Reconcile(ctx, key)
+	// Delegate to the reconciler implementation with proper key
+	return c.reconciler.Reconcile(ctx, req.Key)
 }
 
 // handleError handles errors from work item processing using KCP patterns
 // for proper error tracking and exponential backoff with typed queue.
-func (c *baseControllerImpl) handleError(err error, key string) {
+func (c *baseControllerImpl) handleError(err error, req Request) {
 	// Record error metrics
 	c.metrics.reconcileTotal.WithLabelValues(c.name, "error").Inc()
 
 	// Implement exponential backoff with workspace context
-	if c.queue.NumRequeues(key) < 10 {
+	if c.queue.NumRequeues(req) < 10 {
 		klog.V(4).InfoS("Error processing item, retrying", 
 			"controller", c.name,
-			"workspace", c.workspace,
-			"key", key, 
+			"workspace", req.Workspace,
+			"key", req.Key, 
 			"error", err,
-			"retries", c.queue.NumRequeues(key))
+			"retries", c.queue.NumRequeues(req))
 		
-		c.queue.AddRateLimited(key)
+		c.queue.AddRateLimited(req)
 		return
 	}
 
 	// Too many retries, drop the item
 	klog.ErrorS(err, "Dropping item after too many retries", 
 		"controller", c.name,
-		"workspace", c.workspace,
-		"key", key,
-		"retries", c.queue.NumRequeues(key))
+		"workspace", req.Workspace,
+		"key", req.Key,
+		"retries", c.queue.NumRequeues(req))
 	
-	c.queue.Forget(key)
+	c.queue.Forget(req)
 	utilruntime.HandleError(err)
 	
 	// Mark controller as unhealthy if we're dropping items
@@ -360,7 +408,12 @@ func (c *baseControllerImpl) startMetricsCollection() {
 // EnqueueKey adds a key to the controller's work queue
 // This is a utility function for controllers that extend the base controller
 func (c *baseControllerImpl) EnqueueKey(key string) {
-	c.queue.Add(key)
+	req := Request{
+		Key:       key,
+		Workspace: c.workspace,
+		Priority:  0,
+	}
+	c.queue.Add(req)
 }
 
 // EnqueueObject adds an object to the work queue using the KCP key function.
@@ -371,15 +424,104 @@ func (c *baseControllerImpl) EnqueueObject(obj interface{}) {
 		utilruntime.HandleError(fmt.Errorf("couldn't get key for object %+v: %v", obj, err))
 		return
 	}
-	c.queue.Add(key)
+	
+	// Extract workspace from the object using KCP's logicalcluster.From pattern
+	workspace := c.workspace
+	if metaObj, ok := obj.(metav1.Object); ok {
+		workspace = logicalcluster.From(metaObj)
+	}
+	
+	req := Request{
+		Key:       key,
+		Workspace: workspace,
+		Priority:  0,
+	}
+	c.queue.Add(req)
 }
 
 // EnqueueAfter adds a key to the work queue after the specified duration
 func (c *baseControllerImpl) EnqueueAfter(key string, after time.Duration) {
-	c.queue.AddAfter(key, after)
+	req := Request{
+		Key:       key,
+		Workspace: c.workspace,
+		Priority:  0,
+	}
+	c.queue.AddAfter(req, after)
 }
 
 // GetQueue returns the controller's typed work queue (for advanced usage)
-func (c *baseControllerImpl) GetQueue() workqueue.TypedRateLimitingInterface[string] {
+func (c *baseControllerImpl) GetQueue() workqueue.TypedRateLimitingInterface[Request] {
 	return c.queue
+}
+
+// AddInformer adds an informer to the controller for proper sync checking.
+// This is essential for ensuring the controller waits for cache synchronization.
+func (c *baseControllerImpl) AddInformer(informer cache.SharedIndexInformer) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	c.informers = append(c.informers, informer)
+	c.hasSyncedFuncs = append(c.hasSyncedFuncs, informer.HasSynced)
+}
+
+// AddClusterAwareInformer adds a KCP cluster-aware informer to the controller for proper sync checking.
+// This handles ScopeableSharedIndexInformer types which embed SharedIndexInformer.
+func (c *baseControllerImpl) AddClusterAwareInformer(informer kcpcache.ScopeableSharedIndexInformer) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	
+	// ScopeableSharedIndexInformer embeds SharedIndexInformer, so we can store it directly
+	c.informers = append(c.informers, informer)
+	c.hasSyncedFuncs = append(c.hasSyncedFuncs, informer.HasSynced)
+}
+
+// NewClusterAwareInformer creates a cluster-aware informer using KCP patterns.
+// This creates a proper KCP ScopeableSharedIndexInformer for workspace isolation.
+func (c *baseControllerImpl) NewClusterAwareInformer(
+	lw cache.ListerWatcher,
+	objType runtime.Object,
+	resyncPeriod time.Duration,
+	indexers cache.Indexers,
+) kcpcache.ScopeableSharedIndexInformer {
+	// Ensure cluster indexer is present for proper KCP cluster awareness
+	if indexers == nil {
+		indexers = cache.Indexers{}
+	}
+	indexers[kcpcache.ClusterIndexName] = kcpcache.ClusterIndexFunc
+	
+	// Create KCP cluster-aware informer using third-party informers
+	informer := kcpthirdpartyinformers.NewSharedIndexInformer(
+		lw,
+		objType,
+		resyncPeriod,
+		indexers,
+	)
+	
+	// Automatically register this informer for sync checking
+	c.AddClusterAwareInformer(informer)
+	
+	return informer
+}
+
+// QueueKeyFor generates a cluster-aware queue key for the given object.
+// This is the standard way to create keys that respect workspace boundaries.
+func QueueKeyFor(obj interface{}) (Request, error) {
+	key, err := kcpcache.DeletionHandlingMetaClusterNamespaceKeyFunc(obj)
+	if err != nil {
+		return Request{}, fmt.Errorf("couldn't get key for object %+v: %v", obj, err)
+	}
+	
+	// Extract workspace from object using KCP's logicalcluster.From pattern
+	var workspace logicalcluster.Name
+	if metaObj, ok := obj.(metav1.Object); ok {
+		workspace = logicalcluster.From(metaObj)
+	} else {
+		workspace = logicalcluster.Name("")
+	}
+	
+	return Request{
+		Key:       key,
+		Workspace: workspace,
+		Priority:  0,
+	}, nil
 }
