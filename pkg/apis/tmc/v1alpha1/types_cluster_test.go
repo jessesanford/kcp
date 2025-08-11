@@ -60,7 +60,7 @@ func TestClusterRegistrationStatus(t *testing.T) {
 				},
 			},
 			AllocatedResources: &ClusterResourceUsage{
-				CPU:    int64Ptr(2000), // 2 CPU cores in milliCPU
+				CPU:    int64Ptr(2000),                   // 2 CPU cores in milliCPU
 				Memory: int64Ptr(4 * 1024 * 1024 * 1024), // 4GB in bytes
 				Pods:   int32Ptr(10),
 			},
@@ -91,7 +91,7 @@ func TestClusterRegistrationStatus(t *testing.T) {
 
 func TestClusterCapacity(t *testing.T) {
 	capacity := ClusterCapacity{
-		CPU:     int64Ptr(4000), // 4 CPU cores
+		CPU:     int64Ptr(4000),                   // 4 CPU cores
 		Memory:  int64Ptr(8 * 1024 * 1024 * 1024), // 8GB
 		MaxPods: int32Ptr(110),
 	}

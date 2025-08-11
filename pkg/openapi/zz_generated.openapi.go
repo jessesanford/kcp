@@ -3789,6 +3789,13 @@ func schema_sdk_apis_core_v1alpha1_LogicalClusterStatus(ref common.ReferenceCall
 							},
 						},
 					},
+					"logicalCluster": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LogicalCluster is the logical cluster this status belongs to",
+							Type:        []string{"string"},
+							Format:      "",
+						},
+					},
 				},
 			},
 		},
@@ -3962,6 +3969,13 @@ func schema_sdk_apis_core_v1alpha1_ShardStatus(ref common.ReferenceCallback) com
 									},
 								},
 							},
+						},
+					},
+					"logicalCluster": {
+						SchemaProps: spec.SchemaProps{
+							Description: "LogicalCluster is the logical cluster this shard status belongs to",
+							Type:        []string{"string"},
+							Format:      "",
 						},
 					},
 				},

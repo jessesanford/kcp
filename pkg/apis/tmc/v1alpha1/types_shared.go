@@ -68,13 +68,13 @@ type PlacementPolicy string
 const (
 	// PlacementPolicyRoundRobin distributes workloads evenly across clusters
 	PlacementPolicyRoundRobin PlacementPolicy = "RoundRobin"
-	
+
 	// PlacementPolicyLeastLoaded places workloads on the least loaded cluster
 	PlacementPolicyLeastLoaded PlacementPolicy = "LeastLoaded"
-	
+
 	// PlacementPolicyRandom randomly selects target clusters
 	PlacementPolicyRandom PlacementPolicy = "Random"
-	
+
 	// PlacementPolicyLocationAware considers cluster location for placement
 	PlacementPolicyLocationAware PlacementPolicy = "LocationAware"
 )
@@ -105,13 +105,13 @@ type PlacedWorkloadStatus string
 const (
 	// PlacedWorkloadStatusPending indicates the workload is waiting to be placed
 	PlacedWorkloadStatusPending PlacedWorkloadStatus = "Pending"
-	
+
 	// PlacedWorkloadStatusPlaced indicates the workload has been successfully placed
 	PlacedWorkloadStatusPlaced PlacedWorkloadStatus = "Placed"
-	
+
 	// PlacedWorkloadStatusFailed indicates the workload placement failed
 	PlacedWorkloadStatusFailed PlacedWorkloadStatus = "Failed"
-	
+
 	// PlacedWorkloadStatusRemoved indicates the workload has been removed
 	PlacedWorkloadStatusRemoved PlacedWorkloadStatus = "Removed"
 )

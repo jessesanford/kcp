@@ -25,9 +25,9 @@ import (
 	"k8s.io/klog/v2"
 
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/kcp/pkg/reconciler/committer"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
 	"github.com/kcp-dev/logicalcluster/v3"
-	"github.com/kcp-dev/kcp/pkg/reconciler/committer"
 )
 
 // BaseController provides common controller patterns and functionality
@@ -36,13 +36,13 @@ import (
 type BaseController interface {
 	// Start starts the controller and blocks until the context is cancelled
 	Start(ctx context.Context) error
-	
+
 	// Shutdown gracefully shuts down the controller
 	Shutdown(ctx context.Context) error
-	
+
 	// IsHealthy returns true if the controller is healthy
 	IsHealthy() bool
-	
+
 	// Name returns the controller name
 	Name() string
 }
@@ -58,7 +58,7 @@ type Reconciler interface {
 // ReconcilerWithCommit extends Reconciler with committer pattern support for efficient patching.
 type ReconcilerWithCommit[Sp any, St any] interface {
 	Reconciler
-	
+
 	// GetCommitFunc returns a commit function for the specific resource type.
 	// This enables efficient patching following KCP's committer pattern.
 	GetCommitFunc() committer.CommitFunc[Sp, St]
@@ -68,22 +68,22 @@ type ReconcilerWithCommit[Sp any, St any] interface {
 type BaseControllerConfig struct {
 	// Name is the controller name for logging and metrics
 	Name string
-	
+
 	// Workspace is the logical cluster workspace for isolation
 	Workspace logicalcluster.Name
-	
+
 	// ResyncPeriod controls how often the controller resyncs
 	ResyncPeriod time.Duration
-	
+
 	// WorkerCount controls the number of worker goroutines
 	WorkerCount int
-	
+
 	// Reconciler implements the business logic for the controller
 	Reconciler Reconciler
-	
+
 	// Metrics provides metrics collection for the controller
 	Metrics *ManagerMetrics
-	
+
 	// InformerFactory provides shared informers
 	InformerFactory kcpinformers.SharedInformerFactory
 }
@@ -97,22 +97,22 @@ type baseControllerImpl struct {
 	workerCount  int
 	resyncPeriod time.Duration
 	workspace    logicalcluster.Name
-	
+
 	// Work queue management - uses KCP typed workqueue
 	queue workqueue.TypedRateLimitingInterface[string]
-	
+
 	// Business logic reconciler following KCP patterns
 	reconciler Reconciler
-	
+
 	// Metrics and observability
 	metrics *ManagerMetrics
-	
+
 	// Lifecycle management
 	mu       sync.RWMutex
 	started  bool
 	stopping bool
 	healthy  bool
-	
+
 	// Informer factory for workspace-aware informers
 	informerFactory kcpinformers.SharedInformerFactory
 }
@@ -124,15 +124,15 @@ func NewBaseController(config *BaseControllerConfig) BaseController {
 	if config == nil {
 		panic("BaseControllerConfig cannot be nil")
 	}
-	
+
 	if config.Workspace.Empty() {
 		panic("Workspace cannot be empty - workspace isolation is required")
 	}
-	
+
 	if config.Reconciler == nil {
 		panic("Reconciler cannot be nil - business logic implementation required")
 	}
-	
+
 	// Create KCP typed rate limiting queue
 	queue := workqueue.NewTypedRateLimitingQueueWithConfig(
 		workqueue.DefaultTypedControllerRateLimiter[string](),
@@ -140,7 +140,7 @@ func NewBaseController(config *BaseControllerConfig) BaseController {
 			Name: config.Name,
 		},
 	)
-	
+
 	return &baseControllerImpl{
 		name:            config.Name,
 		workspace:       config.Workspace,
@@ -186,9 +186,9 @@ func (c *baseControllerImpl) Start(ctx context.Context) error {
 
 	// Block until context is cancelled
 	<-ctx.Done()
-	
+
 	klog.InfoS("Shutting down controller", "controller", c.name)
-	
+
 	// Mark as stopping
 	c.mu.Lock()
 	c.stopping = true
@@ -196,7 +196,7 @@ func (c *baseControllerImpl) Start(ctx context.Context) error {
 
 	// Wait for workers to finish
 	wg.Wait()
-	
+
 	klog.InfoS("Controller stopped", "controller", c.name)
 	return nil
 }
@@ -212,10 +212,10 @@ func (c *baseControllerImpl) Shutdown(ctx context.Context) error {
 	c.mu.Unlock()
 
 	klog.InfoS("Gracefully shutting down controller", "controller", c.name)
-	
+
 	// Shutdown the work queue to stop accepting new work
 	c.queue.ShutDown()
-	
+
 	// The actual shutdown happens in Start() method when context is cancelled
 	return nil
 }
@@ -224,20 +224,20 @@ func (c *baseControllerImpl) Shutdown(ctx context.Context) error {
 func (c *baseControllerImpl) IsHealthy() bool {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	
+
 	if !c.started || c.stopping {
 		return false
 	}
-	
+
 	// Check queue depth as a health indicator
 	queueLength := c.queue.Len()
 	if queueLength > 1000 {
-		klog.V(4).InfoS("Controller queue depth high", 
-			"controller", c.name, 
+		klog.V(4).InfoS("Controller queue depth high",
+			"controller", c.name,
 			"depth", queueLength)
 		return false
 	}
-	
+
 	return c.healthy
 }
 
@@ -299,11 +299,11 @@ func (c *baseControllerImpl) processNextWorkItem(ctx context.Context) bool {
 // processItem delegates to the configured reconciler for actual business logic.
 // This follows KCP patterns by passing the key to the reconciler implementation.
 func (c *baseControllerImpl) processItem(ctx context.Context, key string) error {
-	klog.V(6).InfoS("Processing item", 
+	klog.V(6).InfoS("Processing item",
 		"controller", c.name,
 		"workspace", c.workspace,
 		"key", key)
-	
+
 	// Delegate to the reconciler implementation
 	return c.reconciler.Reconcile(ctx, key)
 }
@@ -316,32 +316,32 @@ func (c *baseControllerImpl) handleError(err error, key string) {
 
 	// Implement exponential backoff with workspace context
 	if c.queue.NumRequeues(key) < 10 {
-		klog.V(4).InfoS("Error processing item, retrying", 
+		klog.V(4).InfoS("Error processing item, retrying",
 			"controller", c.name,
 			"workspace", c.workspace,
-			"key", key, 
+			"key", key,
 			"error", err,
 			"retries", c.queue.NumRequeues(key))
-		
+
 		c.queue.AddRateLimited(key)
 		return
 	}
 
 	// Too many retries, drop the item
-	klog.ErrorS(err, "Dropping item after too many retries", 
+	klog.ErrorS(err, "Dropping item after too many retries",
 		"controller", c.name,
 		"workspace", c.workspace,
 		"key", key,
 		"retries", c.queue.NumRequeues(key))
-	
+
 	c.queue.Forget(key)
 	utilruntime.HandleError(err)
-	
+
 	// Mark controller as unhealthy if we're dropping items
 	c.mu.Lock()
 	c.healthy = false
 	c.mu.Unlock()
-	
+
 	// Recover health after some time
 	go func() {
 		time.Sleep(30 * time.Second)
