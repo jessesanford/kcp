@@ -22,8 +22,8 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 
-	"github.com/kcp-dev/logicalcluster/v3"
 	kcpclientsetfake "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/fake"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -117,7 +117,7 @@ func TestClusterRegistrationController_PerformHealthCheck(t *testing.T) {
 			name: "healthy cluster with nodes",
 			setupClient: func() *fake.Clientset {
 				client := fake.NewSimpleClientset()
-				
+
 				// Add a node to make the cluster appear healthy
 				node := &corev1.Node{
 					ObjectMeta: metav1.ObjectMeta{
@@ -133,7 +133,7 @@ func TestClusterRegistrationController_PerformHealthCheck(t *testing.T) {
 					},
 				}
 				client.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
-				
+
 				// Set up fake discovery client with version info
 				fakeDiscovery, ok := client.Discovery().(*fakediscovery.FakeDiscovery)
 				if ok {
@@ -149,7 +149,7 @@ func TestClusterRegistrationController_PerformHealthCheck(t *testing.T) {
 						Platform:     "linux/amd64",
 					}
 				}
-				
+
 				return client
 			},
 			wantHealthy: true,
@@ -159,7 +159,7 @@ func TestClusterRegistrationController_PerformHealthCheck(t *testing.T) {
 			name: "healthy cluster with no nodes",
 			setupClient: func() *fake.Clientset {
 				client := fake.NewSimpleClientset()
-				
+
 				// Set up fake discovery client with version info
 				fakeDiscovery, ok := client.Discovery().(*fakediscovery.FakeDiscovery)
 				if ok {
@@ -169,7 +169,7 @@ func TestClusterRegistrationController_PerformHealthCheck(t *testing.T) {
 						GitVersion: "v1.28.0",
 					}
 				}
-				
+
 				return client
 			},
 			wantHealthy: true,
