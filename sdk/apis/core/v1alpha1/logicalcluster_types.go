@@ -22,6 +22,7 @@ import (
 
 	conditionsv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
 	"github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/util/conditions"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 // LogicalCluster describes the current logical cluster. It is used to authorize
@@ -35,6 +36,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,categories=kcp
+// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`,description="The current phase (e.g. Scheduling, Initializing, Ready, Deleting)"
 // +kubebuilder:printcolumn:name="URL",type=string,JSONPath=`.status.URL`,description="URL to access the logical cluster"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
@@ -172,6 +174,10 @@ type LogicalClusterStatus struct {
 	//
 	// +optional
 	Initializers []LogicalClusterInitializer `json:"initializers,omitempty"`
+
+	// LogicalCluster is the logical cluster this status belongs to
+	// +optional
+	LogicalCluster logicalcluster.Name `json:"logicalCluster,omitempty"`
 }
 
 func (in *LogicalCluster) SetConditions(c conditionsv1alpha1.Conditions) {

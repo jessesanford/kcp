@@ -22,6 +22,7 @@ import (
 
 	"github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
 	"github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/util/conditions"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 // RootShard holds a name of the root shard.
@@ -35,6 +36,7 @@ var RootShard = "root"
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster,categories=kcp
+// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Region",type=string,JSONPath=`.metadata.labels['region']`,description="The region this workspace is in"
 // +kubebuilder:printcolumn:name="URL",type=string,JSONPath=`.spec.baseURL`,description="Type URL to directly connect to the shard"
 // +kubebuilder:printcolumn:name="External URL",type=string,JSONPath=`.spec.externalURL`,description="The URL exposed in logical clusters created on that shard"
@@ -113,6 +115,10 @@ type ShardStatus struct {
 	// Current processing state of the Shard.
 	// +optional
 	Conditions v1alpha1.Conditions `json:"conditions,omitempty"`
+
+	// LogicalCluster is the logical cluster this shard status belongs to
+	// +optional
+	LogicalCluster logicalcluster.Name `json:"logicalCluster,omitempty"`
 }
 
 // ShardList is a list of shard instances
