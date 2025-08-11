@@ -123,7 +123,6 @@ func NewTMCShardHealthController(
 		workloadCount:    make(map[string]int64),
 	}
 	
-	// Set up shard informer event handlers for health monitoring
 	_, _ = shardInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: controller.onShardAdd,
 		UpdateFunc: func(oldObj, newObj interface{}) {
@@ -143,10 +142,7 @@ func (c *TMCShardHealthController) Start(ctx context.Context) error {
 	klog.InfoS("Starting TMC shard health controller", "controller", ShardHealthControllerName, "workspace", c.workspace)
 	defer klog.InfoS("Shutting down TMC shard health controller")
 	
-	// Start health monitoring and metrics collection
 	go c.startComprehensiveHealthMonitoring(ctx)
-	
-	// Start metrics cleanup routine
 	go c.startMetricsCleanup(ctx)
 	
 	// Start workers
@@ -158,7 +154,6 @@ func (c *TMCShardHealthController) Start(ctx context.Context) error {
 	return nil
 }
 
-// Event handlers for comprehensive shard health monitoring
 
 func (c *TMCShardHealthController) onShardAdd(obj interface{}) {
 	shard, ok := obj.(*corev1alpha1.Shard)
