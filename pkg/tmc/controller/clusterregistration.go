@@ -27,13 +27,132 @@ import (
 	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 	"github.com/kcp-dev/logicalcluster/v3"
+	"github.com/kcp-dev/kcp/pkg/reconciler/committer"
 )
+
+// TMC API Types - placeholder types until full TMC APIs are available
+// These will be replaced by proper TMC API types in future PRs
+
+// TMCClusterRegistrationSpec defines the desired state of cluster registration
+type TMCClusterRegistrationSpec struct {
+	// Location specifies the geographic or logical location of the cluster
+	Location string `json:"location,omitempty"`
+	
+	// Capabilities describes what the cluster can do
+	Capabilities []string `json:"capabilities,omitempty"`
+	
+	// KubeConfig reference for connecting to the cluster
+	KubeConfigSecretName string `json:"kubeConfigSecretName,omitempty"`
+}
+
+// TMCClusterRegistrationStatus defines the observed state of cluster registration
+type TMCClusterRegistrationStatus struct {
+	// Conditions represent the latest available observations
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	
+	// Phase indicates the current lifecycle phase
+	Phase string `json:"phase,omitempty"`
+	
+	// LastHealthCheck timestamp of last successful health check
+	LastHealthCheck *metav1.Time `json:"lastHealthCheck,omitempty"`
+	
+	// ClusterInfo contains discovered information about the cluster
+	ClusterInfo *ClusterInfo `json:"clusterInfo,omitempty"`
+}
+
+// ClusterInfo contains discovered information about a physical cluster
+type ClusterInfo struct {
+	// Version of the Kubernetes cluster
+	Version string `json:"version,omitempty"`
+	
+	// NodeCount in the cluster
+	NodeCount int `json:"nodeCount,omitempty"`
+	
+	// Region where the cluster is located
+	Region string `json:"region,omitempty"`
+}
+
+// TMCClusterRegistrationResource wraps cluster registration for committer pattern
+type TMCClusterRegistrationResource = committer.Resource[TMCClusterRegistrationSpec, TMCClusterRegistrationStatus]
+
+// TMCClusterRegistrationPatcher defines the interface for patching TMC ClusterRegistration resources
+// This will be replaced with actual TMC client interface in future PRs
+type TMCClusterRegistrationPatcher interface {
+	Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*TMCClusterRegistrationResource, error)
+}
+
+// TMCClusterPatcher provides cluster-aware patching for TMC resources
+// This is a placeholder implementation until TMC APIs are available
+type TMCClusterPatcher struct {
+	workspace logicalcluster.Name
+}
+
+// NewTMCClusterPatcher creates a new TMC cluster patcher
+func NewTMCClusterPatcher(workspace logicalcluster.Name) *TMCClusterPatcher {
+	return &TMCClusterPatcher{workspace: workspace}
+}
+
+// Cluster returns a scoped patcher for the logical cluster
+func (p *TMCClusterPatcher) Cluster(cluster logicalcluster.Path) TMCClusterRegistrationPatcher {
+	return &tmcScopedPatcher{
+		workspace:   p.workspace,
+		clusterPath: cluster,
+	}
+}
+
+// tmcScopedPatcher implements TMCClusterRegistrationPatcher for a specific logical cluster
+type tmcScopedPatcher struct {
+	workspace   logicalcluster.Name
+	clusterPath logicalcluster.Path
+}
+
+// Patch is a placeholder implementation that logs patch operations
+// In real implementation, this would call actual TMC API client
+func (p *tmcScopedPatcher) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts metav1.PatchOptions, subresources ...string) (*TMCClusterRegistrationResource, error) {
+	klog.V(2).InfoS("TMC patch operation", 
+		"cluster", name, 
+		"workspace", p.workspace, 
+		"clusterPath", p.clusterPath,
+		"patchType", pt,
+		"patch", string(data),
+		"subresources", subresources)
+	
+	// Return a placeholder resource - in real implementation this would be the patched resource
+	now := metav1.Now()
+	return &TMCClusterRegistrationResource{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: "default", // TMC resources might be namespaced
+		},
+		Spec: TMCClusterRegistrationSpec{
+			Location: "placeholder",
+		},
+		Status: TMCClusterRegistrationStatus{
+			Phase:           "Patched",
+			LastHealthCheck: &now,
+		},
+	}, nil
+}
+
+// ClusterRegistrationReconciler defines the interface for reconciling cluster registrations
+type ClusterRegistrationReconciler interface {
+	// Reconcile processes a cluster registration resource
+	Reconcile(ctx context.Context, clusterName string) error
+}
+
+// ReconcilerWithCommit defines a reconciler that supports the committer pattern
+type ReconcilerWithCommit interface {
+	ClusterRegistrationReconciler
+	// GetCommitter returns the committer function for resource updates
+	GetCommitter() committer.CommitFunc[TMCClusterRegistrationSpec, TMCClusterRegistrationStatus]
+}
 
 // ClusterRegistrationController manages physical cluster registration and health.
 // This controller is responsible for:
@@ -43,13 +162,19 @@ import (
 // - Preparing for TMC API consumption via APIBinding (Phase 1 integration)
 type ClusterRegistrationController struct {
 	// Core components
-	queue workqueue.RateLimitingInterface
+	queue workqueue.TypedRateLimitingInterface[string]
+
+	// Committer for TMC ClusterRegistration resources
+	commitClusterRegistration committer.CommitFunc[TMCClusterRegistrationSpec, TMCClusterRegistrationStatus]
 
 	// KCP client for future TMC API consumption
 	kcpClusterClient kcpclientset.ClusterInterface
 
 	// Physical cluster clients for health checking
 	clusterClients map[string]kubernetes.Interface
+
+	// TMC resource tracking
+	clusterResources map[string]*TMCClusterRegistrationResource
 
 	// Configuration
 	workspace    logicalcluster.Name
@@ -99,6 +224,7 @@ func NewClusterRegistrationController(
 	// Build cluster clients
 	clusterClients := make(map[string]kubernetes.Interface)
 	clusterHealth := make(map[string]*ClusterHealthStatus)
+	clusterResources := make(map[string]*TMCClusterRegistrationResource)
 
 	for name, config := range clusterConfigs {
 		client, err := kubernetes.NewForConfig(config)
@@ -114,16 +240,21 @@ func NewClusterRegistrationController(
 		klog.V(2).InfoS("Configured cluster client", "cluster", name)
 	}
 
+	// Create the committer using KCP committer pattern
+	patcher := NewTMCClusterPatcher(workspace)
+	commitClusterRegistration := committer.NewCommitter[*TMCClusterRegistrationResource, TMCClusterRegistrationPatcher, TMCClusterRegistrationSpec, TMCClusterRegistrationStatus](patcher)
+
 	c := &ClusterRegistrationController{
-		queue: workqueue.NewNamedRateLimitingQueue(
-			workqueue.DefaultControllerRateLimiter(),
-			"cluster-registration"),
-		kcpClusterClient: kcpClusterClient,
-		clusterClients:   clusterClients,
-		workspace:        workspace,
-		resyncPeriod:     resyncPeriod,
-		workerCount:      workerCount,
-		clusterHealth:    clusterHealth,
+		queue: workqueue.NewTypedRateLimitingQueue(
+			workqueue.DefaultTypedControllerRateLimiter[string]()),
+		commitClusterRegistration: commitClusterRegistration,
+		kcpClusterClient:         kcpClusterClient,
+		clusterClients:           clusterClients,
+		clusterResources:         clusterResources,
+		workspace:                workspace,
+		resyncPeriod:             resyncPeriod,
+		workerCount:              workerCount,
+		clusterHealth:            clusterHealth,
 	}
 
 	klog.InfoS("Created cluster registration controller",
@@ -132,6 +263,16 @@ func NewClusterRegistrationController(
 		"resyncPeriod", resyncPeriod)
 
 	return c, nil
+}
+
+// Reconcile implements ClusterRegistrationReconciler.Reconcile
+func (c *ClusterRegistrationController) Reconcile(ctx context.Context, clusterName string) error {
+	return c.syncCluster(ctx, clusterName)
+}
+
+// GetCommitter implements ReconcilerWithCommit.GetCommitter
+func (c *ClusterRegistrationController) GetCommitter() committer.CommitFunc[TMCClusterRegistrationSpec, TMCClusterRegistrationStatus] {
+	return c.commitClusterRegistration
 }
 
 // Start runs the cluster registration controller.
@@ -191,7 +332,7 @@ func (c *ClusterRegistrationController) processNextWorkItem(ctx context.Context)
 	return true
 }
 
-// syncCluster performs health checking for a single cluster
+// syncCluster performs health checking and TMC resource updates for a single cluster
 func (c *ClusterRegistrationController) syncCluster(ctx context.Context, clusterName string) error {
 	klog.V(4).InfoS("Syncing cluster", "cluster", clusterName)
 
@@ -216,6 +357,11 @@ func (c *ClusterRegistrationController) syncCluster(ctx context.Context, cluster
 		}(),
 	}
 
+	// Update TMC resource using committer pattern
+	if err := c.updateTMCResource(ctx, clusterName, healthy, err); err != nil {
+		return fmt.Errorf("failed to update TMC resource: %w", err)
+	}
+
 	if healthy {
 		klog.V(2).InfoS("Cluster health check passed", "cluster", clusterName)
 	} else {
@@ -223,6 +369,99 @@ func (c *ClusterRegistrationController) syncCluster(ctx context.Context, cluster
 	}
 
 	return nil
+}
+
+// updateTMCResource updates the TMC ClusterRegistration resource using the committer pattern
+func (c *ClusterRegistrationController) updateTMCResource(ctx context.Context, clusterName string, healthy bool, healthErr error) error {
+	// Get or create the TMC resource
+	oldResource, exists := c.clusterResources[clusterName]
+	if !exists {
+		// Create initial resource
+		now := metav1.Now()
+		oldResource = &TMCClusterRegistrationResource{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: clusterName,
+				Annotations: map[string]string{
+					"tmc.kcp.io/workspace": string(c.workspace),
+				},
+			},
+			Spec: TMCClusterRegistrationSpec{
+				Location: "unknown", // This would come from cluster configuration
+			},
+			Status: TMCClusterRegistrationStatus{
+				Phase:           "Initializing",
+				LastHealthCheck: &now,
+				Conditions:      []metav1.Condition{},
+			},
+		}
+		c.clusterResources[clusterName] = oldResource
+	}
+
+	// Create updated resource
+	newResource := &TMCClusterRegistrationResource{
+		ObjectMeta: oldResource.ObjectMeta,
+		Spec:       oldResource.Spec,
+		Status:     oldResource.Status,
+	}
+
+	// Update status based on health check
+	now := metav1.Now()
+	newResource.Status.LastHealthCheck = &now
+
+	if healthy {
+		newResource.Status.Phase = "Ready"
+		// Update or add Ready condition
+		readyCondition := metav1.Condition{
+			Type:               "Ready",
+			Status:             metav1.ConditionTrue,
+			LastTransitionTime: now,
+			Reason:             "HealthCheckPassed",
+			Message:            "Cluster is healthy and ready",
+		}
+		newResource.Status.Conditions = c.updateCondition(newResource.Status.Conditions, readyCondition)
+	} else {
+		newResource.Status.Phase = "NotReady"
+		// Update or add Ready condition
+		readyCondition := metav1.Condition{
+			Type:               "Ready",
+			Status:             metav1.ConditionFalse,
+			LastTransitionTime: now,
+			Reason:             "HealthCheckFailed",
+			Message:            fmt.Sprintf("Health check failed: %v", healthErr),
+		}
+		newResource.Status.Conditions = c.updateCondition(newResource.Status.Conditions, readyCondition)
+	}
+
+	// Update cluster info if available from health status
+	if healthStatus, ok := c.clusterHealth[clusterName]; ok {
+		newResource.Status.ClusterInfo = &ClusterInfo{
+			Version:   healthStatus.Version,
+			NodeCount: healthStatus.NodeCount,
+		}
+	}
+
+	// Use committer to patch the resource
+	if err := c.commitClusterRegistration(ctx, oldResource, newResource); err != nil {
+		return fmt.Errorf("failed to commit cluster registration update: %w", err)
+	}
+
+	// Update our local cache
+	c.clusterResources[clusterName] = newResource
+
+	return nil
+}
+
+// updateCondition updates or adds a condition to the condition list
+func (c *ClusterRegistrationController) updateCondition(conditions []metav1.Condition, newCondition metav1.Condition) []metav1.Condition {
+	for i, condition := range conditions {
+		if condition.Type == newCondition.Type {
+			// Update existing condition
+			conditions[i] = newCondition
+			return conditions
+		}
+	}
+	// Add new condition
+	return append(conditions, newCondition)
 }
 
 // performHealthCheck tests cluster connectivity and basic functionality
