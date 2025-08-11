@@ -59,30 +59,19 @@ type ClusterHealthController struct {
 
 // ClusterHealthStatus tracks comprehensive health information for a physical cluster
 type ClusterHealthStatus struct {
-	// Basic cluster information
-	Name string
-	
-	// Health status and timing
-	LastCheck time.Time
-	Healthy   bool
-	Error     string
-	
-	// Cluster metrics
-	NodeCount int
-	Version   string
-	
-	// Resource capacity information
-	CPUCapacity    string
-	MemoryCapacity string
-	
-	// Health check statistics
+	Name                   string
+	LastCheck              time.Time
+	Healthy                bool
+	Error                  string
+	NodeCount              int
+	Version                string
+	CPUCapacity            string
+	MemoryCapacity         string
 	SuccessiveHealthChecks int
 	FailedHealthChecks     int
 	AverageResponseTime    time.Duration
-	
-	// Connection information
-	APIServerEndpoint string
-	LastSuccessfulAPI time.Time
+	APIServerEndpoint      string
+	LastSuccessfulAPI      time.Time
 }
 
 // NewClusterHealthController creates a new cluster health monitoring controller.
@@ -131,7 +120,7 @@ func NewClusterHealthController(
 		clusterHealth:    clusterHealth,
 	}
 	
-	klog.InfoS("Created cluster health controller", "workspace", workspace, "clusters", len(clusterConfigs), "resyncPeriod", resyncPeriod)
+	klog.InfoS("Created cluster health controller", "workspace", workspace, "clusters", len(clusterConfigs))
 	
 	return c, nil
 }
@@ -269,12 +258,7 @@ func (c *ClusterHealthController) updateHealthStatus(health *ClusterHealthStatus
 		health.MemoryCapacity = fmt.Sprintf("%dGi", totalMemory/(1024*1024*1024))
 	}
 	
-	klog.V(4).InfoS("Updated cluster health status", 
-		"cluster", health.Name,
-		"nodes", health.NodeCount,
-		"cpu", health.CPUCapacity,
-		"memory", health.MemoryCapacity,
-		"avgResponse", health.AverageResponseTime)
+	klog.V(4).InfoS("Updated cluster health status", "cluster", health.Name, "nodes", health.NodeCount, "cpu", health.CPUCapacity, "memory", health.MemoryCapacity, "avgResponse", health.AverageResponseTime)
 }
 
 // recordFailedHealthCheck records a failed health check with error details

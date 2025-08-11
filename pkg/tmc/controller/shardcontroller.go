@@ -78,30 +78,20 @@ type ShardHealthMetrics struct {
 	Healthy          bool
 	LastHealthCheck  time.Time
 	WorkloadCount    int64
-	
-	// Performance metrics
 	AverageLatency   time.Duration
 	P95Latency       time.Duration
 	P99Latency       time.Duration
 	ErrorRate        float64
 	RequestsPerSecond float64
-	
-	// Resource utilization
 	CPUUtilization    float64
 	MemoryUtilization float64
 	StorageUtilization float64
-	
-	// Network metrics  
 	NetworkLatency   time.Duration
 	NetworkErrors    int64
 	NetworkThroughput float64
-	
-	// Health statistics
 	SuccessfulChecks int64
 	FailedChecks     int64
 	UptimePercentage float64
-	
-	// Capacity information
 	MaxCapacity     int64
 	CurrentCapacity int64
 	AvailableCapacity int64
@@ -157,7 +147,7 @@ func (c *TMCShardHealthController) Start(ctx context.Context) error {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 	
-	klog.InfoS("Starting TMC shard health controller", "controller", ShardHealthControllerName, "workspace", c.workspace, "workers", c.workerCount)
+	klog.InfoS("Starting TMC shard health controller", "controller", ShardHealthControllerName, "workspace", c.workspace)
 	defer klog.InfoS("Shutting down TMC shard health controller")
 	
 	// Start health monitoring and metrics collection
@@ -321,11 +311,9 @@ func (c *TMCShardHealthController) isShardHealthyComprehensive(shard *corev1alph
 }
 
 func (c *TMCShardHealthController) updateShardCapacityMetrics(health *ShardHealthMetrics) {
-	// Simulate capacity calculation based on workload count
 	health.CurrentCapacity = health.WorkloadCount
 	health.AvailableCapacity = health.MaxCapacity - health.CurrentCapacity
 	
-	// Simulate performance metrics (these would come from actual monitoring in production)
 	if health.Healthy {
 		health.CPUUtilization = 45.0 + (float64(health.WorkloadCount)/float64(health.MaxCapacity))*30.0
 		health.MemoryUtilization = 35.0 + (float64(health.WorkloadCount)/float64(health.MaxCapacity))*40.0
@@ -333,7 +321,7 @@ func (c *TMCShardHealthController) updateShardCapacityMetrics(health *ShardHealt
 		health.ErrorRate = 0.01 + (float64(health.WorkloadCount)/float64(health.MaxCapacity))*0.05
 		health.RequestsPerSecond = 1000.0 - (float64(health.WorkloadCount)/float64(health.MaxCapacity))*200.0
 	} else {
-		health.ErrorRate = 0.5 // High error rate when unhealthy
+		health.ErrorRate = 0.5
 		health.RequestsPerSecond = 0.0
 		health.AverageLatency = 5 * time.Second
 	}
@@ -350,7 +338,6 @@ func (c *TMCShardHealthController) recordHealthSnapshot(shardName string, health
 		MemoryUsage:   health.MemoryUtilization,
 	}
 	
-	// Add to history (maintain only recent snapshots)
 	history, exists := c.healthHistory[shardName]
 	if !exists {
 		c.healthHistory[shardName] = make([]*ShardHealthSnapshot, 0)
@@ -359,7 +346,6 @@ func (c *TMCShardHealthController) recordHealthSnapshot(shardName string, health
 	
 	c.healthHistory[shardName] = append(history, snapshot)
 	
-	// Keep only the last 24 hours of snapshots
 	cutoffTime := time.Now().Add(-ShardMetricsRetentionPeriod)
 	for i, snap := range c.healthHistory[shardName] {
 		if snap.Timestamp.After(cutoffTime) {
