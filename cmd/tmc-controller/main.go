@@ -67,9 +67,7 @@ func main() {
 		syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	defer cancel()
 
-	klog.InfoS("Starting TMC controller", 
-		"version", "v1alpha1",
-		"workspace", opts.Workspace)
+	klog.InfoS("Starting TMC controller", "version", "v1alpha1", "workspace", opts.Workspace)
 
 	// Build KCP client config for workspace connection
 	kcpConfig, err := buildKCPConfig(opts)
@@ -97,9 +95,7 @@ func main() {
 		klog.Fatalf("Error creating TMC controller manager: %v", err)
 	}
 
-	klog.InfoS("TMC controller manager created successfully", 
-		"clusters", len(clusterConfigs),
-		"workers", opts.WorkerCount)
+	klog.InfoS("TMC controller manager created successfully", "clusters", len(clusterConfigs), "workers", opts.WorkerCount)
 
 	// Start the controller manager
 	if err := mgr.Start(ctx); err != nil {
@@ -163,9 +159,7 @@ func buildClusterConfigs(opts *options.Options) (map[string]*rest.Config, error)
 
 		clusterConfigs[clusterName] = config
 
-		klog.V(2).InfoS("Configured cluster client", 
-			"cluster", clusterName, 
-			"kubeconfig", kubeconfigPath)
+		klog.V(2).InfoS("Configured cluster client", "cluster", clusterName, "kubeconfig", kubeconfigPath)
 	}
 
 	return clusterConfigs, nil

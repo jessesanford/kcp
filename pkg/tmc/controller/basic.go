@@ -71,10 +71,7 @@ func NewBasicController(
 		workerCount:    workerCount,
 	}
 	
-	klog.InfoS("Created basic TMC controller",
-		"workspace", workspace,
-		"clusters", len(clusterClients),
-		"resyncPeriod", resyncPeriod)
+	klog.InfoS("Created basic TMC controller", "workspace", workspace, "clusters", len(clusterClients), "resyncPeriod", resyncPeriod)
 	
 	return c, nil
 }
@@ -89,9 +86,7 @@ func (c *BasicController) Start(ctx context.Context) error {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 	
-	klog.InfoS("Starting basic TMC controller", 
-		"workspace", c.workspace,
-		"workers", c.workerCount)
+	klog.InfoS("Starting basic TMC controller", "workspace", c.workspace, "workers", c.workerCount)
 	defer klog.InfoS("Shutting down basic TMC controller")
 	
 	// Start periodic work queueing

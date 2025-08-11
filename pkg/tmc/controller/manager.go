@@ -142,9 +142,7 @@ func NewManager(ctx context.Context, config *Config) (*Manager, error) {
 
 // Start starts the controller manager and all controllers
 func (m *Manager) Start(ctx context.Context) error {
-	klog.InfoS("Starting TMC controller manager", 
-		"controllers", len(m.controllers),
-		"workspace", m.config.Workspace)
+	klog.InfoS("Starting TMC controller manager", "controllers", len(m.controllers), "workspace", m.config.Workspace)
 	
 	// Start shared informers
 	klog.V(2).InfoS("Starting shared informers")
