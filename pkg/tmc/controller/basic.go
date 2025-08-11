@@ -160,7 +160,6 @@ func (c *BasicController) syncCluster(ctx context.Context, clusterName string) e
 
 // verifyClusterConnection performs basic connectivity verification
 func (c *BasicController) verifyClusterConnection(ctx context.Context, clusterName string, client kubernetes.Interface) error {
-	// Simple connectivity test - try to get server version
 	_, err := client.Discovery().ServerVersion()
 	if err != nil {
 		return fmt.Errorf("failed to verify cluster connectivity: %w", err)

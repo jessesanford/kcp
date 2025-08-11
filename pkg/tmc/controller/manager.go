@@ -263,30 +263,24 @@ func (m *Manager) initializeControllers() error {
 
 // setupHTTPServers configures metrics and health HTTP servers
 func (m *Manager) setupHTTPServers() error {
-	// Setup metrics server
 	if m.config.MetricsPort > 0 {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/metrics", m.metricsHandler)
-		
 		m.metricsServer = &http.Server{
 			Addr:    fmt.Sprintf(":%d", m.config.MetricsPort),
 			Handler: mux,
 		}
-		
 		klog.V(2).InfoS("Configured metrics server", "port", m.config.MetricsPort)
 	}
 	
-	// Setup health server
 	if m.config.HealthPort > 0 {
 		mux := http.NewServeMux()
 		mux.HandleFunc("/healthz", m.healthHandler)
 		mux.HandleFunc("/readyz", m.readinessHandler)
-		
 		m.healthServer = &http.Server{
 			Addr:    fmt.Sprintf(":%d", m.config.HealthPort),
 			Handler: mux,
 		}
-		
 		klog.V(2).InfoS("Configured health server", "port", m.config.HealthPort)
 	}
 	
@@ -295,7 +289,6 @@ func (m *Manager) setupHTTPServers() error {
 
 // startHTTPServers starts the configured HTTP servers
 func (m *Manager) startHTTPServers() error {
-	// Start metrics server
 	if m.metricsServer != nil {
 		go func() {
 			klog.InfoS("Starting metrics server", "addr", m.metricsServer.Addr)
@@ -305,7 +298,6 @@ func (m *Manager) startHTTPServers() error {
 		}()
 	}
 	
-	// Start health server
 	if m.healthServer != nil {
 		go func() {
 			klog.InfoS("Starting health server", "addr", m.healthServer.Addr)
