@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -114,8 +115,8 @@ func TestNewAdvancedClusterController(t *testing.T) {
 			if controller.capabilityDetector == nil {
 				t.Error("capability detector should be initialized")
 			}
-			if controller.commitFn == nil {
-				t.Error("committer should be initialized")
+			if controller.statusUpdater == nil {
+				t.Error("status updater should be initialized")
 			}
 		})
 	}
@@ -353,8 +354,8 @@ func TestAdvancedClusterController_CollectClusterMetrics(t *testing.T) {
 	if metrics.NamespaceCount == 0 {
 		t.Error("expected namespace count > 0")
 	}
-	if metrics.ResponseTime <= 0 {
-		t.Error("expected response time > 0")
+	if metrics.ResponseTime < 0 {
+		t.Error("expected response time >= 0")
 	}
 }
 

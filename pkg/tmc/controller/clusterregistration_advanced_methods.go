@@ -23,7 +23,6 @@ import (
 	"k8s.io/klog/v2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"github.com/kcp-dev/kcp/pkg/reconciler/committer"
 )
 
 // performComprehensiveHealthCheck conducts detailed cluster health assessment
@@ -284,31 +283,6 @@ func (c *AdvancedClusterController) updateFailureStatus(clusterName string, err 
 	}
 }
 
-// commitHealthStatus commits health status using KCP committer pattern
-func (c *AdvancedClusterController) commitHealthStatus(ctx context.Context, clusterName string, oldStatus, newStatus *AdvancedClusterHealthStatus) error {
-	// Create resource objects for committer pattern
-	oldResource := &committer.Resource[*ClusterSpec, *AdvancedClusterHealthStatus]{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: clusterName,
-			Annotations: map[string]string{
-				"cluster.kcp.io/workspace": c.workspace.String(),
-			},
-		},
-		Spec: &ClusterSpec{
-			Name: clusterName,
-		},
-		Status: oldStatus,
-	}
-	
-	newResource := &committer.Resource[*ClusterSpec, *AdvancedClusterHealthStatus]{
-		ObjectMeta: oldResource.ObjectMeta,
-		Spec:       oldResource.Spec,
-		Status:     newStatus,
-	}
-	
-	// Use committer for status updates
-	return c.commitFn.CommitStatus(ctx, oldResource, newResource, committer.Options{})
-}
 
 // GetAdvancedClusterHealth returns comprehensive health status for a cluster
 func (c *AdvancedClusterController) GetAdvancedClusterHealth(clusterName string) (*AdvancedClusterHealthStatus, bool) {
