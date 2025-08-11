@@ -21,8 +21,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	kcpfakecorev1 "github.com/kcp-dev/client-go/kubernetes/fake"
 	kcprbacinformers "github.com/kcp-dev/client-go/informers/rbac/v1"
+	kcpfakecorev1 "github.com/kcp-dev/client-go/kubernetes/fake"
 	"github.com/kcp-dev/logicalcluster/v3"
 )
 
