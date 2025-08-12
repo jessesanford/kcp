@@ -29,6 +29,7 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/kcp-dev/logicalcluster/v3"
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 )
 
@@ -39,8 +40,8 @@ type Controller struct {
 	// Core KCP integration
 	kcpClusterClient kcpclientset.ClusterInterface
 
-	// Work queue for cluster reconciliation
-	queue workqueue.RateLimitingInterface
+	// Work queue for cluster reconciliation with KCP deletion handling
+	queue workqueue.TypedRateLimitingInterface[kcpcache.DeletionHandlingMetaNamespaceKeyFunc]
 
 	// Physical cluster clients for health checking
 	clusterClients map[string]kubernetes.Interface
@@ -114,10 +115,10 @@ func DefaultControllerOptions() *ControllerOptions {
 
 // NewController creates a new TMC cluster controller.
 // This controller follows KCP patterns for workspace-aware reconciliation
-// and integrates with the committer pattern for status updates.
+// and uses proper typed workqueue for cluster management.
 //
 // Parameters:
-//   - kcpClusterClient: Cluster-aware KCP client for TMC API access
+//   - kcpClusterClient: Cluster-aware KCP client for KCP APIs
 //   - clusterConfigs: Map of cluster names to their REST configurations
 //   - workspace: Logical cluster name for workspace isolation
 //   - opts: Controller configuration options
@@ -159,10 +160,12 @@ func NewController(
 		klog.V(2).InfoS("Configured cluster client", "cluster", name)
 	}
 
-	// Create work queue with rate limiting
-	queue := workqueue.NewNamedRateLimitingQueue(
-		workqueue.DefaultControllerRateLimiter(),
-		"cluster-controller",
+	// Create work queue with proper KCP typed rate limiting
+	queue := workqueue.NewTypedRateLimitingQueueWithConfig(
+		workqueue.DefaultTypedControllerRateLimiter[kcpcache.DeletionHandlingMetaNamespaceKeyFunc](),
+		workqueue.TypedRateLimitingQueueConfig[kcpcache.DeletionHandlingMetaNamespaceKeyFunc]{
+			Name: "tmc-cluster-controller",
+		},
 	)
 
 	c := &Controller{
@@ -214,7 +217,8 @@ func (c *Controller) enqueueAllClusters() {
 	defer c.clientsMutex.RUnlock()
 
 	for clusterName := range c.clusterClients {
-		c.queue.Add(clusterName)
+		// Use the DeletionHandlingMetaNamespaceKeyFunc for proper KCP key formatting
+		c.queue.Add(kcpcache.DeletionHandlingMetaNamespaceKeyFunc{Key: clusterName})
 		klog.V(4).InfoS("Enqueued cluster for reconciliation", "cluster", clusterName)
 	}
 }

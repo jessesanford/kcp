@@ -59,20 +59,21 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	}
 	defer c.queue.Done(obj)
 
-	clusterName, ok := obj.(string)
-	if !ok {
-		utilruntime.HandleError(fmt.Errorf("expected string in workqueue but got %T", obj))
+	// Extract cluster name from the typed key function result
+	clusterName := obj.Key
+	if clusterName == "" {
+		utilruntime.HandleError(fmt.Errorf("empty cluster name in workqueue"))
 		c.queue.Forget(obj)
 		return true
 	}
 
 	if err := c.reconcileCluster(ctx, clusterName); err != nil {
 		utilruntime.HandleError(fmt.Errorf("error reconciling cluster %s: %w", clusterName, err))
-		c.queue.AddRateLimited(clusterName)
+		c.queue.AddRateLimited(obj)
 		return true
 	}
 
-	c.queue.Forget(clusterName)
+	c.queue.Forget(obj)
 	return true
 }
 
