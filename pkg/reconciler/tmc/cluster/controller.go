@@ -89,6 +89,9 @@ func NewController(
 		clusterLister:  clusterInformer.Lister(),
 	}
 
+	// Initialize the reconciler
+	c.reconciler = newReconciler(c)
+
 	// Add event handlers for ClusterRegistration resources
 	_, _ = clusterInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { c.enqueue(obj) },
@@ -109,6 +112,8 @@ type Controller struct {
 
 	clusterIndexer cache.Indexer
 	clusterLister  ClusterRegistrationLister
+
+	reconciler *reconciler
 }
 
 // enqueue adds a ClusterRegistration resource to the work queue.
@@ -215,12 +220,12 @@ func (c *Controller) process(ctx context.Context, cluster ClusterRegistration) e
 	// Create a working copy to avoid mutating the cached object
 	cluster = cluster.DeepCopy()
 
-	// TODO: Implement cluster lifecycle management
-	// - Validate cluster configuration
-	// - Establish connection to cluster API server
-	// - Monitor cluster health and capacity
-	// - Update cluster status and conditions
-	// - Handle cluster registration and deregistration
+	// Delegate to the reconciler for actual processing
+	_, err := c.reconciler.reconcileCluster(ctx, cluster)
+	if err != nil {
+		logger.Error(err, "cluster reconciliation failed", "cluster", cluster.GetName())
+		return err
+	}
 
 	logger.V(3).Info("ClusterRegistration processed successfully", "cluster", cluster.GetName())
 	return nil

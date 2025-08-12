@@ -1,0 +1,6 @@
+# Worktree ownership file - DO NOT DELETE
+WORKTREE_NAME="impl4-09-cluster-controller"
+EXPECTED_BRANCH="feature/tmc-impl4/09-cluster-controller"
+CREATED_AT="2025-08-12T01:47:24+00:00"
+CREATED_BY="orchestrator"
+PURPOSE="Fresh reimplementation after corruption"
