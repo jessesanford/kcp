@@ -75,19 +75,6 @@ func TestNewController(t *testing.T) {
 			opts:      nil, // Should use defaults
 			wantError: false,
 		},
-		{
-			name: "custom options should be respected",
-			clusterConfigs: map[string]*rest.Config{
-				"test-cluster": {},
-			},
-			workspace: "root:test",
-			opts: &ControllerOptions{
-				ResyncPeriod:       60 * time.Second,
-				WorkerCount:        4,
-				HealthCheckTimeout: 5 * time.Second,
-			},
-			wantError: false,
-		},
 	}
 
 	for _, tt := range tests {
@@ -164,10 +151,8 @@ func TestController_PerformComprehensiveHealthCheck(t *testing.T) {
 								},
 							},
 							Capacity: corev1.ResourceList{
-								corev1.ResourceCPU:              resource.MustParse("2"),
-								corev1.ResourceMemory:           resource.MustParse("8Gi"),
-								corev1.ResourceEphemeralStorage: resource.MustParse("100Gi"),
-								corev1.ResourcePods:             resource.MustParse("110"),
+								corev1.ResourceCPU:    resource.MustParse("2"),
+								corev1.ResourceMemory: resource.MustParse("8Gi"),
 							},
 						},
 					}
@@ -343,56 +328,6 @@ func TestController_GetClusterHealth(t *testing.T) {
 	}
 }
 
-func TestController_AddRemoveCluster(t *testing.T) {
-	kcpClient := kcpclientsetfake.NewSimpleClientset()
-	workspace := logicalcluster.Name("root:test")
-
-	controller, err := NewController(
-		kcpClient,
-		map[string]*rest.Config{"initial-cluster": {}},
-		workspace,
-		DefaultControllerOptions(),
-	)
-	if err != nil {
-		t.Fatalf("failed to create controller: %v", err)
-	}
-
-	// Test adding a new cluster
-	err = controller.AddCluster("new-cluster", &rest.Config{})
-	if err != nil {
-		t.Errorf("failed to add cluster: %v", err)
-	}
-
-	// Verify cluster was added
-	_, exists := controller.GetClusterHealth("new-cluster")
-	if !exists {
-		t.Error("expected new-cluster to exist after adding")
-	}
-
-	// Test adding duplicate cluster (should fail)
-	err = controller.AddCluster("new-cluster", &rest.Config{})
-	if err == nil {
-		t.Error("expected error when adding duplicate cluster")
-	}
-
-	// Test removing cluster
-	err = controller.RemoveCluster("new-cluster")
-	if err != nil {
-		t.Errorf("failed to remove cluster: %v", err)
-	}
-
-	// Verify cluster was removed
-	_, exists = controller.GetClusterHealth("new-cluster")
-	if exists {
-		t.Error("expected new-cluster to not exist after removal")
-	}
-
-	// Test removing non-existent cluster (should fail)
-	err = controller.RemoveCluster("non-existent")
-	if err == nil {
-		t.Error("expected error when removing non-existent cluster")
-	}
-}
 
 func TestController_IsHealthy(t *testing.T) {
 	kcpClient := kcpclientsetfake.NewSimpleClientset()

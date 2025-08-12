@@ -86,61 +86,31 @@ type ClusterHealthStatus struct {
 	Conditions []ClusterCondition `json:"conditions,omitempty"`
 }
 
-// ClusterCapacity represents the resource capacity of a cluster
+// ClusterCapacity represents basic resource capacity of a cluster
 type ClusterCapacity struct {
-	// CPU capacity in millicores
-	CPU int64 `json:"cpu"`
-
-	// Memory capacity in bytes
-	Memory int64 `json:"memory"`
-
-	// Storage capacity in bytes
-	Storage int64 `json:"storage"`
-
-	// Pods represents the maximum number of pods
-	Pods int64 `json:"pods"`
+	CPU    int64 `json:"cpu"`    // CPU capacity in millicores
+	Memory int64 `json:"memory"` // Memory capacity in bytes
 }
 
-// ClusterCondition represents a condition of the cluster
+// ClusterCondition represents a basic condition of the cluster
 type ClusterCondition struct {
-	// Type of the condition
-	Type string `json:"type"`
-
-	// Status of the condition (True, False, Unknown)
-	Status string `json:"status"`
-
-	// LastTransitionTime is the last time the condition changed
+	Type    string    `json:"type"`
+	Status  string    `json:"status"`
+	Message string    `json:"message"`
 	LastTransitionTime time.Time `json:"lastTransitionTime"`
-
-	// Reason is a brief machine readable explanation for the condition
-	Reason string `json:"reason"`
-
-	// Message is a human readable message indicating details about the condition
-	Message string `json:"message"`
 }
 
-// ControllerOptions holds configuration options for the cluster controller
+// ControllerOptions holds basic configuration options for the cluster controller
 type ControllerOptions struct {
-	// ResyncPeriod defines how often to perform health checks
-	ResyncPeriod time.Duration
-
-	// WorkerCount is the number of reconciliation workers
-	WorkerCount int
-
-	// HealthCheckTimeout is the maximum time to wait for health checks
-	HealthCheckTimeout time.Duration
-
-	// RetryBackoff configuration for failed reconciliations
-	RetryBackoff workqueue.RateLimiter
+	ResyncPeriod time.Duration // How often to perform health checks
+	WorkerCount  int           // Number of reconciliation workers
 }
 
 // DefaultControllerOptions returns sensible defaults for the controller
 func DefaultControllerOptions() *ControllerOptions {
 	return &ControllerOptions{
-		ResyncPeriod:       30 * time.Second,
-		WorkerCount:        2,
-		HealthCheckTimeout: 10 * time.Second,
-		RetryBackoff:       workqueue.DefaultControllerRateLimiter(),
+		ResyncPeriod: 30 * time.Second,
+		WorkerCount:  2,
 	}
 }
 
@@ -176,10 +146,6 @@ func NewController(
 	clusterHealth := make(map[string]*ClusterHealthStatus)
 
 	for name, config := range clusterConfigs {
-		// Set reasonable timeouts for cluster clients
-		config = rest.CopyConfig(config)
-		config.Timeout = opts.HealthCheckTimeout
-
 		client, err := kubernetes.NewForConfig(config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create client for cluster %s: %w", name, err)
@@ -192,14 +158,12 @@ func NewController(
 			Conditions: []ClusterCondition{},
 		}
 
-		klog.V(2).InfoS("Configured cluster client",
-			"cluster", name,
-			"workspace", workspace)
+		klog.V(2).InfoS("Configured cluster client", "cluster", name)
 	}
 
 	// Create work queue with rate limiting
 	queue := workqueue.NewNamedRateLimitingQueue(
-		opts.RetryBackoff,
+		workqueue.DefaultControllerRateLimiter(),
 		"cluster-controller",
 	)
 
@@ -219,9 +183,7 @@ func NewController(
 
 	klog.InfoS("Created TMC cluster controller",
 		"workspace", workspace,
-		"clusters", len(clusterConfigs),
-		"resyncPeriod", opts.ResyncPeriod,
-		"workers", opts.WorkerCount)
+		"clusters", len(clusterConfigs))
 
 	return c, nil
 }

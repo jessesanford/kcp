@@ -256,14 +256,14 @@ func (c *Controller) checkNodeHealth(ctx context.Context, client kubernetes.Inte
 	return nil
 }
 
-// gatherClusterCapacity collects resource capacity information from the cluster
+// gatherClusterCapacity collects basic resource capacity information from the cluster
 func (c *Controller) gatherClusterCapacity(ctx context.Context, client kubernetes.Interface, healthStatus *ClusterHealthStatus) error {
 	nodeList, err := client.CoreV1().Nodes().List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("failed to list nodes for capacity calculation: %w", err)
 	}
 
-	var totalCPU, totalMemory, totalStorage, totalPods int64
+	var totalCPU, totalMemory int64
 
 	for _, node := range nodeList.Items {
 		if !c.isNodeReady(&node) {
@@ -279,31 +279,12 @@ func (c *Controller) gatherClusterCapacity(ctx context.Context, client kubernete
 		if memory, ok := node.Status.Capacity[corev1.ResourceMemory]; ok {
 			totalMemory += memory.Value()
 		}
-
-		// Ephemeral storage capacity (in bytes)
-		if storage, ok := node.Status.Capacity[corev1.ResourceEphemeralStorage]; ok {
-			totalStorage += storage.Value()
-		}
-
-		// Pod capacity
-		if pods, ok := node.Status.Capacity[corev1.ResourcePods]; ok {
-			totalPods += pods.Value()
-		}
 	}
 
 	healthStatus.Capacity = ClusterCapacity{
-		CPU:     totalCPU,
-		Memory:  totalMemory,
-		Storage: totalStorage,
-		Pods:    totalPods,
+		CPU:    totalCPU,
+		Memory: totalMemory,
 	}
-
-	klog.V(4).InfoS("Gathered cluster capacity",
-		"cluster", healthStatus.Name,
-		"cpu", resource.NewMilliQuantity(totalCPU, resource.DecimalSI).String(),
-		"memory", resource.NewQuantity(totalMemory, resource.BinarySI).String(),
-		"storage", resource.NewQuantity(totalStorage, resource.BinarySI).String(),
-		"pods", totalPods)
 
 	return nil
 }
@@ -333,59 +314,3 @@ func (c *Controller) updateClusterHealthStatus(clusterName string, healthStatus 
 		"conditions", len(healthStatus.Conditions))
 }
 
-// AddCluster dynamically adds a new cluster to the controller
-func (c *Controller) AddCluster(clusterName string, config *rest.Config) error {
-	c.clientsMutex.Lock()
-	defer c.clientsMutex.Unlock()
-
-	if _, exists := c.clusterClients[clusterName]; exists {
-		return fmt.Errorf("cluster %s already exists", clusterName)
-	}
-
-	// Create client with timeout
-	config = rest.CopyConfig(config)
-	if config.Timeout == 0 {
-		config.Timeout = 10 * time.Second
-	}
-
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return fmt.Errorf("failed to create client for cluster %s: %w", clusterName, err)
-	}
-
-	c.clusterClients[clusterName] = client
-
-	// Initialize health status
-	c.healthMutex.Lock()
-	c.clusterHealth[clusterName] = &ClusterHealthStatus{
-		Name:       clusterName,
-		Healthy:    false,
-		Conditions: []ClusterCondition{},
-	}
-	c.healthMutex.Unlock()
-
-	// Trigger immediate reconciliation
-	c.queue.Add(clusterName)
-
-	klog.InfoS("Added cluster to controller", "cluster", clusterName)
-	return nil
-}
-
-// RemoveCluster dynamically removes a cluster from the controller
-func (c *Controller) RemoveCluster(clusterName string) error {
-	c.clientsMutex.Lock()
-	defer c.clientsMutex.Unlock()
-
-	if _, exists := c.clusterClients[clusterName]; !exists {
-		return fmt.Errorf("cluster %s does not exist", clusterName)
-	}
-
-	delete(c.clusterClients, clusterName)
-
-	c.healthMutex.Lock()
-	delete(c.clusterHealth, clusterName)
-	c.healthMutex.Unlock()
-
-	klog.InfoS("Removed cluster from controller", "cluster", clusterName)
-	return nil
-}
