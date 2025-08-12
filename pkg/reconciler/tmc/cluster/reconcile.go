@@ -20,7 +20,6 @@ import (
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/kubernetes"
@@ -109,7 +108,6 @@ func (c *Controller) reconcileCluster(ctx context.Context, clusterName string) e
 					Type:               ConditionTypeHealthy,
 					Status:             "False",
 					LastTransitionTime: time.Now(),
-					Reason:             ReasonHealthCheckFailed,
 					Message:            fmt.Sprintf("Health check failed: %v", err),
 				},
 			},
@@ -167,7 +165,6 @@ func (c *Controller) performComprehensiveHealthCheck(ctx context.Context, cluste
 		Type:               ConditionTypeHealthy,
 		Status:             "True",
 		LastTransitionTime: time.Now(),
-		Reason:             ReasonHealthCheckPassed,
 		Message:            "All health checks passed successfully",
 	})
 
@@ -183,7 +180,6 @@ func (c *Controller) checkAPIServerHealth(ctx context.Context, client kubernetes
 			Type:               ConditionTypeAPIServer,
 			Status:             "False",
 			LastTransitionTime: time.Now(),
-			Reason:             ReasonAPIServerDown,
 			Message:            fmt.Sprintf("Failed to get server version: %v", err),
 		})
 		return err
@@ -194,7 +190,6 @@ func (c *Controller) checkAPIServerHealth(ctx context.Context, client kubernetes
 		Type:               ConditionTypeAPIServer,
 		Status:             "True",
 		LastTransitionTime: time.Now(),
-		Reason:             ReasonAPIServerHealthy,
 		Message:            fmt.Sprintf("API server healthy, version: %s", version.String()),
 	})
 
@@ -217,7 +212,6 @@ func (c *Controller) checkNodeHealth(ctx context.Context, client kubernetes.Inte
 			Type:               ConditionTypeNodes,
 			Status:             "False",
 			LastTransitionTime: time.Now(),
-			Reason:             ReasonNodesNotReady,
 			Message:            fmt.Sprintf("Failed to list nodes: %v", err),
 		})
 		return err
@@ -239,7 +233,6 @@ func (c *Controller) checkNodeHealth(ctx context.Context, client kubernetes.Inte
 			Type:               ConditionTypeNodes,
 			Status:             "False",
 			LastTransitionTime: time.Now(),
-			Reason:             ReasonNodesNotReady,
 			Message:            message,
 		})
 		return fmt.Errorf("no ready nodes found")
@@ -249,7 +242,6 @@ func (c *Controller) checkNodeHealth(ctx context.Context, client kubernetes.Inte
 		Type:               ConditionTypeNodes,
 		Status:             "True",
 		LastTransitionTime: time.Now(),
-		Reason:             ReasonNodesReady,
 		Message:            message,
 	})
 

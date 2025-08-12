@@ -30,7 +30,6 @@ import (
 
 	"github.com/kcp-dev/logicalcluster/v3"
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
-	"github.com/kcp-dev/kcp/pkg/reconciler/committer"
 )
 
 // Controller manages physical cluster registration and health for TMC.
@@ -39,7 +38,6 @@ import (
 type Controller struct {
 	// Core KCP integration
 	kcpClusterClient kcpclientset.ClusterInterface
-	committer        committer.Committer
 
 	// Work queue for cluster reconciliation
 	queue workqueue.RateLimitingInterface
@@ -167,12 +165,8 @@ func NewController(
 		"cluster-controller",
 	)
 
-	// Create committer for status updates (will be used for TMC API integration)
-	committer := committer.NewCommitter(kcpClusterClient, queue)
-
 	c := &Controller{
 		kcpClusterClient: kcpClusterClient,
-		committer:        committer,
 		queue:            queue,
 		clusterClients:   clusterClients,
 		workspace:        workspace,
@@ -316,10 +310,8 @@ func (c *Controller) copyClusterHealth(health *ClusterHealthStatus) *ClusterHeal
 		NodeCount: health.NodeCount,
 		Version:   health.Version,
 		Capacity: ClusterCapacity{
-			CPU:     health.Capacity.CPU,
-			Memory:  health.Capacity.Memory,
-			Storage: health.Capacity.Storage,
-			Pods:    health.Capacity.Pods,
+			CPU:    health.Capacity.CPU,
+			Memory: health.Capacity.Memory,
 		},
 		Conditions: conditions,
 	}
