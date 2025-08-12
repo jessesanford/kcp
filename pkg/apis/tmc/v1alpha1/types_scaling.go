@@ -573,77 +573,38 @@ type MetricStatus struct {
 // ObjectMetricStatus indicates the current value of a metric describing a single kubernetes object.
 type ObjectMetricStatus struct {
 	// metric identifies the target metric by name and selector.
-	//
-	// +required
 	Metric MetricIdentifier `json:"metric"`
-
 	// current contains the current value for the given metric.
-	//
-	// +required
 	Current MetricValueStatus `json:"current"`
-
 	// describedObject specifies the descriptions of a object.
-	//
-	// +required
 	DescribedObject CrossVersionObjectReference `json:"describedObject"`
 }
 
 // PodsMetricStatus indicates the current value of a metric describing each pod in the current scale target.
 type PodsMetricStatus struct {
 	// metric identifies the target metric by name and selector.
-	//
-	// +required
 	Metric MetricIdentifier `json:"metric"`
-
 	// current contains the current value for the given metric.
-	//
-	// +required
 	Current MetricValueStatus `json:"current"`
 }
 
 // ResourceMetricStatus indicates the current value of a resource metric known to Kubernetes.
 type ResourceMetricStatus struct {
-	// name is the name of the resource in question.
-	//
-	// +required
-	Name string `json:"name"`
-
-	// current contains the current value for the given metric.
-	//
-	// +required
+	Name    string            `json:"name"`
 	Current MetricValueStatus `json:"current"`
 }
 
 // ExternalMetricStatus indicates the current value of a global metric not associated with any Kubernetes object.
 type ExternalMetricStatus struct {
-	// metric identifies the target metric by name and selector.
-	//
-	// +required
-	Metric MetricIdentifier `json:"metric"`
-
-	// current contains the current value for the given metric.
-	//
-	// +required
+	Metric  MetricIdentifier  `json:"metric"`
 	Current MetricValueStatus `json:"current"`
 }
 
 // MetricValueStatus holds the current value for a metric.
 type MetricValueStatus struct {
-	// value is the current value of the metric (as a quantity).
-	//
-	// +optional
-	Value *intstr.IntOrString `json:"value,omitempty"`
-
-	// averageValue is the current value of the average of the metric across all relevant pods.
-	//
-	// +optional
-	AverageValue *intstr.IntOrString `json:"averageValue,omitempty"`
-
-	// averageUtilization is the current value of the average of the resource metric across all relevant pods,
-	// represented as a percentage of the requested value of the resource for the pods.
-	//
-	// +optional
-	AverageUtilization *int32 `json:"averageUtilization,omitempty"`
+	Value              *intstr.IntOrString `json:"value,omitempty"`
+	AverageValue       *intstr.IntOrString `json:"averageValue,omitempty"`
+	AverageUtilization *int32              `json:"averageUtilization,omitempty"`
 }
 
 // These are valid condition types for AutoScalingPolicy.
