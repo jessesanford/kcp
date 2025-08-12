@@ -28,8 +28,6 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/kcp-dev/logicalcluster/v3"
-
-	"github.com/kcp-dev/kcp/pkg/logging"
 )
 
 const (
@@ -181,7 +179,7 @@ func NewCollector(options CollectorOptions) (*Collector, error) {
 
 // CollectPlacementData collects placement data for a specific placement
 func (c *Collector) CollectPlacementData(ctx context.Context, clusterName logicalcluster.Name, workspaceName, placementName, placementNamespace string) error {
-	logger := logging.WithReconcileContext(c.logger, ctx)
+	logger := c.logger
 
 	data := PlacementData{
 		Timestamp:          time.Now(),

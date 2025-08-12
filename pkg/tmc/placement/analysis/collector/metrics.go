@@ -22,8 +22,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"k8s.io/klog/v2"
-
-	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 // MetricsCollector handles Prometheus metrics collection for placement analysis
