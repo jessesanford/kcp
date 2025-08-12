@@ -30,33 +30,25 @@ import (
 
 	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
 	"github.com/kcp-dev/client-go/kubernetes"
+	"github.com/kcp-dev/logicalcluster/v3"
 
 	"github.com/kcp-dev/kcp/pkg/logging"
+	"github.com/kcp-dev/kcp/pkg/reconciler/committer"
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
+
+	tmcv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/tmc/v1alpha1"
+	tmcclientset "github.com/kcp-dev/kcp/pkg/client/clientset/versioned/cluster"
 )
 
 const (
 	ControllerName = "tmc-cluster"
 )
 
-// ClusterRegistration is a placeholder interface for TMC ClusterRegistration type
-// This will be replaced with actual TMC API types when they are available
-type ClusterRegistration interface {
-	GetName() string
-	GetNamespace() string
-	DeepCopy() ClusterRegistration
-}
+// ClusterRegistrationResource wraps TMC ClusterRegistration for committer pattern
+type ClusterRegistrationResource = committer.Resource[tmcv1alpha1.ClusterRegistrationSpec, tmcv1alpha1.ClusterRegistrationStatus]
 
-// ClusterRegistrationLister is a placeholder interface for cluster registration lister
-type ClusterRegistrationLister interface {
-	Get(name string) (ClusterRegistration, error)
-}
-
-// ClusterRegistrationInformer is a placeholder interface for cluster registration informer
-type ClusterRegistrationInformer interface {
-	Informer() cache.SharedIndexInformer
-	Lister() ClusterRegistrationLister
-}
+// ClusterRegistrationCommitFunc defines the commit function type for cluster registration
+type ClusterRegistrationCommitFunc = committer.CommitFunc[tmcv1alpha1.ClusterRegistrationSpec, tmcv1alpha1.ClusterRegistrationStatus]
 
 // NewController creates a new TMC cluster controller following KCP patterns.
 // It integrates with the KCP cluster client and maintains workspace isolation.
@@ -72,8 +64,12 @@ type ClusterRegistrationInformer interface {
 func NewController(
 	kcpClusterClient kcpclientset.ClusterInterface,
 	kubeClusterClient kubernetes.ClusterInterface,
-	clusterInformer ClusterRegistrationInformer,
+	tmcClusterClient tmcclientset.ClusterInterface,
+	clusterInformer cache.SharedIndexInformer,
 ) (*Controller, error) {
+	// Create committer for status updates
+	commitClusterRegistration := committer.NewCommitter[*tmcv1alpha1.ClusterRegistration, tmcclientset.ClusterInterface](tmcClusterClient.TmcV1alpha1().ClusterRegistrations())
+
 	c := &Controller{
 		queue: workqueue.NewTypedRateLimitingQueueWithConfig(
 			workqueue.DefaultTypedControllerRateLimiter[string](),
@@ -84,16 +80,17 @@ func NewController(
 
 		kcpClusterClient:  kcpClusterClient,
 		kubeClusterClient: kubeClusterClient,
+		tmcClusterClient:  tmcClusterClient,
 
-		clusterIndexer: clusterInformer.Informer().GetIndexer(),
-		clusterLister:  clusterInformer.Lister(),
+		clusterIndexer: clusterInformer.GetIndexer(),
+		commitClusterRegistration: commitClusterRegistration,
 	}
 
 	// Initialize the reconciler
 	c.reconciler = newReconciler(c)
 
 	// Add event handlers for ClusterRegistration resources
-	_, _ = clusterInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+	_, _ = clusterInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { c.enqueue(obj) },
 		UpdateFunc: func(_, obj interface{}) { c.enqueue(obj) },
 		DeleteFunc: func(obj interface{}) { c.enqueue(obj) },
@@ -109,9 +106,10 @@ type Controller struct {
 
 	kcpClusterClient  kcpclientset.ClusterInterface
 	kubeClusterClient kubernetes.ClusterInterface
+	tmcClusterClient  tmcclientset.ClusterInterface
 
-	clusterIndexer cache.Indexer
-	clusterLister  ClusterRegistrationLister
+	clusterIndexer            cache.Indexer
+	commitClusterRegistration ClusterRegistrationCommitFunc
 
 	reconciler *reconciler
 }
@@ -192,13 +190,18 @@ func (c *Controller) sync(ctx context.Context, key string) error {
 	logger := klog.FromContext(ctx).WithValues("cluster", name)
 	ctx = klog.NewContext(ctx, logger)
 
-	cluster, err := c.clusterLister.Get(name)
+	obj, exists, err := c.clusterIndexer.GetByKey(key)
 	if err != nil {
-		if errors.IsNotFound(err) {
-			logger.V(2).Info("ClusterRegistration deleted before processing")
-			return nil // object deleted before we handled it
-		}
 		return err
+	}
+	if !exists {
+		logger.V(2).Info("ClusterRegistration deleted before processing")
+		return nil // object deleted before we handled it
+	}
+
+	cluster, ok := obj.(*tmcv1alpha1.ClusterRegistration)
+	if !ok {
+		return fmt.Errorf("object in indexer is not a ClusterRegistration: %T", obj)
 	}
 
 	return c.process(ctx, cluster)
@@ -213,7 +216,7 @@ func (c *Controller) sync(ctx context.Context, key string) error {
 //
 // Returns:
 //   - error: Any error encountered during processing
-func (c *Controller) process(ctx context.Context, cluster ClusterRegistration) error {
+func (c *Controller) process(ctx context.Context, cluster *tmcv1alpha1.ClusterRegistration) error {
 	logger := klog.FromContext(ctx)
 	logger.V(2).Info("processing ClusterRegistration", "cluster", cluster.GetName())
 
