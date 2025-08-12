@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/klog/v2"
 
@@ -37,7 +38,7 @@ type StatusManagerInterface interface {
 	UpdateStatus(ctx context.Context, obj StatusUpdater, conditions []conditionsapi.Condition) error
 	
 	// RecordEvent records an event for status changes
-	RecordEvent(obj metav1.Object, eventType, reason, message string)
+	RecordEvent(obj runtime.Object, eventType, reason, message string)
 	
 	// ComputeReadyCondition computes the overall Ready condition based on dependent conditions
 	ComputeReadyCondition(conditions []conditionsapi.Condition) *conditionsapi.Condition
@@ -51,6 +52,7 @@ type StatusUpdater interface {
 	conditionsutil.Getter
 	conditionsutil.Setter
 	metav1.Object
+	runtime.Object
 }
 
 // Manager implements StatusManagerInterface for TMC cluster status management.
@@ -107,14 +109,22 @@ func (m *Manager) UpdateStatus(ctx context.Context, obj StatusUpdater, condition
 }
 
 // RecordEvent records a Kubernetes event for status-related changes.
-func (m *Manager) RecordEvent(obj metav1.Object, eventType, reason, message string) {
+func (m *Manager) RecordEvent(obj runtime.Object, eventType, reason, message string) {
 	if m.eventRecorder != nil && obj != nil {
 		m.eventRecorder.Event(obj, eventType, reason, message)
-		m.logger.V(3).Info("Event recorded", 
-			"object", klog.KObj(obj), 
-			"type", eventType, 
-			"reason", reason,
-			"message", message)
+		// Convert to metav1.Object for klog.KObj if possible
+		if metaObj, ok := obj.(metav1.Object); ok {
+			m.logger.V(3).Info("Event recorded", 
+				"object", klog.KObj(metaObj), 
+				"type", eventType, 
+				"reason", reason,
+				"message", message)
+		} else {
+			m.logger.V(3).Info("Event recorded", 
+				"type", eventType, 
+				"reason", reason,
+				"message", message)
+		}
 	}
 }
 
@@ -246,7 +256,7 @@ func (m *Manager) mergeConditions(current, new []conditionsapi.Condition) []cond
 }
 
 // recordConditionEvents records events for significant condition changes.
-func (m *Manager) recordConditionEvents(obj metav1.Object, oldConditions, newConditions []conditionsapi.Condition) {
+func (m *Manager) recordConditionEvents(obj runtime.Object, oldConditions, newConditions []conditionsapi.Condition) {
 	if m.eventRecorder == nil {
 		return
 	}
