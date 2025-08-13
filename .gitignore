@@ -48,3 +48,4 @@ dex/
 *.pem
 
 index.html
+/testing/
