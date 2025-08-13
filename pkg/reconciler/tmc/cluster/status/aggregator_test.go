@@ -156,6 +156,215 @@ func TestAggregator_FilterStaleConditions(t *testing.T) {
 	}
 }
 
+func TestAggregator_NewAggregatorWithConfig(t *testing.T) {
+	criticalTypes := map[conditionsapi.ConditionType]bool{
+		ClusterConnectionCondition: true,
+	}
+	
+	aggregator := NewAggregatorWithConfig(0.9, criticalTypes)
+	
+	// Test that aggregator uses custom configuration - high threshold means more tolerance for failures
+	components := []ComponentStatus{
+		{
+			Name:           "test1",
+			Critical:       false,
+			LastUpdateTime: metav1.Now(),
+			Conditions: []conditionsapi.Condition{
+				{
+					Type:   PlacementAvailableCondition,
+					Status: corev1.ConditionTrue,
+					Reason: "Healthy",
+				},
+			},
+		},
+		{
+			Name:           "test2", 
+			Critical:       false,
+			LastUpdateTime: metav1.Now(),
+			Conditions: []conditionsapi.Condition{
+				{
+					Type:   PlacementAvailableCondition,
+					Status: corev1.ConditionFalse,
+					Reason: "TestReason",
+				},
+			},
+		},
+	}
+	
+	conditions := aggregator.AggregateClusterStatus(components)
+	health := aggregator.ComputeOverallHealth(conditions)
+	
+	// With 90% threshold and only 50% healthy, should be degraded
+	if health != ClusterHealthDegraded {
+		t.Errorf("expected degraded with custom config, got %s", health)
+	}
+}
+
+func TestAggregator_aggregateConditionType(t *testing.T) {
+	aggregator := NewAggregator().(*Aggregator)
+	
+	tests := map[string]struct {
+		componentConditions []ComponentCondition
+		wantStatus         corev1.ConditionStatus
+		wantReason         string
+	}{
+		"no data": {
+			componentConditions: []ComponentCondition{},
+			wantStatus:         corev1.ConditionUnknown,
+			wantReason:         "NoData",
+		},
+		"all true": {
+			componentConditions: []ComponentCondition{
+				{Component: "comp1", Critical: true, Condition: conditionsapi.Condition{Status: corev1.ConditionTrue}},
+				{Component: "comp2", Critical: false, Condition: conditionsapi.Condition{Status: corev1.ConditionTrue}},
+			},
+			wantStatus: corev1.ConditionTrue,
+			wantReason: "ComponentsHealthy",
+		},
+		"critical failed": {
+			componentConditions: []ComponentCondition{
+				{Component: "comp1", Critical: true, Condition: conditionsapi.Condition{Status: corev1.ConditionFalse}},
+			},
+			wantStatus: corev1.ConditionFalse,
+			wantReason: "CriticalComponentsFailed",
+		},
+		"insufficient data": {
+			componentConditions: []ComponentCondition{
+				{Component: "comp1", Critical: false, Condition: conditionsapi.Condition{Status: corev1.ConditionTrue}},
+				{Component: "comp2", Critical: false, Condition: conditionsapi.Condition{Status: corev1.ConditionUnknown}},
+				{Component: "comp3", Critical: false, Condition: conditionsapi.Condition{Status: corev1.ConditionUnknown}},
+			},
+			wantStatus: corev1.ConditionUnknown,
+			wantReason: "InsufficientData",
+		},
+		"components degraded": {
+			componentConditions: []ComponentCondition{
+				{Component: "comp1", Critical: false, Condition: conditionsapi.Condition{Status: corev1.ConditionTrue}},
+				{Component: "comp2", Critical: false, Condition: conditionsapi.Condition{Status: corev1.ConditionFalse}},
+				{Component: "comp3", Critical: false, Condition: conditionsapi.Condition{Status: corev1.ConditionFalse}},
+			},
+			wantStatus: corev1.ConditionFalse,
+			wantReason: "ComponentsDegraded",
+		},
+	}
+	
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// Set LastUpdate time for all conditions
+			now := metav1.Now()
+			for i := range tc.componentConditions {
+				tc.componentConditions[i].LastUpdate = now
+			}
+			
+			condition := aggregator.aggregateConditionType("TestCondition", tc.componentConditions)
+			
+			if condition.Status != tc.wantStatus {
+				t.Errorf("expected status %s, got %s", tc.wantStatus, condition.Status)
+			}
+			
+			if condition.Reason != tc.wantReason {
+				t.Errorf("expected reason %s, got %s", tc.wantReason, condition.Reason)
+			}
+		})
+	}
+}
+
+func TestAggregator_computeReadyConditionFromAggregated(t *testing.T) {
+	aggregator := NewAggregator().(*Aggregator)
+	
+	tests := map[string]struct {
+		conditions []conditionsapi.Condition
+		wantStatus corev1.ConditionStatus
+		wantReason string
+	}{
+		"all healthy": {
+			conditions: []conditionsapi.Condition{
+				{
+					Type:   ClusterConnectionCondition,
+					Status: corev1.ConditionTrue,
+				},
+			},
+			wantStatus: corev1.ConditionTrue,
+			wantReason: "ClusterReady",
+		},
+		"critical errors": {
+			conditions: []conditionsapi.Condition{
+				{
+					Type:     ClusterConnectionCondition,
+					Status:   corev1.ConditionFalse,
+					Severity: conditionsapi.ConditionSeverityError,
+				},
+			},
+			wantStatus: corev1.ConditionFalse,
+			wantReason: "CriticalConditionsFailed",
+		},
+		"critical unknown": {
+			conditions: []conditionsapi.Condition{
+				{
+					Type:   ClusterConnectionCondition,
+					Status: corev1.ConditionUnknown,
+				},
+			},
+			wantStatus: corev1.ConditionUnknown,
+			wantReason: "CriticalConditionsUnknown",
+		},
+		"warnings only": {
+			conditions: []conditionsapi.Condition{
+				{
+					Type:     PlacementAvailableCondition,
+					Status:   corev1.ConditionFalse,
+					Severity: conditionsapi.ConditionSeverityWarning,
+				},
+			},
+			wantStatus: corev1.ConditionTrue,
+			wantReason: "ClusterReady",
+		},
+	}
+	
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			condition := aggregator.computeReadyConditionFromAggregated(tc.conditions)
+			
+			if condition.Status != tc.wantStatus {
+				t.Errorf("expected status %s, got %s", tc.wantStatus, condition.Status)
+			}
+			
+			if condition.Reason != tc.wantReason {
+				t.Errorf("expected reason %s, got %s", tc.wantReason, condition.Reason)
+			}
+		})
+	}
+}
+
+func TestGetDefaultCriticalConditionTypes(t *testing.T) {
+	criticalTypes := GetDefaultCriticalConditionTypes()
+	
+	expectedCritical := []conditionsapi.ConditionType{
+		ClusterConnectionCondition,
+		ClusterRegistrationCondition,
+		HeartbeatCondition,
+	}
+	
+	for _, conditionType := range expectedCritical {
+		if !criticalTypes[conditionType] {
+			t.Errorf("expected %s to be critical", conditionType)
+		}
+	}
+	
+	// These should not be critical by default
+	expectedNonCritical := []conditionsapi.ConditionType{
+		PlacementAvailableCondition,
+		ResourcesAvailableCondition,
+		SyncCondition,
+	}
+	
+	for _, conditionType := range expectedNonCritical {
+		if criticalTypes[conditionType] {
+			t.Errorf("expected %s to not be critical", conditionType)
+		}
+	}
+}
+
 func TestClusterHealthHelpers(t *testing.T) {
 	tests := map[string]struct {
 		health     ClusterHealth
