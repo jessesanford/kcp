@@ -18,6 +18,8 @@
 package controller
 
 import (
+	"fmt"
+	"sync"
 	"time"
 )
 
@@ -48,6 +50,8 @@ type ClusterHealthStatus struct {
 // This helper encapsulates common operations for cluster health management
 // that can be shared across multiple controller implementations.
 type ClusterHealthHelper struct {
+	// mu provides thread safety for concurrent access
+	mu sync.RWMutex
 	// clusterHealth maps cluster names to their health status
 	clusterHealth map[string]*ClusterHealthStatus
 }
@@ -71,10 +75,27 @@ func NewClusterHealthHelper() *ClusterHealthHelper {
 // Parameters:
 //   - clusterName: Name of the cluster to update
 //   - status: New health status information
-func (h *ClusterHealthHelper) SetClusterHealth(clusterName string, status *ClusterHealthStatus) {
-	if status == nil {
-		return
+//
+// Returns:
+//   - error: validation error if input is invalid
+func (h *ClusterHealthHelper) SetClusterHealth(clusterName string, status *ClusterHealthStatus) error {
+	if clusterName == "" {
+		return fmt.Errorf("cluster name cannot be empty")
 	}
+
+	if status == nil {
+		return fmt.Errorf("status cannot be nil")
+	}
+
+	if status.Name != "" && status.Name != clusterName {
+		return fmt.Errorf("status name '%s' doesn't match cluster name '%s'", status.Name, clusterName)
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	// Ensure Name is set correctly
+	status.Name = clusterName
 
 	// Create a copy to avoid external modification
 	h.clusterHealth[clusterName] = &ClusterHealthStatus{
@@ -85,6 +106,8 @@ func (h *ClusterHealthHelper) SetClusterHealth(clusterName string, status *Clust
 		NodeCount: status.NodeCount,
 		Version:   status.Version,
 	}
+
+	return nil
 }
 
 // GetClusterHealth returns the current health status of a cluster.
@@ -98,6 +121,9 @@ func (h *ClusterHealthHelper) SetClusterHealth(clusterName string, status *Clust
 //   - *ClusterHealthStatus: Health status information for the cluster
 //   - bool: true if the cluster health status exists, false otherwise
 func (h *ClusterHealthHelper) GetClusterHealth(clusterName string) (*ClusterHealthStatus, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	health, exists := h.clusterHealth[clusterName]
 	if !exists {
 		return nil, false
@@ -121,7 +147,11 @@ func (h *ClusterHealthHelper) GetClusterHealth(clusterName string) (*ClusterHeal
 // Returns:
 //   - map[string]*ClusterHealthStatus: Map of cluster names to health status
 func (h *ClusterHealthHelper) GetAllClusterHealth() map[string]*ClusterHealthStatus {
-	result := make(map[string]*ClusterHealthStatus)
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	// Pre-allocate with exact size for efficiency
+	result := make(map[string]*ClusterHealthStatus, len(h.clusterHealth))
 
 	for name, health := range h.clusterHealth {
 		result[name] = &ClusterHealthStatus{
@@ -145,6 +175,9 @@ func (h *ClusterHealthHelper) GetAllClusterHealth() map[string]*ClusterHealthSta
 // Returns:
 //   - bool: true if all clusters are healthy, false if any cluster is unhealthy
 func (h *ClusterHealthHelper) IsHealthy() bool {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	for _, health := range h.clusterHealth {
 		if !health.Healthy {
 			return false
@@ -160,6 +193,9 @@ func (h *ClusterHealthHelper) IsHealthy() bool {
 // Returns:
 //   - int: Number of clusters currently marked as healthy
 func (h *ClusterHealthHelper) GetHealthyClusterCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	count := 0
 	for _, health := range h.clusterHealth {
 		if health.Healthy {
@@ -176,6 +212,9 @@ func (h *ClusterHealthHelper) GetHealthyClusterCount() int {
 // Returns:
 //   - int: Number of clusters currently marked as unhealthy
 func (h *ClusterHealthHelper) GetUnhealthyClusterCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	count := 0
 	for _, health := range h.clusterHealth {
 		if !health.Healthy {
@@ -192,6 +231,9 @@ func (h *ClusterHealthHelper) GetUnhealthyClusterCount() int {
 // Returns:
 //   - int: Total number of clusters being tracked
 func (h *ClusterHealthHelper) GetTotalClusterCount() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	return len(h.clusterHealth)
 }
 
@@ -202,11 +244,72 @@ func (h *ClusterHealthHelper) GetTotalClusterCount() int {
 // Parameters:
 //   - clusterName: Name of the cluster to remove from tracking
 func (h *ClusterHealthHelper) RemoveCluster(clusterName string) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	delete(h.clusterHealth, clusterName)
 }
 
 // ClearAll removes all cluster health information.
 // This method is used for cleanup or reset operations.
 func (h *ClusterHealthHelper) ClearAll() {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	h.clusterHealth = make(map[string]*ClusterHealthStatus)
+}
+
+// SetClusterHealthForWorkspace updates health status for a cluster in a specific workspace.
+// This ensures proper workspace isolation in KCP environments.
+//
+// Parameters:
+//   - workspace: The logical cluster name (e.g., "root:org:ws")
+//   - clusterName: Name of the cluster to update
+//   - status: New health status information
+func (h *ClusterHealthHelper) SetClusterHealthForWorkspace(workspace, clusterName string, status *ClusterHealthStatus) {
+	if status == nil {
+		return
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	key := fmt.Sprintf("%s:%s", workspace, clusterName)
+	h.clusterHealth[key] = &ClusterHealthStatus{
+		Name:      status.Name,
+		LastCheck: status.LastCheck,
+		Healthy:   status.Healthy,
+		Error:     status.Error,
+		NodeCount: status.NodeCount,
+		Version:   status.Version,
+	}
+}
+
+// GetClusterHealthForWorkspace returns health status for a cluster in a specific workspace.
+//
+// Parameters:
+//   - workspace: The logical cluster name
+//   - clusterName: Name of the cluster to query
+//
+// Returns:
+//   - *ClusterHealthStatus: Health status information
+//   - bool: true if exists, false otherwise
+func (h *ClusterHealthHelper) GetClusterHealthForWorkspace(workspace, clusterName string) (*ClusterHealthStatus, bool) {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	key := fmt.Sprintf("%s:%s", workspace, clusterName)
+	health, exists := h.clusterHealth[key]
+	if !exists {
+		return nil, false
+	}
+
+	return &ClusterHealthStatus{
+		Name:      health.Name,
+		LastCheck: health.LastCheck,
+		Healthy:   health.Healthy,
+		Error:     health.Error,
+		NodeCount: health.NodeCount,
+		Version:   health.Version,
+	}, true
 }
