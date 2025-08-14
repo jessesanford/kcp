@@ -22,10 +22,10 @@ import (
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
-
-	workloadv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/workload/v1alpha1"
 )
 
 func TestSyncerVirtualWorkspace_ResolveRootPath(t *testing.T) {
@@ -107,7 +107,7 @@ func TestSyncerVirtualWorkspace_Authorize(t *testing.T) {
 	authConfig := NewDefaultAuthConfig()
 	
 	// Register a test SyncTarget
-	syncTarget := &workloadv1alpha1.SyncTarget{}
+	syncTarget := &SyncTarget{}
 	syncTarget.Name = "test-syncer"
 	syncTarget.Namespace = "test-workspace"
 	syncTarget.Spec.SupportedResourceTypes = []string{"pods", "services"}
@@ -197,13 +197,13 @@ func TestSyncerVirtualWorkspace_IsReady(t *testing.T) {
 		"valid configuration": {
 			authConfig: &AuthConfig{
 				ValidateCertificate:    func(user.Info) error { return nil },
-				GetSyncTargetForSyncer: func(string, string) (*workloadv1alpha1.SyncTarget, error) { return nil, nil },
+				GetSyncTargetForSyncer: func(string, string) (*SyncTarget, error) { return nil, nil },
 			},
 			expectError: false,
 		},
 		"missing certificate validator": {
 			authConfig: &AuthConfig{
-				GetSyncTargetForSyncer: func(string, string) (*workloadv1alpha1.SyncTarget, error) { return nil, nil },
+				GetSyncTargetForSyncer: func(string, string) (*SyncTarget, error) { return nil, nil },
 			},
 			expectError: true,
 		},
@@ -244,6 +244,55 @@ func TestSyncerVirtualWorkspace_IsReady(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResourceTransformer_TransformForDownstream(t *testing.T) {
+	transformer := NewResourceTransformer("test-syncer", "test-workspace")
+	
+	testObj := generateTestObject()
+	result, err := transformer.TransformForDownstream(testObj)
+	
+	if err != nil {
+		t.Errorf("TransformForDownstream failed: %v", err)
+	}
+	
+	if result == nil {
+		t.Error("TransformForDownstream returned nil result")
+	}
+}
+
+func TestResourceTransformer_TransformFromUpstream(t *testing.T) {
+	transformer := NewResourceTransformer("test-syncer", "test-workspace")
+	
+	testObj := generateTestObject()
+	result, err := transformer.TransformFromUpstream(testObj)
+	
+	if err != nil {
+		t.Errorf("TransformFromUpstream failed: %v", err)
+	}
+	
+	if result == nil {
+		t.Error("TransformFromUpstream returned nil result")
+	}
+}
+
+// generateTestObject creates a test object for benchmarks
+func generateTestObject() *testRuntimeObject {
+	return &testRuntimeObject{
+		name:      "test-config",
+		namespace: "default",
+	}
+}
+
+// Simple test runtime object that implements runtime.Object
+type testRuntimeObject struct {
+	name      string
+	namespace string
+}
+
+func (o *testRuntimeObject) GetObjectKind() schema.ObjectKind { return schema.EmptyObjectKind }
+func (o *testRuntimeObject) DeepCopyObject() runtime.Object {
+	return &testRuntimeObject{name: o.name, namespace: o.namespace}
 }
 
 // testAttributes implements authorizer.Attributes for testing
