@@ -53,6 +53,26 @@ const (
 	// Enables VirtualWorkspace urls on APIExport. This enables to use Deprecated APIExport VirtualWorkspace urls.
 	// This is a temporary feature to ease the migration to the new VirtualWorkspace urls.
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls featuregate.Feature = "EnableDeprecatedAPIExportVirtualWorkspacesUrls"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables synchronization from physical clusters to KCP
+	UpstreamSync featuregate.Feature = "UpstreamSync"
+
+	// owner: @jessesanford  
+	// alpha: v0.1
+	// Enables the core synchronization loop
+	UpstreamSyncLoop featuregate.Feature = "UpstreamSyncLoop"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables status aggregation across clusters
+	UpstreamSyncAggregation featuregate.Feature = "UpstreamSyncAggregation"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables automatic conflict resolution
+	UpstreamSyncConflictResolution featuregate.Feature = "UpstreamSyncConflictResolution"
 )
 
 // DefaultFeatureGate exposes the upstream feature gate, but with our gate setting applied.
@@ -129,6 +149,18 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
 	},
+	UpstreamSync: {
+		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	UpstreamSyncLoop: {
+		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	UpstreamSyncAggregation: {
+		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	UpstreamSyncConflictResolution: {
+		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+	},
 	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
 	// unintentionally on either side:
 	genericfeatures.APIResponseCompression: {
@@ -148,4 +180,11 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 	logsapi.ContextualLogging: {
 		{Version: version.MustParse("1.26"), Default: true, PreRelease: featuregate.Alpha},
 	},
+}
+
+// IsUpstreamSyncFullyEnabled returns true if all upstream sync feature gates are enabled
+func IsUpstreamSyncFullyEnabled() bool {
+	return utilfeature.DefaultMutableFeatureGate.Enabled(UpstreamSync) &&
+		utilfeature.DefaultMutableFeatureGate.Enabled(UpstreamSyncLoop) &&
+		utilfeature.DefaultMutableFeatureGate.Enabled(UpstreamSyncAggregation)
 }
