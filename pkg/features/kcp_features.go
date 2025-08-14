@@ -53,6 +53,21 @@ const (
 	// Enables VirtualWorkspace urls on APIExport. This enables to use Deprecated APIExport VirtualWorkspace urls.
 	// This is a temporary feature to ease the migration to the new VirtualWorkspace urls.
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls featuregate.Feature = "EnableDeprecatedAPIExportVirtualWorkspacesUrls"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables upstream sync functionality for TMC
+	UpstreamSync featuregate.Feature = "UpstreamSync"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables status aggregation in upstream sync
+	UpstreamSyncAggregation featuregate.Feature = "UpstreamSyncAggregation"
+
+	// owner: @jessesanford
+	// alpha: v0.1
+	// Enables conflict resolution in upstream sync
+	UpstreamSyncConflictResolution featuregate.Feature = "UpstreamSyncConflictResolution"
 )
 
 // DefaultFeatureGate exposes the upstream feature gate, but with our gate setting applied.
@@ -128,6 +143,15 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 	},
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	UpstreamSync: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	UpstreamSyncAggregation: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	UpstreamSyncConflictResolution: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
 	// unintentionally on either side:
