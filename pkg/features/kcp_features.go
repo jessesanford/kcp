@@ -53,6 +53,16 @@ const (
 	// Enables VirtualWorkspace urls on APIExport. This enables to use Deprecated APIExport VirtualWorkspace urls.
 	// This is a temporary feature to ease the migration to the new VirtualWorkspace urls.
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls featuregate.Feature = "EnableDeprecatedAPIExportVirtualWorkspacesUrls"
+
+	// TMC enables the Transparent Multi-Cluster functionality
+	// owner: @jessesanford
+	// alpha: v0.1
+	TMC featuregate.Feature = "TMC"
+
+	// TMCClusterRegistration enables TMC cluster registration controller
+	// owner: @jessesanford
+	// alpha: v0.1
+	TMCClusterRegistration featuregate.Feature = "TMCClusterRegistration"
 )
 
 // DefaultFeatureGate exposes the upstream feature gate, but with our gate setting applied.
@@ -128,6 +138,12 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 	},
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMC: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	TMCClusterRegistration: {
+		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
 	// unintentionally on either side:
