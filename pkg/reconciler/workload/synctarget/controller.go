@@ -103,8 +103,8 @@ func (c *Controller) enqueue(obj interface{}) {
 	c.queue.Add(key)
 }
 
-// Start begins processing items from the work queue
-func (c *Controller) Start(ctx context.Context) {
+// Run starts the controller with the specified number of workers
+func (c *Controller) Run(ctx context.Context, workers int) {
 	defer runtime.HandleCrash()
 	defer c.queue.ShutDown()
 
@@ -112,21 +112,18 @@ func (c *Controller) Start(ctx context.Context) {
 	defer klog.Info("Shutting down SyncTarget deployment controller")
 
 	if !cache.WaitForCacheSync(ctx.Done(), c.syncTargetSynced) {
-		runtime.HandleError(fmt.Errorf("failed to sync caches"))
 		return
 	}
 
-	klog.Info("Caches synced, starting workers")
-
-	for i := 0; i < WorkerCount; i++ {
-		go wait.Until(c.runWorker, time.Second, ctx.Done())
+	for i := 0; i < workers; i++ {
+		go wait.UntilWithContext(ctx, c.worker, time.Second)
 	}
 
 	<-ctx.Done()
 }
 
-// runWorker processes items from the queue
-func (c *Controller) runWorker() {
+// worker processes items from the queue
+func (c *Controller) worker(ctx context.Context) {
 	for c.processNextItem() {
 	}
 }
