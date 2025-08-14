@@ -49,6 +49,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&SyncTarget{},
 		&SyncTargetList{},
+		&ClusterWorkloadPlacement{},
+		&ClusterWorkloadPlacementList{},
 	)
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 	return nil
