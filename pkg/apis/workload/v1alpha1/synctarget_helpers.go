@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -39,9 +40,9 @@ func (s *SyncTarget) GetCondition(conditionType conditionsv1alpha1.ConditionType
 // SetCondition sets the condition with the given type to the given status.
 // If the condition already exists, it updates the existing condition.
 // If the condition does not exist, it adds a new condition.
-func (s *SyncTarget) SetCondition(conditionType conditionsv1alpha1.ConditionType, status metav1.ConditionStatus, reason, message string) {
+func (s *SyncTarget) SetCondition(conditionType conditionsv1alpha1.ConditionType, status corev1.ConditionStatus, reason, message string) {
 	now := metav1.Now()
-	condition := &conditionsv1alpha1.Condition{
+	condition := conditionsv1alpha1.Condition{
 		Type:               conditionType,
 		Status:             status,
 		Reason:             reason,
@@ -67,26 +68,26 @@ func (s *SyncTarget) SetCondition(conditionType conditionsv1alpha1.ConditionType
 	}
 
 	// Add new condition
-	s.Status.Conditions = append(s.Status.Conditions, *condition)
+	s.Status.Conditions = append(s.Status.Conditions, condition)
 }
 
 // IsReady returns true if the SyncTarget is ready to accept workloads.
 // A SyncTarget is considered ready when the Ready condition is True.
 func (s *SyncTarget) IsReady() bool {
 	condition := s.GetCondition(SyncTargetReady)
-	return condition != nil && condition.Status == metav1.ConditionTrue
+	return condition != nil && condition.Status == corev1.ConditionTrue
 }
 
 // IsSyncerReady returns true if the syncer component is connected and operational.
 func (s *SyncTarget) IsSyncerReady() bool {
 	condition := s.GetCondition(SyncTargetSyncerReady)
-	return condition != nil && condition.Status == metav1.ConditionTrue
+	return condition != nil && condition.Status == corev1.ConditionTrue
 }
 
 // IsClusterReady returns true if the target cluster is reachable and healthy.
 func (s *SyncTarget) IsClusterReady() bool {
 	condition := s.GetCondition(SyncTargetClusterReady)
-	return condition != nil && condition.Status == metav1.ConditionTrue
+	return condition != nil && condition.Status == corev1.ConditionTrue
 }
 
 // GetAvailableCapacity returns the available capacity by subtracting allocated
@@ -102,7 +103,8 @@ func (s *SyncTarget) GetAvailableCapacity() *ResourceCapacity {
 
 	// Calculate available CPU
 	if s.Status.Allocatable.CPU != nil {
-		available.CPU = s.Status.Allocatable.CPU.DeepCopy()
+		cpu := s.Status.Allocatable.CPU.DeepCopy()
+		available.CPU = &cpu
 		if s.Status.Allocated.CPU != nil {
 			available.CPU.Sub(*s.Status.Allocated.CPU)
 		}
@@ -110,7 +112,8 @@ func (s *SyncTarget) GetAvailableCapacity() *ResourceCapacity {
 
 	// Calculate available Memory
 	if s.Status.Allocatable.Memory != nil {
-		available.Memory = s.Status.Allocatable.Memory.DeepCopy()
+		memory := s.Status.Allocatable.Memory.DeepCopy()
+		available.Memory = &memory
 		if s.Status.Allocated.Memory != nil {
 			available.Memory.Sub(*s.Status.Allocated.Memory)
 		}
@@ -118,7 +121,8 @@ func (s *SyncTarget) GetAvailableCapacity() *ResourceCapacity {
 
 	// Calculate available Storage
 	if s.Status.Allocatable.Storage != nil {
-		available.Storage = s.Status.Allocatable.Storage.DeepCopy()
+		storage := s.Status.Allocatable.Storage.DeepCopy()
+		available.Storage = &storage
 		if s.Status.Allocated.Storage != nil {
 			available.Storage.Sub(*s.Status.Allocated.Storage)
 		}
@@ -126,7 +130,8 @@ func (s *SyncTarget) GetAvailableCapacity() *ResourceCapacity {
 
 	// Calculate available Pods
 	if s.Status.Allocatable.Pods != nil {
-		available.Pods = s.Status.Allocatable.Pods.DeepCopy()
+		pods := s.Status.Allocatable.Pods.DeepCopy()
+		available.Pods = &pods
 		if s.Status.Allocated.Pods != nil {
 			available.Pods.Sub(*s.Status.Allocated.Pods)
 		}
