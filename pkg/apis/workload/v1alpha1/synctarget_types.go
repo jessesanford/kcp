@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -322,6 +323,68 @@ func (s *SyncTarget) GetConditions() conditionsv1alpha1.Conditions {
 // SetConditions sets the conditions of the SyncTarget.
 func (s *SyncTarget) SetConditions(conditions conditionsv1alpha1.Conditions) {
 	s.Status.Conditions = conditions
+}
+
+// GetCondition returns the condition with the given type.
+// Returns nil if the condition is not found.
+func (s *SyncTarget) GetCondition(conditionType conditionsv1alpha1.ConditionType) *conditionsv1alpha1.Condition {
+	for i := range s.Status.Conditions {
+		if s.Status.Conditions[i].Type == conditionType {
+			return &s.Status.Conditions[i]
+		}
+	}
+	return nil
+}
+
+// SetCondition updates or adds a condition to the SyncTarget's status.
+// If a condition with the same type already exists, it will be updated.
+// Otherwise, the condition will be added to the list.
+func (s *SyncTarget) SetCondition(condition conditionsv1alpha1.Condition) {
+	existingIndex := -1
+	for i := range s.Status.Conditions {
+		if s.Status.Conditions[i].Type == condition.Type {
+			existingIndex = i
+			break
+		}
+	}
+	
+	if existingIndex != -1 {
+		s.Status.Conditions[existingIndex] = condition
+	} else {
+		s.Status.Conditions = append(s.Status.Conditions, condition)
+	}
+}
+
+// HasCondition returns true if the SyncTarget has a condition of the given type.
+func (s *SyncTarget) HasCondition(conditionType conditionsv1alpha1.ConditionType) bool {
+	return s.GetCondition(conditionType) != nil
+}
+
+// IsConditionTrue returns true if the condition with the given type exists and has status True.
+func (s *SyncTarget) IsConditionTrue(conditionType conditionsv1alpha1.ConditionType) bool {
+	condition := s.GetCondition(conditionType)
+	return condition != nil && condition.Status == corev1.ConditionTrue
+}
+
+// IsConditionFalse returns true if the condition with the given type exists and has status False.
+func (s *SyncTarget) IsConditionFalse(conditionType conditionsv1alpha1.ConditionType) bool {
+	condition := s.GetCondition(conditionType)
+	return condition != nil && condition.Status == corev1.ConditionFalse
+}
+
+// IsReady returns true if the SyncTarget is ready to accept workloads.
+func (s *SyncTarget) IsReady() bool {
+	return s.IsConditionTrue(SyncTargetReady)
+}
+
+// IsSyncerReady returns true if the syncer component is connected and operational.
+func (s *SyncTarget) IsSyncerReady() bool {
+	return s.IsConditionTrue(SyncTargetSyncerReady)
+}
+
+// IsClusterReady returns true if the target cluster is reachable and healthy.
+func (s *SyncTarget) IsClusterReady() bool {
+	return s.IsConditionTrue(SyncTargetClusterReady)
 }
 
 // SyncTargetList contains a list of SyncTarget resources.
