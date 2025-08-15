@@ -21,38 +21,40 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
-// ResourceDiscoveryInterface provides resource discovery capabilities for virtual workspaces
+// ResourceDiscoveryInterface provides resource discovery capabilities for virtual workspaces.
 type ResourceDiscoveryInterface interface {
-	// Start initializes the discovery provider and begins monitoring
+	// Start initializes the discovery provider and begins monitoring.
 	Start(ctx context.Context) error
 
-	// Discover returns available resources in the specified workspace
-	Discover(ctx context.Context, workspace string) ([]ResourceInfo, error)
+	// Discover returns available resources in the specified workspace.
+	Discover(ctx context.Context, workspace logicalcluster.Name) ([]ResourceInfo, error)
 
-	// GetOpenAPISchema returns the OpenAPI schema for workspace resources
-	GetOpenAPISchema(ctx context.Context, workspace string) ([]byte, error)
+	// GetOpenAPISchema returns the OpenAPI schema for workspace resources.
+	GetOpenAPISchema(ctx context.Context, workspace logicalcluster.Name) ([]byte, error)
 
-	// Watch monitors for resource changes in the workspace
-	Watch(ctx context.Context, workspace string) (<-chan DiscoveryEvent, error)
+	// Watch monitors for resource changes in the workspace.
+	Watch(ctx context.Context, workspace logicalcluster.Name) (<-chan DiscoveryEvent, error)
 
-	// IsResourceAvailable checks if a specific resource is available
-	IsResourceAvailable(ctx context.Context, workspace string, gvr schema.GroupVersionResource) (bool, error)
+	// IsResourceAvailable checks if a specific resource is available in the workspace.
+	IsResourceAvailable(ctx context.Context, workspace logicalcluster.Name, gvr schema.GroupVersionResource) (bool, error)
 }
 
-// DiscoveryCache provides caching for discovered resources
+// DiscoveryCache provides caching for discovered resources with workspace isolation.
 type DiscoveryCache interface {
-	// GetResources retrieves cached resources for a workspace
-	GetResources(workspace string) ([]ResourceInfo, bool)
+	// GetResources retrieves cached resources for a workspace.
+	GetResources(workspace logicalcluster.Name) ([]ResourceInfo, bool)
 
-	// SetResources caches resources for a workspace with TTL
-	SetResources(workspace string, resources []ResourceInfo, ttl int64)
+	// SetResources caches resources for a workspace with TTL.
+	SetResources(workspace logicalcluster.Name, resources []ResourceInfo, ttl int64)
 
-	// InvalidateWorkspace removes cached data for a workspace
-	InvalidateWorkspace(workspace string)
+	// InvalidateWorkspace removes cached data for a workspace.
+	InvalidateWorkspace(workspace logicalcluster.Name)
 
-	// Clear removes all cached data
+	// Clear removes all cached data.
 	Clear()
 }
 
@@ -65,7 +67,7 @@ type ResourceInfo struct {
 	APIResource metav1.APIResource
 
 	// Workspace identifies the workspace this resource belongs to
-	Workspace string
+	Workspace logicalcluster.Name
 
 	// APIExportName is the name of the APIExport providing this resource
 	APIExportName string
@@ -83,7 +85,7 @@ type DiscoveryEvent struct {
 	Type DiscoveryEventType
 
 	// Workspace identifies the workspace where the event occurred
-	Workspace string
+	Workspace logicalcluster.Name
 
 	// Resource contains the resource information for the event
 	Resource ResourceInfo

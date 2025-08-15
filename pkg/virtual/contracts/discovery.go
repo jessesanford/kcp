@@ -14,19 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package contracts defines shared constants and configuration values
+// for the KCP virtual workspace discovery system.
 package contracts
 
-// DiscoveryProviderName is the name used to identify discovery providers
+// DiscoveryProviderName is the standard identifier used across the system
+// to identify KCP discovery providers in logs, metrics, and configuration.
 const DiscoveryProviderName = "kcp-discovery"
 
-// DefaultCacheTTLSeconds is the default cache TTL in seconds
+// DefaultCacheTTLSeconds defines the default time-to-live for cached discovery results.
 const DefaultCacheTTLSeconds = int64(300) // 5 minutes
 
-// DefaultCacheCleanupIntervalSeconds is the default cache cleanup interval
+// DefaultCacheCleanupIntervalSeconds defines how often the cache performs cleanup.
 const DefaultCacheCleanupIntervalSeconds = int64(60) // 1 minute
 
-// MaxCachedWorkspaces is the maximum number of workspaces to cache
+// MaxCachedWorkspaces limits the number of workspaces that can be cached.
 const MaxCachedWorkspaces = 1000
 
-// DefaultWatchChannelBuffer is the default buffer size for watch channels
+// DefaultWatchChannelBuffer sets the buffer size for watch event channels.
 const DefaultWatchChannelBuffer = 100

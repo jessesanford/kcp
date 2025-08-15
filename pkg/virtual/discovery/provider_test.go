@@ -24,37 +24,39 @@ import (
 	kcpclient "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 	kcpfakeclient "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/fake"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
+	
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 func TestNewKCPDiscoveryProvider(t *testing.T) {
 	tests := map[string]struct {
 		kcpClient       interface{}
 		informerFactory kcpinformers.SharedInformerFactory
-		workspace       string
+		workspace       logicalcluster.Name
 		wantError       bool
 	}{
 		"valid parameters": {
 			kcpClient:       kcpfakeclient.NewSimpleClientset(),
 			informerFactory: kcpinformers.NewSharedInformerFactory(kcpfakeclient.NewSimpleClientset(), time.Minute),
-			workspace:       "root:test",
+			workspace:       logicalcluster.Name("root:test"),
 			wantError:       false,
 		},
 		"nil kcpClient": {
 			kcpClient:       nil,
 			informerFactory: kcpinformers.NewSharedInformerFactory(kcpfakeclient.NewSimpleClientset(), time.Minute),
-			workspace:       "root:test",
+			workspace:       logicalcluster.Name("root:test"),
 			wantError:       true,
 		},
 		"nil informerFactory": {
 			kcpClient:       kcpfakeclient.NewSimpleClientset(),
 			informerFactory: nil,
-			workspace:       "root:test",
+			workspace:       logicalcluster.Name("root:test"),
 			wantError:       true,
 		},
 		"empty workspace": {
 			kcpClient:       kcpfakeclient.NewSimpleClientset(),
 			informerFactory: kcpinformers.NewSharedInformerFactory(kcpfakeclient.NewSimpleClientset(), time.Minute),
-			workspace:       "",
+			workspace:       logicalcluster.Name(""),
 			wantError:       true,
 		},
 	}
@@ -91,14 +93,14 @@ func TestKCPDiscoveryProvider_Discover(t *testing.T) {
 	fakeClient := kcpfakeclient.NewSimpleClientset()
 	informerFactory := kcpinformers.NewSharedInformerFactory(fakeClient, time.Minute)
 
-	provider, err := NewKCPDiscoveryProvider(fakeClient, informerFactory, "root:test")
+	provider, err := NewKCPDiscoveryProvider(fakeClient, informerFactory, logicalcluster.Name("root:test"))
 	if err != nil {
 		t.Fatalf("Failed to create provider: %v", err)
 	}
 
 	// Test discovery with empty store
 	ctx := context.Background()
-	resources, err := provider.Discover(ctx, "root:test")
+	resources, err := provider.Discover(ctx, logicalcluster.Name("root:test"))
 	if err != nil {
 		t.Errorf("Discover failed: %v", err)
 	}
@@ -108,3 +110,35 @@ func TestKCPDiscoveryProvider_Discover(t *testing.T) {
 		t.Errorf("Expected no resources with empty store, got %d", len(resources))
 	}
 }
+
+func TestKCPDiscoveryProvider_StartStop(t *testing.T) {
+	fakeClient := kcpfakeclient.NewSimpleClientset()
+	informerFactory := kcpinformers.NewSharedInformerFactory(fakeClient, time.Minute)
+
+	provider, err := NewKCPDiscoveryProvider(fakeClient, informerFactory, logicalcluster.Name("root:test"))
+	if err != nil {
+		t.Fatalf("Failed to create provider: %v", err)
+	}
+
+	// Test starting the provider
+	ctx := context.Background()
+	err = provider.Start(ctx)
+	if err != nil {
+		t.Errorf("Start failed: %v", err)
+	}
+
+	// Test starting already started provider
+	err = provider.Start(ctx)
+	if err == nil {
+		t.Error("Expected error when starting already started provider")
+	}
+
+	// Test stopping the provider
+	provider.Stop()
+
+	// Test stopping already stopped provider (should not panic)
+	provider.Stop()
+}
+
+// Additional tests will be added in subsequent PRs
+// This basic test coverage validates core functionality for this PR split
