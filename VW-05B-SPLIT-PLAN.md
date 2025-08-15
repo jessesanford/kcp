@@ -28,7 +28,7 @@ The vw-05b branch exceeded the 800-line hard limit with 1,372 lines. This workfl
 
 #### Step 1: Rename Original Oversized Branch
 ```bash
-cd /workspaces/kcp-worktrees/vw-05b
+cd /workspaces/kcp-worktrees/phase4/virtual-workspaces/vw-05b
 
 # Rename local branch
 git branch -m vw-05b vw-05b-to-be-split
@@ -42,15 +42,12 @@ git push -u origin vw-05b-to-be-split
 # Verify branch rename
 git branch -vv | grep "vw-05b-to-be-split.*origin/vw-05b-to-be-split"
 
-# Create phase4/virtual-workspaces directory structure if needed
-mkdir -p /workspaces/kcp-worktrees/phase4/virtual-workspaces
-
-# Move worktree to proper location
-cd /workspaces/kcp-worktrees
-mv vw-05b phase4/virtual-workspaces/vw-05b-to-be-split
+# Rename worktree directory to reflect new branch name
+cd /workspaces/kcp-worktrees/phase4/virtual-workspaces
+mv vw-05b vw-05b-to-be-split
 
 # Verify worktree is still valid
-cd phase4/virtual-workspaces/vw-05b-to-be-split
+cd vw-05b-to-be-split
 git status
 ```
 
