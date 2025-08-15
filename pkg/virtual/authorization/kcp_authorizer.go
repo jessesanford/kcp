@@ -30,14 +30,11 @@ import (
 )
 
 // KCPAuthorizationProvider implements AuthorizationProvider for KCP environments
-// This is a minimal implementation that integrates with the authorization infrastructure
-// Full RBAC analysis will be implemented in subsequent PRs
 type KCPAuthorizationProvider struct {
-	delegate    authorizer.Authorizer
-	kcpClient   kcpclient.ClusterInterface
-	workspace   logicalcluster.Name
-	cache       AuthorizationCache
-	filter      *WorkspaceFilter
+	delegate  authorizer.Authorizer
+	workspace logicalcluster.Name
+	cache     AuthorizationCache
+	filter    *WorkspaceFilter
 }
 
 // NewKCPAuthorizationProvider creates a new KCP authorization provider
@@ -46,15 +43,11 @@ func NewKCPAuthorizationProvider(
 	kcpClient kcpclient.ClusterInterface,
 	workspace logicalcluster.Name,
 ) (*KCPAuthorizationProvider, error) {
-	cache := NewMemoryAuthorizationCache(5*time.Minute, time.Minute)
-	filter := NewWorkspaceFilter(workspace, false)
-	
 	return &KCPAuthorizationProvider{
 		delegate:  delegate,
-		kcpClient: kcpClient,
 		workspace: workspace,
-		cache:     cache,
-		filter:    filter,
+		cache:     NewMemoryAuthorizationCache(5*time.Minute, time.Minute),
+		filter:    NewWorkspaceFilter(workspace, false),
 	}, nil
 }
 
@@ -68,14 +61,12 @@ func (p *KCPAuthorizationProvider) Start(ctx context.Context) error {
 func (p *KCPAuthorizationProvider) Authorize(ctx context.Context, req *interfaces.AuthorizationRequest) (*interfaces.AuthorizationDecision, error) {
 	start := time.Now()
 	
-	// Filter request for workspace boundaries
 	filteredReq, err := p.filter.FilterRequest(ctx, req)
 	if err != nil {
 		RecordAuthorizationRequest(req.Workspace, req.User, time.Since(start), false, err)
 		return &interfaces.AuthorizationDecision{Allowed: false, Reason: err.Error(), EvaluationError: err}, nil
 	}
 	
-	// Check cache first
 	cacheKey := generateCacheKey(req.User, req.Workspace, req.Resource.String(), req.Verb, req.ResourceName)
 	if decision, hit := p.cache.GetDecision(cacheKey); hit {
 		RecordCacheHit(req.Workspace, true)
@@ -85,8 +76,6 @@ func (p *KCPAuthorizationProvider) Authorize(ctx context.Context, req *interface
 	
 	RecordCacheHit(req.Workspace, false)
 	
-	// TODO: Implement full RBAC evaluation in subsequent PR
-	// For now, delegate to the underlying authorizer if available
 	if p.delegate != nil {
 		attrs := p.buildAuthorizerAttributes(filteredReq)
 		authorized, reason, err := p.delegate.Authorize(ctx, attrs)
@@ -95,15 +84,11 @@ func (p *KCPAuthorizationProvider) Authorize(ctx context.Context, req *interface
 			Reason: reason,
 			EvaluationError: err,
 		}
-		
-		// Cache the decision
 		p.cache.SetDecision(cacheKey, decision, 5*time.Minute)
-		
 		RecordAuthorizationRequest(req.Workspace, req.User, time.Since(start), decision.Allowed, decision.EvaluationError)
 		return decision, nil
 	}
 	
-	// Default deny if no delegate
 	decision := &interfaces.AuthorizationDecision{Allowed: false, Reason: "no authorization delegate configured"}
 	RecordAuthorizationRequest(req.Workspace, req.User, time.Since(start), false, nil)
 	RecordDenial(req.Workspace, req.User, req.Resource.String(), req.Verb)
@@ -112,7 +97,6 @@ func (p *KCPAuthorizationProvider) Authorize(ctx context.Context, req *interface
 
 // GetPermissions returns permissions for a user in the workspace
 func (p *KCPAuthorizationProvider) GetPermissions(ctx context.Context, workspace, user string) ([]interfaces.Permission, error) {
-	// TODO: Implement permission extraction in subsequent PR
 	return []interfaces.Permission{}, fmt.Errorf("permission extraction not yet implemented")
 }
 
@@ -137,13 +121,13 @@ func (p *KCPAuthorizationProvider) buildAuthorizerAttributes(req *interfaces.Aut
 	}
 }
 
-// requestUser implements user.Info interface
+// requestUser implements user.Info interface  
 type requestUser struct {
 	name   string
 	groups []string
 }
 
-func (u *requestUser) GetName() string              { return u.name }
-func (u *requestUser) GetUID() string               { return "" }
-func (u *requestUser) GetGroups() []string          { return u.groups }
-func (u *requestUser) GetExtra() map[string][]string { return nil }
+func (u *requestUser) GetName() string                { return u.name }
+func (u *requestUser) GetUID() string                 { return "" }
+func (u *requestUser) GetGroups() []string            { return u.groups }
+func (u *requestUser) GetExtra() map[string][]string  { return nil }
