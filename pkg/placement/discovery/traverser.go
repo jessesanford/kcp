@@ -3,6 +3,7 @@ package discovery
 import (
 	"context"
 	"fmt"
+	"time"
 	"github.com/kcp-dev/kcp/pkg/placement/interfaces"
 	kcpclient "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
 	"github.com/kcp-dev/logicalcluster/v3"
@@ -13,7 +14,7 @@ import (
 // WorkspaceTraverser implements workspace discovery and traversal
 type WorkspaceTraverser struct {
 	client      kcpclient.Interface
-	cache       *HierarchyCache
+	cache       *DiscoveryCache
 	permissions *PermissionChecker
 }
 
@@ -21,7 +22,7 @@ type WorkspaceTraverser struct {
 func NewWorkspaceTraverser(client kcpclient.Interface) *WorkspaceTraverser {
 	return &WorkspaceTraverser{
 		client:      client,
-		cache:       NewHierarchyCache(),
+		cache:       NewDiscoveryCache(10 * time.Minute),
 		permissions: NewPermissionChecker(client),
 	}
 }

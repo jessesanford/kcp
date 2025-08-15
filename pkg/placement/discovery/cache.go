@@ -98,28 +98,6 @@ func (c *DiscoveryCache) Clear() {
 	c.clusters = make(map[string]*cacheEntry[[]interfaces.ClusterTarget])
 }
 
-// ClearExpired removes expired cache entries
-func (c *DiscoveryCache) ClearExpired() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	
-	now := time.Now()
-	
-	// Clear expired workspace entries
-	for key, entry := range c.workspaces {
-		if now.Sub(entry.timestamp) > c.ttl {
-			delete(c.workspaces, key)
-		}
-	}
-	
-	// Clear expired cluster entries
-	for key, entry := range c.clusters {
-		if now.Sub(entry.timestamp) > c.ttl {
-			delete(c.clusters, key)
-		}
-	}
-}
-
 // GetStats returns cache statistics
 func (c *DiscoveryCache) GetStats() CacheStats {
 	c.mu.RLock()

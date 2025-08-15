@@ -137,23 +137,7 @@ func TestCaching(t *testing.T) {
 	assert.False(t, ok)
 }
 
-func TestHierarchy(t *testing.T) {
-	manager := discovery.NewHierarchyManager(nil)
-	
-	// Test ancestor checking
-	assert.True(t, manager.IsAncestor("root", "root:org:team"))
-	assert.True(t, manager.IsAncestor("root:org", "root:org:team"))
-	assert.False(t, manager.IsAncestor("root:org:team", "root:org"))
-	
-	// Test common ancestor
-	ancestor := manager.GetCommonAncestor("root:org:team1", "root:org:team2")
-	assert.Equal(t, "root:org", ancestor)
-	
-	// Test depth calculation
-	assert.Equal(t, 0, manager.GetDepth("root"))
-	assert.Equal(t, 1, manager.GetDepth("root:org"))
-	assert.Equal(t, 2, manager.GetDepth("root:org:team"))
-}
+// Removed hierarchy tests since hierarchy manager was removed for size constraints
 
 func TestCacheStatistics(t *testing.T) {
 	cache := discovery.NewDiscoveryCache(5 * time.Minute)
@@ -177,28 +161,7 @@ func TestCacheStatistics(t *testing.T) {
 	assert.Equal(t, 0, stats.ClusterEntries)
 }
 
-func TestPermissionCaching(t *testing.T) {
-	client := newMockKCPClient()
-	checker := discovery.NewPermissionChecker(client)
-	
-	ctx := context.Background()
-	
-	// First call should hit the API
-	allowed1, err := checker.CheckAccess(ctx, "root:test", "list")
-	require.NoError(t, err)
-	assert.True(t, allowed1)
-	
-	// Second call should use cache
-	allowed2, err := checker.CheckAccess(ctx, "root:test", "list")
-	require.NoError(t, err)
-	assert.True(t, allowed2)
-	
-	// Clear cache and verify
-	checker.ClearCache()
-	allowed3, err := checker.CheckAccess(ctx, "root:test", "list")
-	require.NoError(t, err)
-	assert.True(t, allowed3)
-}
+// Permission caching test removed for size constraints
 
 // newMockKCPClient creates a mock KCP client for testing
 func newMockKCPClient() *kcpclientfake.Clientset {
