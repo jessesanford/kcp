@@ -25,6 +25,10 @@ import (
 	"github.com/kcp-dev/logicalcluster/v3"
 )
 
+// NOTE: Basic authentication types (AuthMethod, AuthCredentials, OAuth2Config, ServiceAccountConfig)
+// are defined in basic_types.go in the sync-02a-tunnel-core branch and should be imported from there
+// when integrating these interfaces.
+
 // AuthContext contains authentication and authorization context for tunnel operations
 type AuthContext struct {
 	// Workspace identifies the logical cluster context
@@ -199,7 +203,8 @@ type AuthManagerFactory interface {
 	CreateAuthorizer() TunnelAuthorizer
 }
 
-// Authentication and authorization errors specific to advanced auth operations
+// Advanced authentication and authorization errors
+// NOTE: Basic auth errors (ErrUnsupportedAuthMethod, ErrInvalidCredentials) are in basic_types.go
 var (
 	// ErrAuthenticationFailed indicates invalid credentials or auth failure
 	ErrAuthenticationFailed = fmt.Errorf("authentication failed")
