@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	kcpclient "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 	kcpfakeclient "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/fake"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
 )
@@ -60,9 +61,9 @@ func TestNewKCPDiscoveryProvider(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			var kcpClient kcpfakeclient.ClusterInterface
+			var kcpClient kcpclient.ClusterInterface
 			if tc.kcpClient != nil {
-				kcpClient = tc.kcpClient.(kcpfakeclient.ClusterInterface)
+				kcpClient = tc.kcpClient.(kcpclient.ClusterInterface)
 			}
 			provider, err := NewKCPDiscoveryProvider(kcpClient, tc.informerFactory, tc.workspace)
 			

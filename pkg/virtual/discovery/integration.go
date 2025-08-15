@@ -121,12 +121,12 @@ func (i *WorkspaceIntegrator) checkWorkspaceHierarchyAccess(
 // ResolveLogicalCluster resolves workspace references to logical clusters
 func (i *WorkspaceIntegrator) ResolveLogicalCluster(workspace string) (logicalcluster.Name, error) {
 	if workspace == "" {
-		return logicalcluster.Name{}, fmt.Errorf("workspace cannot be empty")
+		return logicalcluster.Name(""), fmt.Errorf("workspace cannot be empty")
 	}
 
 	// Parse the workspace string into a logical cluster name
 	logicalCluster := logicalcluster.NewPath(workspace)
-	return logicalcluster.Name(logicalCluster), nil
+	return logicalcluster.Name(logicalCluster.String()), nil
 }
 
 // ValidateWorkspaceAccess validates that discovery is allowed for the workspace
