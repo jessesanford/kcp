@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kcp-dev/kcp/pkg/placement/interfaces"
-	"github.com/kcp-dev/kcp/sdk/apis/core"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 func TestPlacementDecisionValidation(t *testing.T) {
@@ -24,7 +24,7 @@ func TestPlacementDecisionValidation(t *testing.T) {
 					{
 						ClusterTarget: interfaces.ClusterTarget{
 							Name:      "cluster-1",
-							Workspace: core.LogicalCluster("root:org:prod"),
+							Workspace: logicalcluster.Name("root:org:prod"),
 							Ready:     true,
 						},
 						Score: 100,
@@ -95,7 +95,7 @@ func TestClusterTargetFields(t *testing.T) {
 		"basic cluster target": {
 			target: interfaces.ClusterTarget{
 				Name:      "test-cluster",
-				Workspace: core.LogicalCluster("root:org:test"),
+				Workspace: logicalcluster.Name("root:org:test"),
 				Ready:     true,
 				Labels: map[string]string{
 					"region": "us-west",
@@ -109,7 +109,7 @@ func TestClusterTargetFields(t *testing.T) {
 			},
 			validate: func(t *testing.T, target interfaces.ClusterTarget) {
 				assert.Equal(t, "test-cluster", target.Name)
-				assert.Equal(t, core.LogicalCluster("root:org:test"), target.Workspace)
+				assert.Equal(t, logicalcluster.Name("root:org:test"), target.Workspace)
 				assert.True(t, target.Ready)
 				assert.Equal(t, "us-west", target.Labels["region"])
 				assert.Equal(t, "us-west-1a", target.Labels["zone"])
@@ -144,7 +144,7 @@ func TestScoredTarget(t *testing.T) {
 	scored := interfaces.ScoredTarget{
 		ClusterTarget: interfaces.ClusterTarget{
 			Name:      "high-score-cluster",
-			Workspace: core.LogicalCluster("root:prod"),
+			Workspace: logicalcluster.Name("root:prod"),
 			Ready:     true,
 		},
 		Score: 95,
@@ -238,9 +238,9 @@ func TestSchedulingResult(t *testing.T) {
 }
 
 func TestWorkspaceInfo(t *testing.T) {
-	parent := core.LogicalCluster("root:org")
+	parent := logicalcluster.Name("root:org")
 	workspace := interfaces.WorkspaceInfo{
-		Name:   core.LogicalCluster("root:org:team-a"),
+		Name:   logicalcluster.Name("root:org:team-a"),
 		Parent: &parent,
 		Labels: map[string]string{
 			"team":        "alpha",
@@ -249,8 +249,8 @@ func TestWorkspaceInfo(t *testing.T) {
 		Ready: true,
 	}
 
-	assert.Equal(t, core.LogicalCluster("root:org:team-a"), workspace.Name)
-	assert.Equal(t, core.LogicalCluster("root:org"), *workspace.Parent)
+	assert.Equal(t, logicalcluster.Name("root:org:team-a"), workspace.Name)
+	assert.Equal(t, logicalcluster.Name("root:org"), *workspace.Parent)
 	assert.Equal(t, "alpha", workspace.Labels["team"])
 	assert.True(t, workspace.Ready)
 }
@@ -345,10 +345,6 @@ func TestPlacementContext(t *testing.T) {
 		Groups:    []string{"developers", "team-alpha"},
 		RequestID: "req-12345",
 		Timestamp: timestamp,
-		Variables: map[string]interface{}{
-			"deployment_priority": "high",
-			"cost_limit":          100.0,
-		},
 	}
 
 	assert.Equal(t, "alice@example.com", context.User)
@@ -356,8 +352,6 @@ func TestPlacementContext(t *testing.T) {
 	assert.Contains(t, context.Groups, "team-alpha")
 	assert.Equal(t, "req-12345", context.RequestID)
 	assert.Equal(t, timestamp, context.Timestamp)
-	assert.Equal(t, "high", context.Variables["deployment_priority"])
-	assert.Equal(t, 100.0, context.Variables["cost_limit"])
 }
 
 func TestEngineStatus(t *testing.T) {

@@ -6,8 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/kcp-dev/kcp/sdk/apis/core"
-	workloadv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/workload/v1alpha1"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 // PlacementDecision represents the result of a placement operation.
@@ -37,10 +36,10 @@ type ClusterTarget struct {
 	Name string `json:"name"`
 
 	// Workspace is the logical cluster path where this cluster resides
-	Workspace core.LogicalCluster `json:"workspace"`
+	Workspace logicalcluster.Name `json:"workspace"`
 
-	// Location is the physical location reference from the workload API
-	Location *workloadv1alpha1.Location `json:"location,omitempty"`
+	// Location is the physical location reference
+	Location *LocationInfo `json:"location,omitempty"`
 
 	// Capacity represents available resources in the cluster
 	Capacity ResourceCapacity `json:"capacity"`
@@ -157,15 +156,30 @@ type SchedulingResult struct {
 // WorkspaceInfo represents a KCP workspace with its metadata and hierarchy position.
 type WorkspaceInfo struct {
 	// Name is the logical cluster path of the workspace
-	Name core.LogicalCluster `json:"name"`
+	Name logicalcluster.Name `json:"name"`
 	// Parent is the parent workspace (nil for root workspaces)
-	Parent *core.LogicalCluster `json:"parent,omitempty"`
+	Parent *logicalcluster.Name `json:"parent,omitempty"`
 	// Labels from the workspace
 	Labels map[string]string `json:"labels,omitempty"`
 	// Annotations from the workspace
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// Ready indicates if the workspace is available for placement
 	Ready bool `json:"ready"`
+}
+
+// LocationInfo represents a physical location where a cluster resides.
+// This is a simplified version of the workload API Location type.
+type LocationInfo struct {
+	// Name is the location identifier
+	Name string `json:"name"`
+	// Region is the geographic region
+	Region string `json:"region,omitempty"`
+	// Zone is the availability zone within the region  
+	Zone string `json:"zone,omitempty"`
+	// Provider is the cloud or infrastructure provider
+	Provider string `json:"provider,omitempty"`
+	// Labels for additional location metadata
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // PlacementContext provides context information during placement operations.

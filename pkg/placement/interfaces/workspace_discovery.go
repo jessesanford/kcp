@@ -5,7 +5,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/labels"
 
-	"github.com/kcp-dev/kcp/sdk/apis/core"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 // WorkspaceDiscovery provides workspace traversal and cluster discovery
@@ -21,19 +21,19 @@ type WorkspaceDiscovery interface {
 	// GetClusters returns available clusters in the specified workspace.
 	// It discovers all registered clusters that are ready for workload placement
 	// within the given logical cluster workspace.
-	GetClusters(ctx context.Context, workspace core.LogicalCluster) ([]ClusterTarget, error)
+	GetClusters(ctx context.Context, workspace logicalcluster.Name) ([]ClusterTarget, error)
 
 	// CheckAccess verifies permission to place workloads in a workspace.
 	// It performs RBAC checks to ensure the current user has the necessary
 	// permissions to perform the specified verb on the given resource.
-	CheckAccess(ctx context.Context, workspace core.LogicalCluster,
+	CheckAccess(ctx context.Context, workspace logicalcluster.Name,
 		verb string, resource string) (bool, error)
 
 	// GetWorkspaceHierarchy returns the complete hierarchy tree starting from root.
 	// This is useful for understanding workspace relationships and implementing
 	// hierarchical placement policies.
 	GetWorkspaceHierarchy(ctx context.Context,
-		root core.LogicalCluster) (*WorkspaceTree, error)
+		root logicalcluster.Name) (*WorkspaceTree, error)
 
 	// FindWorkspacesByLabels discovers workspaces with specific labels.
 	// This enables label-based workspace selection for placement policies.
