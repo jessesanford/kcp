@@ -333,7 +333,7 @@ func (g *DependencyGraph) copyNode(node *DeploymentNode) *DeploymentNode {
 		return nil
 	}
 	
-	copy := &DeploymentNode{
+	nodeCopy := &DeploymentNode{
 		ID:        node.ID,
 		Name:      node.Name,
 		Workspace: node.Workspace,
@@ -343,22 +343,22 @@ func (g *DependencyGraph) copyNode(node *DeploymentNode) *DeploymentNode {
 	
 	// Copy dependencies
 	if node.Dependencies != nil {
-		copy.Dependencies = make([]string, len(node.Dependencies))
-		copy(copy.Dependencies, node.Dependencies)
+		nodeCopy.Dependencies = make([]string, len(node.Dependencies))
+		copy(nodeCopy.Dependencies, node.Dependencies)
 	}
 	
 	// Copy dependents
 	if node.Dependents != nil {
-		copy.Dependents = make([]string, len(node.Dependents))
-		copy(copy.Dependents, node.Dependents)
+		nodeCopy.Dependents = make([]string, len(node.Dependents))
+		copy(nodeCopy.Dependents, node.Dependents)
 	}
 	
 	// Copy metadata
 	for k, v := range node.Metadata {
-		copy.Metadata[k] = v
+		nodeCopy.Metadata[k] = v
 	}
 	
-	return copy
+	return nodeCopy
 }
 
 // removeFromSlice removes a string from a slice and returns the modified slice.
