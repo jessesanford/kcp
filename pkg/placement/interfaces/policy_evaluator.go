@@ -7,6 +7,13 @@ import (
 // PolicyEvaluator evaluates placement policies against cluster targets.
 // It provides the capability to compile policy expressions and evaluate
 // them against cluster and workload context to make placement decisions.
+//
+// Context Propagation:
+// All evaluation methods that accept context.Context use it for:
+// - Workspace isolation and scoping of policy evaluation
+// - User identity for RBAC-based policy filtering
+// - Request timeouts and cancellation during policy compilation/evaluation
+// - Workspace path information for cross-workspace policy resolution
 type PolicyEvaluator interface {
 	// Compile validates and compiles a policy expression for efficient evaluation.
 	// This preprocessing step catches syntax errors and optimizes the expression

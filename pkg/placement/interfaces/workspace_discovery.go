@@ -83,3 +83,54 @@ type DiscoveryOptions struct {
 	// for repeated workspace queries.
 	CacheResults bool
 }
+
+// WorkspaceContextHelper provides utilities for extracting and managing
+// workspace context information for proper KCP workspace isolation.
+// 
+// Context Propagation Patterns:
+// 
+// In KCP, workspace context is typically carried through context.Context values
+// and metadata annotations. The following patterns should be used:
+//
+// 1. Extracting workspace from context:
+//    - Use logicalcluster.From(ctx) to get the logical cluster name
+//    - Check for kcp.io/path annotation in object metadata
+//    - Validate workspace access permissions before proceeding
+//
+// 2. Propagating workspace context:
+//    - Always pass context.Context through the call chain
+//    - Include workspace path in object annotations when persisting decisions
+//    - Ensure RBAC checks include workspace scope
+//
+// 3. Workspace isolation:
+//    - All cluster discovery must be scoped to accessible workspaces
+//    - Policy evaluation must consider workspace-specific policies
+//    - Placement decisions must be stored with proper workspace annotations
+type WorkspaceContextHelper interface {
+	// ExtractWorkspacePath extracts the logical cluster path from the context.
+	// This is the primary method for getting workspace isolation information
+	// from the request context in KCP.
+	//
+	// Returns empty string if no workspace context is found.
+	ExtractWorkspacePath(ctx context.Context) string
+
+	// ValidateWorkspaceAccess checks if the context has permission to access
+	// the specified workspace for placement operations.
+	//
+	// This should perform RBAC checks considering:
+	// - User identity from context
+	// - Workspace-scoped permissions
+	// - Cross-workspace access policies
+	ValidateWorkspaceAccess(ctx context.Context, workspace logicalcluster.Name) error
+
+	// AnnotateWithWorkspace adds the appropriate workspace path annotation
+	// to object metadata for proper KCP workspace tracking.
+	//
+	// This ensures that placement decisions are properly associated with
+	// their originating workspace.
+	AnnotateWithWorkspace(ctx context.Context, metadata map[string]string) error
+
+	// IsSystemWorkspace determines if the given workspace is a system workspace
+	// that should typically be excluded from user workload placement.
+	IsSystemWorkspace(workspace logicalcluster.Name) bool
+}

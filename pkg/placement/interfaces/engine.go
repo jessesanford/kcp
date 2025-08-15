@@ -10,6 +10,14 @@ import (
 // PlacementEngine orchestrates the placement decision process by coordinating
 // workspace discovery, policy evaluation, and scheduling algorithms.
 // It provides the main entry point for placement operations in the TMC system.
+//
+// Context Propagation:
+// All methods accept context.Context as the first parameter for workspace isolation.
+// The context should contain:
+// - Logical cluster information from logicalcluster.From(ctx)
+// - User identity and RBAC information for authorization
+// - Request timeouts and cancellation signals
+// - Workspace path annotations for proper KCP integration
 type PlacementEngine interface {
 	// FindClusters discovers available clusters across the specified workspaces.
 	// It uses the configured WorkspaceDiscovery to traverse workspaces and

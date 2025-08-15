@@ -9,6 +9,13 @@ import (
 // Scheduler implements placement scheduling algorithms to select the best
 // clusters for workload placement. Different schedulers can implement
 // various algorithms like bin-packing, spreading, or custom strategies.
+//
+// Context Propagation:
+// The Schedule method uses context.Context for:
+// - Workspace-aware scheduling decisions and cluster filtering
+// - User identity for RBAC-scoped cluster access validation
+// - Request timeouts and graceful cancellation of scheduling operations
+// - Workspace isolation when evaluating cluster affinity rules
 type Scheduler interface {
 	// Schedule determines the best placement based on the configured algorithm.
 	// It takes a workload and available clusters, then returns scored clusters

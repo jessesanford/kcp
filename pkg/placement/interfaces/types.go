@@ -13,6 +13,10 @@ import (
 // It contains the selected clusters, policy evaluation results,
 // and metadata about the scheduling process.
 type PlacementDecision struct {
+	// Standard Kubernetes object metadata including ResourceVersion for
+	// optimistic concurrency control and workspace path annotation
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
 	// TargetClusters lists the selected clusters with their scores
 	TargetClusters []ScoredTarget `json:"targetClusters"`
 
@@ -184,6 +188,7 @@ type LocationInfo struct {
 
 // PlacementContext provides context information during placement operations.
 // This context is passed to various placement components for decision making.
+// It includes workspace isolation information extracted from the request context.
 type PlacementContext struct {
 	// Workload is the object being placed
 	Workload runtime.Object `json:"-"`
@@ -195,4 +200,48 @@ type PlacementContext struct {
 	RequestID string `json:"requestID,omitempty"`
 	// Timestamp when the placement was requested
 	Timestamp metav1.Time `json:"timestamp"`
+	// WorkspacePath contains the logical cluster path for workspace isolation.
+	// This is extracted from the context using KCP's workspace context patterns.
+	WorkspacePath string `json:"workspacePath,omitempty"`
 }
+
+// PlacementError represents errors that occur during placement operations.
+// It provides structured error information with retry semantics.
+type PlacementError struct {
+	// Type categorizes the error for proper handling
+	Type PlacementErrorType `json:"type"`
+	// Message provides human-readable error description
+	Message string `json:"message"`
+	// Retryable indicates if the operation can be retried
+	Retryable bool `json:"retryable"`
+	// Cause contains the underlying error that caused this placement error
+	Cause error `json:"-"`
+}
+
+// Error implements the error interface
+func (e *PlacementError) Error() string {
+	return e.Message
+}
+
+// Unwrap returns the underlying cause for error wrapping patterns
+func (e *PlacementError) Unwrap() error {
+	return e.Cause
+}
+
+// PlacementErrorType categorizes placement errors for proper handling and retry logic
+type PlacementErrorType string
+
+const (
+	// ErrorTypeWorkspaceAccess indicates workspace access or permission issues
+	ErrorTypeWorkspaceAccess PlacementErrorType = "WorkspaceAccess"
+	// ErrorTypePolicyViolation indicates policy evaluation failures
+	ErrorTypePolicyViolation PlacementErrorType = "PolicyViolation"
+	// ErrorTypeNoSuitableCluster indicates no clusters meet the placement requirements
+	ErrorTypeNoSuitableCluster PlacementErrorType = "NoSuitableCluster"
+	// ErrorTypeResourceConstraint indicates insufficient resources for placement
+	ErrorTypeResourceConstraint PlacementErrorType = "ResourceConstraint"
+	// ErrorTypeSchedulerFailure indicates internal scheduler algorithm failures
+	ErrorTypeSchedulerFailure PlacementErrorType = "SchedulerFailure"
+	// ErrorTypeContextTimeout indicates placement operation timed out
+	ErrorTypeContextTimeout PlacementErrorType = "ContextTimeout"
+)
