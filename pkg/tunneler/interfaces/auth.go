@@ -25,113 +25,6 @@ import (
 	"github.com/kcp-dev/logicalcluster/v3"
 )
 
-// AuthMethod specifies the authentication method for tunnel connections
-type AuthMethod string
-
-const (
-	// AuthMethodNone indicates no authentication (for testing only)
-	AuthMethodNone AuthMethod = "none"
-	
-	// AuthMethodToken uses bearer token authentication
-	AuthMethodToken AuthMethod = "token"
-	
-	// AuthMethodCertificate uses client certificate authentication
-	AuthMethodCertificate AuthMethod = "certificate"
-	
-	// AuthMethodMTLS uses mutual TLS authentication
-	AuthMethodMTLS AuthMethod = "mtls"
-	
-	// AuthMethodOAuth2 uses OAuth2 authentication flow
-	AuthMethodOAuth2 AuthMethod = "oauth2"
-	
-	// AuthMethodServiceAccount uses Kubernetes service account tokens
-	AuthMethodServiceAccount AuthMethod = "serviceaccount"
-)
-
-// AuthCredentials contains authentication credentials for tunnel connections
-type AuthCredentials struct {
-	// Method specifies which authentication method to use
-	Method AuthMethod
-	
-	// Token contains bearer token for token-based authentication
-	Token string
-	
-	// TokenFile contains path to file containing bearer token
-	TokenFile string
-	
-	// CertificateData contains PEM-encoded client certificate
-	CertificateData []byte
-	
-	// CertificateFile contains path to client certificate file
-	CertificateFile string
-	
-	// KeyData contains PEM-encoded private key
-	KeyData []byte
-	
-	// KeyFile contains path to private key file
-	KeyFile string
-	
-	// CAData contains PEM-encoded certificate authority certificates
-	CAData []byte
-	
-	// CAFile contains path to certificate authority file
-	CAFile string
-	
-	// ServerName for certificate validation (overrides default)
-	ServerName string
-	
-	// InsecureSkipTLSVerify skips server certificate verification (dangerous)
-	InsecureSkipTLSVerify bool
-	
-	// OAuth2Config contains OAuth2 authentication configuration
-	OAuth2Config *OAuth2Config
-	
-	// ServiceAccountConfig contains service account authentication configuration
-	ServiceAccountConfig *ServiceAccountConfig
-}
-
-// OAuth2Config contains OAuth2 authentication parameters
-type OAuth2Config struct {
-	// ClientID identifies the OAuth2 client
-	ClientID string
-	
-	// ClientSecret authenticates the OAuth2 client
-	ClientSecret string
-	
-	// TokenURL is the OAuth2 token endpoint
-	TokenURL string
-	
-	// Scopes contains requested OAuth2 scopes
-	Scopes []string
-	
-	// RefreshToken for token renewal
-	RefreshToken string
-	
-	// AccessToken contains current access token
-	AccessToken string
-	
-	// TokenExpiry tracks when current token expires
-	TokenExpiry time.Time
-}
-
-// ServiceAccountConfig contains Kubernetes service account authentication parameters
-type ServiceAccountConfig struct {
-	// TokenFile contains path to service account token file
-	TokenFile string
-	
-	// Namespace specifies the service account namespace
-	Namespace string
-	
-	// ServiceAccount specifies the service account name
-	ServiceAccount string
-	
-	// Audience specifies the intended audience for the token
-	Audience string
-	
-	// TokenExpiration sets custom token expiration duration
-	TokenExpiration time.Duration
-}
-
 // AuthContext contains authentication and authorization context for tunnel operations
 type AuthContext struct {
 	// Workspace identifies the logical cluster context
@@ -306,7 +199,7 @@ type AuthManagerFactory interface {
 	CreateAuthorizer() TunnelAuthorizer
 }
 
-// Common authentication and authorization errors
+// Authentication and authorization errors specific to advanced auth operations
 var (
 	// ErrAuthenticationFailed indicates invalid credentials or auth failure
 	ErrAuthenticationFailed = fmt.Errorf("authentication failed")
@@ -316,12 +209,6 @@ var (
 	
 	// ErrUnauthorized indicates user lacks required permissions
 	ErrUnauthorized = fmt.Errorf("unauthorized")
-	
-	// ErrUnsupportedAuthMethod indicates auth method is not supported
-	ErrUnsupportedAuthMethod = fmt.Errorf("unsupported authentication method")
-	
-	// ErrInvalidCredentials indicates malformed or incomplete credentials
-	ErrInvalidCredentials = fmt.Errorf("invalid credentials")
 	
 	// ErrPermissionDenied indicates specific operation is not permitted
 	ErrPermissionDenied = fmt.Errorf("permission denied")
