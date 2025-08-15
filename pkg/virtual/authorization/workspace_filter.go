@@ -122,8 +122,7 @@ func (f *WorkspaceFilter) ExtractWorkspaceFromPath(path string) (string, error) 
 		return "", fmt.Errorf("path cannot be empty")
 	}
 
-	// KCP paths typically follow the pattern: /clusters/<workspace>/...
-	// or /clusters/<workspace>/api/... or /clusters/<workspace>/apis/...
+	// KCP paths: /clusters/<workspace>/...
 	parts := strings.Split(strings.TrimPrefix(path, "/"), "/")
 	
 	if len(parts) >= 2 && parts[0] == "clusters" {
@@ -142,14 +141,10 @@ func (f *WorkspaceFilter) ResolveLogicalCluster(workspace string) (logicalcluste
 	if workspace == "" {
 		return "", fmt.Errorf("workspace name cannot be empty")
 	}
-
-	// In a full implementation, this would query the KCP API to resolve the workspace
-	// For now, we'll parse it as a logical cluster name
 	cluster, err := logicalcluster.New(workspace)
 	if err != nil {
 		return "", fmt.Errorf("invalid workspace name %q: %w", workspace, err)
 	}
-
 	return cluster, nil
 }
 
