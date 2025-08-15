@@ -19,28 +19,51 @@ package interfaces
 import (
 	"context"
 
+	"github.com/kcp-dev/kcp/pkg/apis/core"
 	"github.com/kcp-dev/kcp/pkg/deployment/types"
 )
 
-// HealthChecker validates deployment health
+// HealthChecker validates deployment health across KCP logical clusters.
+// All health checking operations must be performed within the appropriate
+// logical cluster context and respect workspace isolation boundaries.
+//
+// Implementations must be thread-safe and capable of handling concurrent
+// health checks across multiple logical clusters and deployments.
+//
+// Example usage:
+//   checker := NewHealthChecker(kcpClient)
+//   target := HealthTarget{
+//     Name:           "my-app",
+//     Namespace:      "default", 
+//     LogicalCluster: cluster,
+//     Type:           "Deployment",
+//   }
+//   status, err := checker.Check(ctx, target)
 type HealthChecker interface {
-	// Check performs health validation
+	// Check performs health validation within the target's logical cluster
 	Check(ctx context.Context, target HealthTarget) (*HealthStatus, error)
 
-	// WaitForReady waits until target is healthy
+	// CheckInCluster performs health validation in a specific logical cluster
+	CheckInCluster(ctx context.Context, cluster core.LogicalCluster, target HealthTarget) (*HealthStatus, error)
+
+	// WaitForReady waits until target is healthy within its logical cluster
 	WaitForReady(ctx context.Context, target HealthTarget,
 		config types.HealthCheckConfig) error
 
-	// RegisterProbe adds a custom health probe
+	// RegisterProbe adds a custom health probe (must be thread-safe)
 	RegisterProbe(name string, probe HealthProbe) error
+
+	// ListProbes returns available health probes
+	ListProbes() []string
 }
 
-// HealthTarget identifies what to check
+// HealthTarget identifies what to check within KCP's logical cluster architecture
 type HealthTarget struct {
-	Name      string            `json:"name"`
-	Namespace string            `json:"namespace"`
-	Type      string            `json:"type"`
-	Selector  map[string]string `json:"selector,omitempty"`
+	Name           string                `json:"name"`
+	Namespace      string                `json:"namespace"`
+	LogicalCluster core.LogicalCluster   `json:"logicalCluster,omitempty"`
+	Type           string                `json:"type"`
+	Selector       map[string]string     `json:"selector,omitempty"`
 }
 
 // HealthStatus represents health check result
@@ -58,11 +81,16 @@ type HealthCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
-// HealthProbe defines a custom health check
+// HealthProbe defines a custom health check that can operate across logical clusters.
+// Probe implementations must be stateless and thread-safe to support concurrent
+// health checking across multiple deployments and logical clusters.
 type HealthProbe interface {
-	// Name returns the probe name
+	// Name returns the probe name for identification and logging
 	Name() string
 
-	// Check executes the health probe
+	// Check executes the health probe within the target's logical cluster context
 	Check(ctx context.Context, target HealthTarget) (bool, string, error)
+
+	// CheckInCluster executes the health probe in a specific logical cluster
+	CheckInCluster(ctx context.Context, cluster core.LogicalCluster, target HealthTarget) (bool, string, error)
 }

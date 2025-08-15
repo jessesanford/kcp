@@ -17,10 +17,17 @@ limitations under the License.
 package interfaces_test
 
 import (
+	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
+	"github.com/kcp-dev/kcp/pkg/deployment/interfaces"
 	"github.com/kcp-dev/kcp/pkg/deployment/types"
 )
 
@@ -120,4 +127,28 @@ func TestDependencyTypes(t *testing.T) {
 			assert.Equal(t, "test-dep", dependency.Name)
 		})
 	}
+}
+
+// TestDeploymentTarget tests the DeploymentTarget struct
+func TestDeploymentTarget(t *testing.T) {
+	target := interfaces.DeploymentTarget{
+		Name:       "test-app",
+		Namespace:  "default",
+		Workspace:  "root:test",
+		APIVersion: "apps/v1",
+		Kind:       "Deployment",
+		Labels: map[string]string{
+			"app": "test",
+			"env": "prod",
+		},
+	}
+
+	assert.Equal(t, "test-app", target.Name)
+	assert.Equal(t, "default", target.Namespace)
+	assert.Equal(t, "root:test", target.Workspace)
+	assert.Equal(t, "apps/v1", target.APIVersion)
+	assert.Equal(t, "Deployment", target.Kind)
+	assert.Len(t, target.Labels, 2)
+	assert.Equal(t, "test", target.Labels["app"])
+	assert.Equal(t, "prod", target.Labels["env"])
 }

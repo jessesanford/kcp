@@ -20,22 +20,45 @@ import (
 	"context"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kcp-dev/kcp/pkg/apis/core"
 )
 
-// RollbackController manages deployment rollbacks
+// RollbackController manages deployment rollbacks across KCP logical clusters.
+// All rollback operations must maintain workspace isolation and operate within
+// the appropriate logical cluster boundaries. Implementations must be thread-safe
+// to support concurrent rollback operations across multiple deployments.
+//
+// Security Considerations:
+//   - Snapshot data should be encrypted at rest when stored externally
+//   - Access to rollback operations must be authorized per logical cluster
+//   - Rollback history must respect workspace boundaries
+//
+// Example usage:
+//   controller := NewRollbackController(kcpClient)
+//   canRollback, reason, err := controller.CanRollback(ctx, deploymentID)
+//   if canRollback {
+//     op, err := controller.InitiateRollback(ctx, deploymentID, "performance degradation")
+//   }
 type RollbackController interface {
-	// CanRollback checks if rollback is possible
+	// CanRollback checks if rollback is possible within the deployment's logical cluster
 	CanRollback(ctx context.Context, deploymentID string) (bool, string, error)
 
-	// InitiateRollback starts the rollback process
+	// CanRollbackInCluster checks rollback possibility in a specific logical cluster
+	CanRollbackInCluster(ctx context.Context, cluster core.LogicalCluster, deploymentID string) (bool, string, error)
+
+	// InitiateRollback starts the rollback process within the deployment's logical cluster
 	InitiateRollback(ctx context.Context, deploymentID string,
 		reason string) (*RollbackOperation, error)
 
-	// GetRollbackStatus returns rollback progress
+	// GetRollbackStatus returns rollback progress (must be thread-safe)
 	GetRollbackStatus(ctx context.Context, rollbackID string) (*RollbackStatus, error)
 
-	// ListSnapshots returns available snapshots
+	// ListSnapshots returns available snapshots within the deployment's logical cluster
 	ListSnapshots(ctx context.Context, deploymentID string) ([]Snapshot, error)
+
+	// CreateSnapshot creates a new deployment state snapshot
+	CreateSnapshot(ctx context.Context, deploymentID string, description string) (*Snapshot, error)
 }
 
 // RollbackOperation represents an active rollback
