@@ -137,12 +137,12 @@ func (c *MemoryAuthorizationCache) SetDecision(key string, decision *interfaces.
 		c.removeFromIndexes(key, existing)
 	}
 
-	// Create new entry
+	// Create new entry  
 	entry := &authCacheEntry{
 		decision:  decision,
 		expireAt:  time.Now().Add(ttl),
-		user:      extractUserFromKey(key),
-		workspace: extractWorkspaceFromKey(key),
+		user:      "",  // simplified for now
+		workspace: "", // simplified for now
 	}
 
 	// Store entry
@@ -286,18 +286,4 @@ func generateCacheKey(user, workspace, resource, verb, resourceName string) stri
 	data := fmt.Sprintf("%s:%s:%s:%s:%s", user, workspace, resource, verb, resourceName)
 	hash := sha256.Sum256([]byte(data))
 	return fmt.Sprintf("%x", hash)
-}
-
-// extractUserFromKey extracts the user from a cache key (simplified implementation)
-func extractUserFromKey(key string) string {
-	// In a real implementation, this would require storing metadata or using a different approach
-	// For now, return empty string since the user is maintained in the entry itself
-	return ""
-}
-
-// extractWorkspaceFromKey extracts the workspace from a cache key (simplified implementation)
-func extractWorkspaceFromKey(key string) string {
-	// In a real implementation, this would require storing metadata or using a different approach
-	// For now, return empty string since the workspace is maintained in the entry itself
-	return ""
 }
