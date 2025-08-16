@@ -146,6 +146,8 @@ github.com/kcp-dev/code-generator/v3 v3.0.0-20250707080944-4094fb87e20f h1:Qfpk7
 github.com/kcp-dev/code-generator/v3 v3.0.0-20250707080944-4094fb87e20f/go.mod h1:1EZhJqiFvXq1N0xKJnJOf8kQ++wuwLkqFGIRVSoVACk=
 github.com/kcp-dev/embeddedetcd v1.0.3-0.20250423205017-89d1631077ab h1:NHsacwN5GN1pGzEPvJy+S96hJ0rT2rCJwovRFqGHn9A=
 github.com/kcp-dev/embeddedetcd v1.0.3-0.20250423205017-89d1631077ab/go.mod h1:IbvtRJOc9/YN5LT7CAHggS/sqNG3vcECNXk4Hmb5TmY=
+github.com/kcp-dev/kcp/pkg/apis v0.11.0 h1:K6p+tNHNcvfACCPLcHgY0EMLeaIwR1jS491FyLfXMII=
+github.com/kcp-dev/kcp/pkg/apis v0.11.0/go.mod h1:8cUAmfMJcksauz53UtsLYG8Phhx62rvuCnd/5t/Zihk=
 github.com/kcp-dev/kubernetes v0.0.0-20250425143807-ddbe171670d8 h1:g2KywpdhJVC6TOVhdjBCDNTuPc5LYCjfawu9B4UXEi4=
 github.com/kcp-dev/kubernetes v0.0.0-20250425143807-ddbe171670d8/go.mod h1:yE54ggQ2WN3jg2H4WwLynkykbCb1zn0cPbh+6s22AFg=
 github.com/kcp-dev/kubernetes/staging/src/k8s.io/api v0.0.0-20250425143807-ddbe171670d8 h1:oPP9XnpYpTv0dvqTGUozYbgvdB16kzX9oZ2r5QfoQxE=

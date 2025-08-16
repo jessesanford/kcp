@@ -15,6 +15,7 @@ require (
 	github.com/kcp-dev/client-go v0.0.0-20250707095244-decc4df45adb
 	github.com/kcp-dev/code-generator/v3 v3.0.0-20250707080944-4094fb87e20f
 	github.com/kcp-dev/embeddedetcd v1.0.3-0.20250423205017-89d1631077ab
+	github.com/kcp-dev/kcp/pkg/apis v0.11.0
 	github.com/kcp-dev/kcp/sdk v0.0.0-00010101000000-000000000000
 	github.com/kcp-dev/logicalcluster/v3 v3.0.5
 	github.com/martinlindhe/base36 v1.1.1
