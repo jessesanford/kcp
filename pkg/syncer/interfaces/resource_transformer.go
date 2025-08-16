@@ -132,24 +132,3 @@ type FieldTransformer interface {
 	// Returns true if the field is supported.
 	SupportsField(gvr schema.GroupVersionResource, fieldPath string) bool
 }
-
-// TransformationContext provides additional context for resource transformations.
-type TransformationContext struct {
-	// SourceWorkspace is the workspace the resource is coming from.
-	SourceWorkspace logicalcluster.Name
-
-	// TargetWorkspace is the workspace the resource is going to.
-	TargetWorkspace logicalcluster.Name
-
-	// Direction indicates the direction of synchronization.
-	Direction SyncDirection
-
-	// PlacementName is the name of the placement that triggered this sync.
-	PlacementName string
-
-	// SyncTargetName is the name of the sync target for physical cluster operations.
-	SyncTargetName string
-
-	// Annotations contains additional metadata for the transformation.
-	Annotations map[string]string
-}

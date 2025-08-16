@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kcp-dev/logicalcluster/v3"
 )
@@ -99,31 +98,6 @@ type SyncEngine interface {
 	//
 	// Returns error if any health check fails.
 	IsHealthy() error
-}
-
-// SyncEngineConfig contains configuration options for creating a sync engine instance.
-type SyncEngineConfig struct {
-	// WorkerCount is the number of worker goroutines to process sync operations.
-	WorkerCount int
-
-	// QueueDepth is the maximum number of operations that can be queued.
-	QueueDepth int
-
-	// Workspace is the logical cluster name this engine is associated with.
-	Workspace logicalcluster.Name
-
-	// ResourceTransformer handles resource transformations during sync.
-	ResourceTransformer ResourceTransformer
-
-	// StatusCollector collects and reports sync operation status.
-	StatusCollector StatusCollector
-
-	// ConflictResolver resolves conflicts during sync operations.
-	ConflictResolver ConflictResolver
-
-	// SupportedGVRs is the list of Group/Version/Resource types this engine can sync.
-	// If empty, all resource types are supported.
-	SupportedGVRs []schema.GroupVersionResource
 }
 
 // ResourceSyncHandler defines callbacks for handling different phases of resource synchronization.

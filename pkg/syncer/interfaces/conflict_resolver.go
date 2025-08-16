@@ -18,7 +18,6 @@ package interfaces
 
 import (
 	"context"
-	"time"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
@@ -54,38 +53,6 @@ type ConflictResolver interface {
 	//
 	// Returns the resolution strategy name.
 	GetResolutionStrategy(conflict SyncConflict) string
-}
-
-// SyncConflict represents a conflict that occurred during synchronization.
-type SyncConflict struct {
-	// Operation is the sync operation that encountered the conflict.
-	Operation SyncOperation
-	// ConflictType indicates the type of conflict.
-	ConflictType ConflictType
-	// SourceResource is the resource from the source cluster.
-	SourceResource *unstructured.Unstructured
-	// TargetResource is the conflicting resource from the target cluster.
-	TargetResource *unstructured.Unstructured
-	// ConflictDetails provides additional information about the conflict.
-	ConflictDetails map[string]interface{}
-	// DetectedAt is when the conflict was first detected.
-	DetectedAt time.Time
-}
-
-// ConflictResolution represents the result of conflict resolution.
-type ConflictResolution struct {
-	// Resolved indicates whether the conflict was successfully resolved.
-	Resolved bool
-	// Resolution is the resolved resource (if applicable).
-	Resolution *unstructured.Unstructured
-	// Strategy is the name of the strategy used for resolution.
-	Strategy string
-	// Message provides details about the resolution process.
-	Message string
-	// Retry indicates whether the operation should be retried.
-	Retry bool
-	// RetryAfter specifies when to retry (if Retry is true).
-	RetryAfter *time.Duration
 }
 
 // ConflictDetector identifies conflicts during sync operations.

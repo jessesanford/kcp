@@ -17,9 +17,11 @@ limitations under the License.
 package interfaces
 
 import (
+	"fmt"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	"github.com/kcp-dev/logicalcluster/v3"
@@ -121,4 +123,165 @@ type SyncMetrics struct {
 	AverageProcessingTime time.Duration
 	// LastSyncTime is the timestamp of the last sync operation.
 	LastSyncTime metav1.Time
+}
+
+// Common annotations used by the syncer for resource tracking and management.
+const (
+	// SyncSourceAnnotation indicates the source cluster for a synced resource.
+	SyncSourceAnnotation = "tmc.kcp.io/sync-source"
+
+	// WorkspaceOriginAnnotation indicates the workspace a resource originated from.
+	WorkspaceOriginAnnotation = "tmc.kcp.io/workspace-origin"
+
+	// PlacementAnnotation indicates which placement policy selected this resource.
+	PlacementAnnotation = "tmc.kcp.io/placement"
+
+	// SyncTargetAnnotation indicates the target cluster for synchronization.
+	SyncTargetAnnotation = "tmc.kcp.io/sync-target"
+
+	// SyncGenerationAnnotation tracks the generation of the synced resource.
+	SyncGenerationAnnotation = "tmc.kcp.io/sync-generation"
+
+	// SyncTimestampAnnotation records when the resource was last synchronized.
+	SyncTimestampAnnotation = "tmc.kcp.io/sync-timestamp"
+
+	// ConflictResolutionAnnotation indicates how conflicts were resolved.
+	ConflictResolutionAnnotation = "tmc.kcp.io/conflict-resolution"
+)
+
+// Common labels used by the syncer.
+const (
+	// SyncerManagedLabel indicates a resource is managed by the syncer.
+	SyncerManagedLabel = "tmc.kcp.io/syncer-managed"
+
+	// WorkspaceLabel indicates the workspace a resource belongs to.
+	WorkspaceLabel = "tmc.kcp.io/workspace"
+
+	// PlacementLabel indicates the placement that selected this resource.
+	PlacementLabel = "tmc.kcp.io/placement"
+)
+
+// Feature gates for syncer functionality.
+const (
+	// FeatureGateTMCSyncer enables the TMC syncer functionality.
+	FeatureGateTMCSyncer = "TMCSyncer"
+
+	// FeatureGateAdvancedConflictResolution enables advanced conflict resolution strategies.
+	FeatureGateAdvancedConflictResolution = "TMCAdvancedConflictResolution"
+
+	// FeatureGateStatusAggregation enables status aggregation across placements.
+	FeatureGateStatusAggregation = "TMCStatusAggregation"
+)
+
+// SyncConflict represents a conflict that occurred during synchronization.
+type SyncConflict struct {
+	// Operation is the sync operation that encountered the conflict.
+	Operation SyncOperation
+	// ConflictType indicates the type of conflict.
+	ConflictType ConflictType
+	// SourceResource is the resource from the source cluster.
+	SourceResource *unstructured.Unstructured
+	// TargetResource is the conflicting resource from the target cluster.
+	TargetResource *unstructured.Unstructured
+	// ConflictDetails provides additional information about the conflict.
+	ConflictDetails map[string]interface{}
+	// DetectedAt is when the conflict was first detected.
+	DetectedAt time.Time
+}
+
+// ConflictResolution represents the result of conflict resolution.
+type ConflictResolution struct {
+	// Resolved indicates whether the conflict was successfully resolved.
+	Resolved bool
+	// Resolution is the resolved resource (if applicable).
+	Resolution *unstructured.Unstructured
+	// Strategy is the name of the strategy used for resolution.
+	Strategy string
+	// Message provides details about the resolution process.
+	Message string
+	// Retry indicates whether the operation should be retried.
+	Retry bool
+	// RetryAfter specifies when to retry (if Retry is true).
+	RetryAfter *time.Duration
+}
+
+// TransformationContext provides additional context for resource transformations.
+type TransformationContext struct {
+	// SourceWorkspace is the workspace the resource is coming from.
+	SourceWorkspace logicalcluster.Name
+
+	// TargetWorkspace is the workspace the resource is going to.
+	TargetWorkspace logicalcluster.Name
+
+	// Direction indicates the direction of synchronization.
+	Direction SyncDirection
+
+	// PlacementName is the name of the placement that triggered this sync.
+	PlacementName string
+
+	// SyncTargetName is the name of the sync target for physical cluster operations.
+	SyncTargetName string
+
+	// Annotations contains additional metadata for the transformation.
+	Annotations map[string]string
+}
+
+// SyncEngineConfig contains configuration options for creating a sync engine instance.
+type SyncEngineConfig struct {
+	// WorkerCount is the number of worker goroutines to process sync operations.
+	WorkerCount int
+
+	// QueueDepth is the maximum number of operations that can be queued.
+	QueueDepth int
+
+	// Workspace is the logical cluster name this engine is associated with.
+	Workspace logicalcluster.Name
+
+	// ResourceTransformer handles resource transformations during sync.
+	ResourceTransformer ResourceTransformer
+
+	// StatusCollector collects and reports sync operation status.
+	StatusCollector StatusCollector
+
+	// ConflictResolver resolves conflicts during sync operations.
+	ConflictResolver ConflictResolver
+
+	// SupportedGVRs is the list of Group/Version/Resource types this engine can sync.
+	// If empty, all resource types are supported.
+	SupportedGVRs []schema.GroupVersionResource
+}
+
+// Validate validates the SyncOperation.
+func (o *SyncOperation) Validate() error {
+	if o.ID == "" {
+		return fmt.Errorf("operation ID is required")
+	}
+	if o.Direction != SyncDirectionUpstream && o.Direction != SyncDirectionDownstream {
+		return fmt.Errorf("invalid sync direction: %s", o.Direction)
+	}
+	if o.SourceCluster.Empty() {
+		return fmt.Errorf("source cluster is required")
+	}
+	if o.TargetCluster.Empty() {
+		return fmt.Errorf("target cluster is required")
+	}
+	if o.GVR.Resource == "" {
+		return fmt.Errorf("resource is required in GVR")
+	}
+	if o.Name == "" {
+		return fmt.Errorf("resource name is required")
+	}
+	return nil
+}
+
+// String returns a string representation of the SyncOperation.
+func (o *SyncOperation) String() string {
+	return fmt.Sprintf("SyncOperation{ID: %s, Direction: %s, %s/%s, %s -> %s}",
+		o.ID, o.Direction, o.Namespace, o.Name, o.SourceCluster, o.TargetCluster)
+}
+
+// String returns a string representation of the SyncStatus.
+func (s *SyncStatus) String() string {
+	return fmt.Sprintf("SyncStatus{Operation: %s, Result: %s, Message: %s}",
+		s.Operation.ID, s.Result, s.Message)
 }
