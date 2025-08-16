@@ -3,23 +3,29 @@ package discovery
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
-	"github.com/kcp-dev/kcp/pkg/placement/interfaces"
-	kcpclient "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
-	"github.com/kcp-dev/logicalcluster/v3"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
+
+	"github.com/kcp-dev/kcp/pkg/placement/interfaces"
+	kcpclient "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
+	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tenancy/v1alpha1"
+	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 // WorkspaceTraverser implements workspace discovery and traversal
 type WorkspaceTraverser struct {
-	client      kcpclient.Interface
+	client      kcpclient.ClusterInterface
 	cache       *DiscoveryCache
 	permissions *PermissionChecker
 }
 
 // NewWorkspaceTraverser creates a new workspace traverser
-func NewWorkspaceTraverser(client kcpclient.Interface) *WorkspaceTraverser {
+func NewWorkspaceTraverser(client kcpclient.ClusterInterface) *WorkspaceTraverser {
 	return &WorkspaceTraverser{
 		client:      client,
 		cache:       NewDiscoveryCache(10 * time.Minute),
@@ -58,6 +64,7 @@ func (t *WorkspaceTraverser) traverseWorkspace(ctx context.Context, path logical
 		return err
 	}
 	if !canAccess {
+		klog.V(4).Infof("Skipping workspace %s due to access restrictions", path.String())
 		return nil // Skip inaccessible workspaces
 	}
 	
@@ -82,6 +89,7 @@ func (t *WorkspaceTraverser) traverseWorkspace(ctx context.Context, path logical
 		childPath := path.Join(child)
 		if err := t.traverseWorkspace(ctx, childPath, selector, workspaces); err != nil {
 			// Log error but continue traversal
+			klog.Errorf("Failed to traverse child workspace %s: %v", childPath.String(), err)
 			continue
 		}
 	}
@@ -89,20 +97,64 @@ func (t *WorkspaceTraverser) traverseWorkspace(ctx context.Context, path logical
 	return nil
 }
 
-// getWorkspaceInfo retrieves workspace information
+// getWorkspaceInfo retrieves workspace information from KCP API
 func (t *WorkspaceTraverser) getWorkspaceInfo(ctx context.Context, path logicalcluster.Path) (interfaces.WorkspaceInfo, error) {
-	// Implementation would fetch workspace details from KCP API
-	return interfaces.WorkspaceInfo{
-		Name:   logicalcluster.Name(path.String()),
-		Labels: map[string]string{},
-		Ready:  true,
-	}, nil
+	// Extract workspace name and parent path
+	workspaceName := path.Base()
+	parentPath := path.Parent()
+	
+	// Get the workspace from the parent cluster
+	workspace, err := t.client.Cluster(parentPath).TenancyV1alpha1().Workspaces().Get(ctx, workspaceName, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			// Workspace doesn't exist or we don't have access
+			return interfaces.WorkspaceInfo{}, fmt.Errorf("workspace %s not found in %s: %w", workspaceName, parentPath, err)
+		}
+		return interfaces.WorkspaceInfo{}, fmt.Errorf("failed to get workspace %s from %s: %w", workspaceName, parentPath, err)
+	}
+	
+	// Convert to WorkspaceInfo
+	info := interfaces.WorkspaceInfo{
+		Name:        logicalcluster.Name(path.String()),
+		Labels:      workspace.Labels,
+		Annotations: workspace.Annotations,
+		Ready:       t.isWorkspaceReady(workspace),
+	}
+	
+	// Set parent if not root
+	if parentPath.String() != "root" && parentPath.String() != "" {
+		parentName := logicalcluster.Name(parentPath.String())
+		info.Parent = &parentName
+	}
+	
+	return info, nil
 }
 
-// listChildWorkspaces lists child workspaces of a parent
+// listChildWorkspaces lists child workspaces of a parent using KCP API
 func (t *WorkspaceTraverser) listChildWorkspaces(ctx context.Context, parent logicalcluster.Path) ([]string, error) {
-	// Implementation would list child workspaces from KCP API
-	return []string{}, nil
+	// List workspaces in the parent cluster
+	workspaces, err := t.client.Cluster(parent).TenancyV1alpha1().Workspaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) || errors.IsForbidden(err) {
+			// Parent doesn't exist or we don't have access - return empty list
+			klog.V(4).Infof("Cannot access workspaces in %s: %v", parent, err)
+			return []string{}, nil
+		}
+		return nil, fmt.Errorf("failed to list workspaces in %s: %w", parent, err)
+	}
+	
+	// Extract workspace names
+	names := make([]string, 0, len(workspaces.Items))
+	for _, ws := range workspaces.Items {
+		// Skip system workspaces unless they are explicitly requested
+		if t.isSystemWorkspace(ws.Name) {
+			klog.V(5).Infof("Skipping system workspace: %s", ws.Name)
+			continue
+		}
+		names = append(names, ws.Name)
+	}
+	
+	return names, nil
 }
 
 // GetClusters returns clusters in a workspace
@@ -154,4 +206,57 @@ func (t *WorkspaceTraverser) fetchClustersInWorkspace(ctx context.Context, works
 	}
 	
 	return targets, nil
+}
+
+// isWorkspaceReady checks if a workspace is ready for placement operations
+func (t *WorkspaceTraverser) isWorkspaceReady(workspace *tenancyv1alpha1.Workspace) bool {
+	// Check workspace phase
+	if workspace.Status.Phase != tenancyv1alpha1.WorkspacePhaseReady {
+		return false
+	}
+	
+	// Check conditions for any failure conditions
+	for _, condition := range workspace.Status.Conditions {
+		if condition.Type == "Ready" && condition.Status == metav1.ConditionFalse {
+			return false
+		}
+		// Check for other failure conditions
+		if strings.Contains(condition.Type, "Failed") && condition.Status == metav1.ConditionTrue {
+			return false
+		}
+	}
+	
+	return true
+}
+
+// isSystemWorkspace determines if a workspace is a system workspace
+func (t *WorkspaceTraverser) isSystemWorkspace(workspaceName string) bool {
+	systemWorkspaceNames := []string{
+		"system",
+		"admin",
+		"kcp-system", 
+		"kcp-root-compute",
+	}
+	
+	// Check exact name matches
+	for _, systemName := range systemWorkspaceNames {
+		if workspaceName == systemName {
+			return true
+		}
+	}
+	
+	// Check prefixes that indicate system workspaces
+	systemPrefixes := []string{
+		"kcp-",
+		"system-",
+		"admin-",
+	}
+	
+	for _, prefix := range systemPrefixes {
+		if strings.HasPrefix(workspaceName, prefix) {
+			return true
+		}
+	}
+	
+	return false
 }

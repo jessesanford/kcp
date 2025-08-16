@@ -12,10 +12,13 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/labels"
 	
-	kcpclientfake "github.com/kcp-dev/kcp/pkg/client/clientset/versioned/fake"
-	workloadv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/workload/v1alpha1"
+	kcpclientfake "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/fake"
+	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tenancy/v1alpha1"
 	authv1 "k8s.io/api/authorization/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/testing"
 )
 
@@ -163,9 +166,59 @@ func TestCacheStatistics(t *testing.T) {
 
 // Permission caching test removed for size constraints
 
+func TestWorkspaceDiscoveryWithRealWorkspaces(t *testing.T) {
+	ctx := context.Background()
+	client := newMockKCPClientWithWorkspaces()
+	traverser := discovery.NewWorkspaceTraverser(client)
+	
+	workspaces, err := traverser.ListWorkspaces(ctx, labels.Everything())
+	require.NoError(t, err)
+	require.Len(t, workspaces, 1)
+	
+	workspace := workspaces[0]
+	assert.Equal(t, "root:test-workspace", string(workspace.Name))
+	assert.True(t, workspace.Ready)
+}
+
+func TestClusterDiscoveryStub(t *testing.T) {
+	ctx := context.Background()
+	client := newMockKCPClient()
+	finder := discovery.NewClusterFinder(client)
+	
+	criteria := discovery.ClusterCriteria{
+		WorkspaceSelector: labels.Everything(),
+		LabelSelector:     labels.Everything(),
+	}
+	
+	clusters, err := finder.FindClusters(ctx, criteria)
+	require.NoError(t, err)
+	// Should be empty since cluster discovery is currently a stub
+	assert.Len(t, clusters, 0)
+}
+
+func TestPermissionDenied(t *testing.T) {
+	ctx := context.Background()
+	client := newMockKCPClientWithPermissionDenied()
+	checker := discovery.NewPermissionChecker(client)
+	
+	allowed, err := checker.CheckAccess(ctx, "forbidden-workspace", "list")
+	require.NoError(t, err)
+	assert.False(t, allowed)
+}
+
+func TestWorkspaceNotFound(t *testing.T) {
+	ctx := context.Background()
+	client := newMockKCPClientWithWorkspaceNotFound()
+	traverser := discovery.NewWorkspaceTraverser(client)
+	
+	workspaces, err := traverser.ListWorkspaces(ctx, labels.Everything())
+	require.NoError(t, err)
+	assert.Len(t, workspaces, 0) // Should return empty list when workspace not found
+}
+
 // newMockKCPClient creates a mock KCP client for testing
-func newMockKCPClient() *kcpclientfake.Clientset {
-	client := kcpclientfake.NewSimpleClientset()
+func newMockKCPClient() *kcpclientfake.ClusterClientset {
+	client := kcpclientfake.NewSimpleClusterClientset()
 	
 	// Add reaction for SubjectAccessReview to always return allowed
 	client.PrependReactor("create", "subjectaccessreviews", func(action testing.Action) (bool, interface{}, error) {
@@ -179,11 +232,73 @@ func newMockKCPClient() *kcpclientfake.Clientset {
 		return true, sar, nil
 	})
 	
-	// Add reaction for SyncTargets
-	client.PrependReactor("list", "synctargets", func(action testing.Action) (bool, interface{}, error) {
-		return true, &workloadv1alpha1.SyncTargetList{
-			Items: []workloadv1alpha1.SyncTarget{},
+	// Add reaction for Workspaces
+	client.PrependReactor("list", "workspaces", func(action testing.Action) (bool, interface{}, error) {
+		return true, &tenancyv1alpha1.WorkspaceList{
+			Items: []tenancyv1alpha1.Workspace{},
 		}, nil
+	})
+	
+	return client
+}
+
+func newMockKCPClientWithWorkspaces() *kcpclientfake.ClusterClientset {
+	client := kcpclientfake.NewSimpleClusterClientset()
+	
+	client.PrependReactor("create", "subjectaccessreviews", func(action testing.Action) (bool, interface{}, error) {
+		createAction := action.(testing.CreateAction)
+		sar := createAction.GetObject().(*authv1.SubjectAccessReview)
+		sar.Status = authv1.SubjectAccessReviewStatus{Allowed: true}
+		return true, sar, nil
+	})
+	
+	client.PrependReactor("list", "workspaces", func(action testing.Action) (bool, interface{}, error) {
+		return true, &tenancyv1alpha1.WorkspaceList{
+			Items: []tenancyv1alpha1.Workspace{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-workspace"},
+					Status: tenancyv1alpha1.WorkspaceStatus{
+						Phase: tenancyv1alpha1.WorkspacePhaseReady,
+						Conditions: []metav1.Condition{
+							{Type: "Ready", Status: metav1.ConditionTrue},
+						},
+					},
+				},
+			},
+		}, nil
+	})
+	
+	return client
+}
+
+func newMockKCPClientWithPermissionDenied() *kcpclientfake.ClusterClientset {
+	client := kcpclientfake.NewSimpleClusterClientset()
+	
+	client.PrependReactor("create", "subjectaccessreviews", func(action testing.Action) (bool, interface{}, error) {
+		createAction := action.(testing.CreateAction)
+		sar := createAction.GetObject().(*authv1.SubjectAccessReview)
+		sar.Status = authv1.SubjectAccessReviewStatus{
+			Allowed: false,
+			Reason:  "Forbidden",
+		}
+		return true, sar, nil
+	})
+	
+	return client
+}
+
+func newMockKCPClientWithWorkspaceNotFound() *kcpclientfake.ClusterClientset {
+	client := kcpclientfake.NewSimpleClusterClientset()
+	
+	client.PrependReactor("create", "subjectaccessreviews", func(action testing.Action) (bool, interface{}, error) {
+		createAction := action.(testing.CreateAction)
+		sar := createAction.GetObject().(*authv1.SubjectAccessReview)
+		sar.Status = authv1.SubjectAccessReviewStatus{Allowed: true}
+		return true, sar, nil
+	})
+	
+	client.PrependReactor("list", "workspaces", func(action testing.Action) (bool, interface{}, error) {
+		return true, nil, apierrors.NewNotFound(tenancyv1alpha1.Resource("workspaces"), "test-workspace")
 	})
 	
 	return client

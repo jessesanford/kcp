@@ -3,6 +3,7 @@ package discovery
 import (
 	"sync"
 	"time"
+	
 	"github.com/kcp-dev/kcp/pkg/placement/interfaces"
 )
 

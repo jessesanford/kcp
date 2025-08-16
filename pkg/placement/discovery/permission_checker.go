@@ -7,14 +7,22 @@ import (
 	"time"
 	
 	authv1 "k8s.io/api/authorization/v1"
-	kcpclient "github.com/kcp-dev/kcp/pkg/client/clientset/versioned"
-	"github.com/kcp-dev/logicalcluster/v3"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
+	
+	kcpclient "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
+	"github.com/kcp-dev/logicalcluster/v3"
+)
+
+const (
+	// permissionCacheTTL is the time-to-live for cached permission checks
+	permissionCacheTTL = 5 * time.Minute
 )
 
 // PermissionChecker checks access permissions for workspaces
 type PermissionChecker struct {
-	client kcpclient.Interface
+	client kcpclient.ClusterInterface
 	cache  *permissionCache
 }
 
@@ -30,7 +38,7 @@ type permissionEntry struct {
 }
 
 // NewPermissionChecker creates a new permission checker
-func NewPermissionChecker(client kcpclient.Interface) *PermissionChecker {
+func NewPermissionChecker(client kcpclient.ClusterInterface) *PermissionChecker {
 	return &PermissionChecker{
 		client: client,
 		cache: &permissionCache{
@@ -79,10 +87,25 @@ func (c *PermissionChecker) performAccessCheck(ctx context.Context, workspace st
 		SubjectAccessReviews().
 		Create(ctx, sar, metav1.CreateOptions{})
 	if err != nil {
-		return false, fmt.Errorf("failed to check access: %w", err)
+		if errors.IsForbidden(err) {
+			// Access denied - return false but don't treat as error
+			klog.V(4).Infof("Access denied for workspace %s, verb %s: %v", workspace, verb, err)
+			return false, nil
+		}
+		if errors.IsNotFound(err) {
+			// Workspace doesn't exist - return false but don't treat as error
+			klog.V(4).Infof("Workspace %s not found for access check: %v", workspace, err)
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to check access for workspace %s: %w", workspace, err)
 	}
 	
-	return result.Status.Allowed, nil
+	allowed := result.Status.Allowed
+	if !allowed {
+		klog.V(5).Infof("Access denied for workspace %s, verb %s: %s", workspace, verb, result.Status.Reason)
+	}
+	
+	return allowed, nil
 }
 
 // CheckWorkspaceAccess checks access for workspace operations
@@ -125,10 +148,23 @@ func (c *PermissionChecker) performWorkspaceAccessCheck(ctx context.Context, wor
 		SubjectAccessReviews().
 		Create(ctx, sar, metav1.CreateOptions{})
 	if err != nil {
-		return false, fmt.Errorf("failed to check workspace access: %w", err)
+		if errors.IsForbidden(err) {
+			klog.V(4).Infof("Workspace access denied for %s, verb %s, resource %s: %v", workspace, verb, resource, err)
+			return false, nil
+		}
+		if errors.IsNotFound(err) {
+			klog.V(4).Infof("Workspace %s not found for access check: %v", workspace, err)
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to check workspace access for %s: %w", workspace, err)
 	}
 	
-	return result.Status.Allowed, nil
+	allowed := result.Status.Allowed
+	if !allowed {
+		klog.V(5).Infof("Workspace access denied for %s, verb %s, resource %s: %s", workspace, verb, resource, result.Status.Reason)
+	}
+	
+	return allowed, nil
 }
 
 // cache methods
@@ -141,8 +177,8 @@ func (c *permissionCache) get(key string) (bool, bool) {
 		return false, false
 	}
 	
-	// Check if cache entry is still valid (5 minutes TTL)
-	if time.Since(entry.timestamp) > 5*time.Minute {
+	// Check if cache entry is still valid using TTL constant
+	if time.Since(entry.timestamp) > permissionCacheTTL {
 		return false, false
 	}
 	
