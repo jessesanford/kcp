@@ -37,6 +37,8 @@ type CanaryDeploymentSpec struct {
 	AnalysisInterval metav1.Duration `json:"analysisInterval"`
 	// SuccessThreshold defines the success rate threshold for promotion.
 	SuccessThreshold float64 `json:"successThreshold"`
+	// RollbackThreshold defines the error rate threshold for automatic rollback.
+	RollbackThreshold float64 `json:"rollbackThreshold"`
 }
 
 // CanaryDeploymentStatus defines the observed state of CanaryDeployment.
