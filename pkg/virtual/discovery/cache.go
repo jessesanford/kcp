@@ -17,7 +17,6 @@ limitations under the License.
 package discovery
 
 import (
-	"context"
 	"sync"
 	"time"
 
@@ -84,11 +83,10 @@ func NewDiscoveryCache(defaultTTLSeconds int64) interfaces.DiscoveryCache {
 // Returns the cached resources and true if found and not expired, otherwise nil and false.
 func (c *DiscoveryCache) GetResources(workspace logicalcluster.Name) ([]interfaces.ResourceInfo, bool) {
 	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	
 	key := workspace.String()
 	entry, exists := c.entries[key]
 	if !exists {
+		c.mutex.RUnlock()
 		RecordCacheHit(key, false)
 		return nil, false
 	}
@@ -96,18 +94,25 @@ func (c *DiscoveryCache) GetResources(workspace logicalcluster.Name) ([]interfac
 	// Check if entry has expired
 	now := time.Now()
 	if now.After(entry.expiresAt) {
+		c.mutex.RUnlock()
 		RecordCacheHit(key, false)
 		// Don't clean up here to avoid lock upgrade, let cleanup goroutine handle it
 		return nil, false
 	}
 	
-	// Update access time and return cached data
-	entry.lastAccessed = now
-	RecordCacheHit(key, true)
-	
-	// Return a copy to prevent external mutation
+	// Create a copy of resources while under read lock
 	result := make([]interfaces.ResourceInfo, len(entry.resources))
 	copy(result, entry.resources)
+	c.mutex.RUnlock()
+	
+	// Update access time with a separate write lock to avoid race conditions
+	c.mutex.Lock()
+	if entry, exists := c.entries[key]; exists && !now.After(entry.expiresAt) {
+		entry.lastAccessed = now
+	}
+	c.mutex.Unlock()
+	
+	RecordCacheHit(key, true)
 	return result, true
 }
 

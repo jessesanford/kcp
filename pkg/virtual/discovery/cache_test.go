@@ -33,7 +33,7 @@ func TestDiscoveryCache_BasicOperations(t *testing.T) {
 	cache := NewDiscoveryCache(60).(*DiscoveryCache) // 60 second TTL
 	defer cache.Stop()
 
-	workspace := logicalcluster.New("test-workspace")
+	workspace := logicalcluster.Name("test-workspace")
 	resources := []interfaces.ResourceInfo{
 		{
 			GroupVersionResource: schema.GroupVersionResource{
@@ -70,7 +70,7 @@ func TestDiscoveryCache_TTLExpiration(t *testing.T) {
 	cache := NewDiscoveryCache(1).(*DiscoveryCache) // 1 second TTL
 	defer cache.Stop()
 
-	workspace := logicalcluster.New("test-workspace")
+	workspace := logicalcluster.Name("test-workspace")
 	resources := []interfaces.ResourceInfo{
 		{
 			GroupVersionResource: schema.GroupVersionResource{
@@ -104,8 +104,8 @@ func TestDiscoveryCache_WorkspaceIsolation(t *testing.T) {
 	cache := NewDiscoveryCache(60).(*DiscoveryCache)
 	defer cache.Stop()
 
-	workspace1 := logicalcluster.New("workspace-1")
-	workspace2 := logicalcluster.New("workspace-2")
+	workspace1 := logicalcluster.Name("workspace-1")
+	workspace2 := logicalcluster.Name("workspace-2")
 
 	resources1 := []interfaces.ResourceInfo{
 		{
@@ -166,7 +166,7 @@ func TestDiscoveryCache_ConcurrentAccess(t *testing.T) {
 	cache := NewDiscoveryCache(60).(*DiscoveryCache)
 	defer cache.Stop()
 
-	workspace := logicalcluster.New("concurrent-test")
+	workspace := logicalcluster.Name("concurrent-test")
 	resources := []interfaces.ResourceInfo{
 		{
 			GroupVersionResource: schema.GroupVersionResource{
@@ -222,8 +222,8 @@ func TestDiscoveryCache_Clear(t *testing.T) {
 	cache := NewDiscoveryCache(60).(*DiscoveryCache)
 	defer cache.Stop()
 
-	workspace1 := logicalcluster.New("workspace-1")
-	workspace2 := logicalcluster.New("workspace-2")
+	workspace1 := logicalcluster.Name("workspace-1")
+	workspace2 := logicalcluster.Name("workspace-2")
 
 	resources := []interfaces.ResourceInfo{
 		{
@@ -261,7 +261,7 @@ func TestCacheStoreManager_Operations(t *testing.T) {
 	manager := NewCacheStoreManager(store, time.Minute)
 	defer manager.Stop()
 
-	workspace := logicalcluster.New("test-workspace")
+	workspace := logicalcluster.Name("test-workspace")
 	resources := []interfaces.ResourceInfo{
 		{
 			GroupVersionResource: schema.GroupVersionResource{
@@ -304,7 +304,7 @@ func BenchmarkDiscoveryCache_Get(b *testing.B) {
 	cache := NewDiscoveryCache(300).(*DiscoveryCache) // 5 minute TTL
 	defer cache.Stop()
 
-	workspace := logicalcluster.New("bench-workspace")
+	workspace := logicalcluster.Name("bench-workspace")
 	resources := []interfaces.ResourceInfo{
 		{
 			GroupVersionResource: schema.GroupVersionResource{
@@ -330,7 +330,7 @@ func BenchmarkDiscoveryCache_Set(b *testing.B) {
 	cache := NewDiscoveryCache(300).(*DiscoveryCache)
 	defer cache.Stop()
 
-	workspace := logicalcluster.New("bench-workspace")
+	workspace := logicalcluster.Name("bench-workspace")
 	resources := []interfaces.ResourceInfo{
 		{
 			GroupVersionResource: schema.GroupVersionResource{
@@ -351,7 +351,7 @@ func BenchmarkDiscoveryCache_ConcurrentGetSet(b *testing.B) {
 	cache := NewDiscoveryCache(300).(*DiscoveryCache)
 	defer cache.Stop()
 
-	workspace := logicalcluster.New("bench-workspace")
+	workspace := logicalcluster.Name("bench-workspace")
 	resources := []interfaces.ResourceInfo{
 		{
 			GroupVersionResource: schema.GroupVersionResource{

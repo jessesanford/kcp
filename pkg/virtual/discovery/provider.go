@@ -60,11 +60,14 @@ type KCPDiscoveryProvider struct {
 	// apiExportInformer monitors APIExport changes
 	apiExportInformer cache.SharedIndexInformer
 
-	// cache stores discovered resources per workspace (stubbed for PR split)
+	// cache stores discovered resources per workspace
 	cache interfaces.DiscoveryCache
 
-	// NOTE: converter and watcher are stubbed for this PR split
-	// They will be implemented in subsequent PRs
+	// converter provides resource conversion capabilities
+	converter *ResourceConverter
+
+	// NOTE: watcher is stubbed for this PR split
+	// It will be implemented in subsequent PRs
 
 	// workspace is the logical cluster this provider serves
 	workspace logicalcluster.Name
@@ -105,9 +108,11 @@ func NewKCPDiscoveryProvider(
 		return nil, fmt.Errorf("workspace cannot be empty")
 	}
 
-	// Create a stub discovery cache for this PR split
-	// The actual implementation will be added in the cache PR
-	discoveryCache := NewStubDiscoveryCache()
+	// Create a discovery cache with default TTL
+	discoveryCache := NewDiscoveryCache(300) // 5 minute default TTL
+
+	// Create a resource converter
+	resourceConverter := NewResourceConverter()
 
 	// Get APIExport informer
 	apiExportInformer := informerFactory.Apis().V1alpha1().APIExports().Informer()
@@ -117,6 +122,7 @@ func NewKCPDiscoveryProvider(
 		informerFactory:   informerFactory,
 		apiExportInformer: apiExportInformer,
 		cache:             discoveryCache,
+		converter:         resourceConverter,
 		workspace:         workspace,
 		stopCh:            make(chan struct{}),
 	}
@@ -135,9 +141,9 @@ func (p *KCPDiscoveryProvider) Start(ctx context.Context) error {
 
 	klog.V(2).InfoS("Starting KCP discovery provider", "workspace", p.workspace)
 
-	// Cache is stubbed for this PR split
-	// Watcher is stubbed for this PR split
-	// These will be implemented in subsequent PRs
+	// Cache is now fully implemented and active
+	// Converter is integrated for resource transformation
+	// Watcher is stubbed for this PR split - will be implemented in subsequent PRs
 
 	p.started = true
 	klog.V(2).InfoS("KCP discovery provider started successfully", "workspace", p.workspace)
@@ -162,12 +168,12 @@ func (p *KCPDiscoveryProvider) Discover(ctx context.Context, workspace logicalcl
 	RecordCacheHit(workspace.String(), false)
 
 	// TODO: Implement actual APIExport discovery for this workspace
-	// This is stubbed for the PR split - actual implementation will be added
-	// in the converter PR which will handle APIExport to ResourceInfo conversion
+	// For now we'll use a placeholder approach, but the converter is integrated
 	var workspaceResources []interfaces.ResourceInfo
 	
-	// For now, return empty results to allow compilation
-	// The actual discovery logic will be implemented when the converter is added
+	// The converter is now available for resource conversion when needed
+	// Example: convertedResources, err := p.converter.ConvertResources(discoveredResources, "v1")
+	// Future PRs will add the full APIExport discovery and use the converter
 
 	// Cache the results
 	p.cache.SetResources(workspace, workspaceResources, contracts.DefaultCacheTTLSeconds)
@@ -238,9 +244,50 @@ func (p *KCPDiscoveryProvider) Stop() {
 
 	close(p.stopCh)
 
-	// Cache cleanup is stubbed for this PR split
-	// Will be implemented when the actual cache is added
+	// Stop the cache cleanup goroutine
+	if p.cache != nil {
+		if discoveryCache, ok := p.cache.(*DiscoveryCache); ok {
+			discoveryCache.Stop()
+		}
+	}
 
 	p.started = false
 	klog.V(2).InfoS("KCP discovery provider stopped", "workspace", p.workspace)
+}
+
+// ConvertResources converts resources to a target API version using the integrated converter
+func (p *KCPDiscoveryProvider) ConvertResources(resources []interfaces.ResourceInfo, targetVersion string) ([]interfaces.ResourceInfo, error) {
+	if p.converter == nil {
+		return resources, fmt.Errorf("converter not initialized")
+	}
+	
+	start := time.Now()
+	convertedResources, err := p.converter.ConvertResources(resources, targetVersion)
+	RecordConversion("unknown", targetVersion, err)
+	
+	klog.V(4).InfoS("Resource conversion completed", 
+		"workspace", p.workspace,
+		"originalCount", len(resources),
+		"convertedCount", len(convertedResources),
+		"targetVersion", targetVersion,
+		"duration", time.Since(start),
+	)
+	
+	return convertedResources, err
+}
+
+// AddConversionRule allows adding custom conversion rules to the provider's converter
+func (p *KCPDiscoveryProvider) AddConversionRule(rule *ConversionRule) error {
+	if p.converter == nil {
+		return fmt.Errorf("converter not initialized")
+	}
+	
+	p.converter.AddConversionRule(rule)
+	klog.V(3).InfoS("Added conversion rule", 
+		"workspace", p.workspace,
+		"sourceGVR", rule.SourceGVR,
+		"targetGVR", rule.TargetGVR,
+	)
+	
+	return nil
 }
