@@ -61,6 +61,24 @@ var (
 		},
 		[]string{"workspace"},
 	)
+
+	// discoveryConversionsTotal counts resource conversions
+	discoveryConversionsTotal = metrics.NewCounterVec(
+		&metrics.CounterOpts{
+			Name: "kcp_virtual_discovery_conversions_total",
+			Help: "Total number of resource conversions performed",
+		},
+		[]string{"source_version", "target_version", "result"},
+	)
+
+	// discoveryCacheSize tracks cache size
+	discoveryCacheSize = metrics.NewGaugeVec(
+		&metrics.GaugeOpts{
+			Name: "kcp_virtual_discovery_cache_entries",
+			Help: "Number of entries in the discovery cache",
+		},
+		[]string{"workspace"},
+	)
 )
 
 // init registers metrics
@@ -70,6 +88,8 @@ func init() {
 		discoveryRequestDuration,
 		discoveryCacheHits,
 		discoveryWatchersActive,
+		discoveryConversionsTotal,
+		discoveryCacheSize,
 	)
 }
 
@@ -97,4 +117,19 @@ func RecordCacheHit(workspace string, hit bool) {
 // UpdateActiveWatchers updates the active watcher count
 func UpdateActiveWatchers(workspace string, delta int) {
 	discoveryWatchersActive.WithLabelValues(workspace).Add(float64(delta))
+}
+
+// RecordConversion records a resource conversion attempt
+func RecordConversion(sourceVersion, targetVersion string, err error) {
+	result := "success"
+	if err != nil {
+		result = "error"
+	}
+	
+	discoveryConversionsTotal.WithLabelValues(sourceVersion, targetVersion, result).Inc()
+}
+
+// UpdateCacheSize updates the cache size metric for a workspace
+func UpdateCacheSize(workspace string, size int) {
+	discoveryCacheSize.WithLabelValues(workspace).Set(float64(size))
 }
