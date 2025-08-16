@@ -1,0 +1,186 @@
+# Cross-Workspace Placement Policy Examples
+# This file contains example placement policies for various scenarios
+
+---
+# Basic Multi-Region Placement Policy
+apiVersion: placement.tmc.io/v1alpha1
+kind: PlacementPolicy
+metadata:
+  name: multi-region-basic
+  namespace: default
+spec:
+  placement:
+    strategy: "spread"
+    targets:
+      - workspace: "prod-us-west-2"
+        weight: 50
+      - workspace: "prod-us-east-1"
+        weight: 50
+  constraints:
+    - expression: 'request.object.metadata.labels["environment"] == "production"'
+      message: "Only production workloads allowed"
+
+---
+# Advanced Placement with Resource Constraints
+apiVersion: placement.tmc.io/v1alpha1
+kind: PlacementPolicy
+metadata:
+  name: resource-aware-placement
+  namespace: default
+spec:
+  placement:
+    strategy: "resource-aware"
+    targets:
+      - workspace: "compute-optimized"
+        weight: 70
+        constraints:
+          - expression: 'sum(request.object.spec.template.spec.containers.map(c, double(c.resources.requests.cpu.replace("m", "")))) > 1000'
+            message: "High CPU workloads go to compute-optimized workspace"
+      - workspace: "memory-optimized"
+        weight: 30
+        constraints:
+          - expression: 'sum(request.object.spec.template.spec.containers.map(c, double(c.resources.requests.memory.replace("Gi", "")))) > 4'
+            message: "High memory workloads go to memory-optimized workspace"
+
+---
+# Tier-Based Placement Policy
+apiVersion: placement.tmc.io/v1alpha1
+kind: PlacementPolicy
+metadata:
+  name: tier-based-placement
+  namespace: default
+spec:
+  placement:
+    strategy: "tier-based"
+    targets:
+      - workspace: "premium-cluster"
+        weight: 100
+        constraints:
+          - expression: 'request.object.metadata.labels["tier"] == "premium"'
+            message: "Premium tier workloads"
+      - workspace: "standard-cluster"
+        weight: 100
+        constraints:
+          - expression: 'request.object.metadata.labels["tier"] == "standard"'
+            message: "Standard tier workloads"
+      - workspace: "basic-cluster"
+        weight: 100
+        constraints:
+          - expression: 'request.object.metadata.labels["tier"] == "basic"'
+            message: "Basic tier workloads"
+
+---
+# Canary Deployment Configuration
+apiVersion: deployment.tmc.io/v1alpha1
+kind: CanaryDeployment
+metadata:
+  name: web-service-canary
+  namespace: default
+spec:
+  sourceWorkspace: "staging-workspace"
+  targetWorkspaces:
+    - name: "prod-us-west-2"
+      traffic: 20
+    - name: "prod-us-east-1"
+      traffic: 20
+  strategy:
+    type: "linear"
+    increments: [10, 25, 50, 75, 100]
+    intervalDuration: "5m"
+    rollbackOnFailure: true
+    maxConcurrentUpdates: 2
+  healthCheck:
+    maxErrorRate: 5.0
+    maxResponseTime: "500ms"
+    minSuccessRate: 95.0
+    checkInterval: "30s"
+  metrics:
+    - name: "error_rate"
+      threshold: 5.0
+      query: "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m]))"
+    - name: "response_time_p95"
+      threshold: 500
+      query: "histogram_quantile(0.95, http_request_duration_seconds_bucket)"
+
+---
+# Development Environment Placement
+apiVersion: placement.tmc.io/v1alpha1
+kind: PlacementPolicy
+metadata:
+  name: dev-environment-placement
+  namespace: default
+spec:
+  placement:
+    strategy: "round-robin"
+    targets:
+      - workspace: "dev-team-a"
+        weight: 33
+      - workspace: "dev-team-b"
+        weight: 33
+      - workspace: "dev-shared"
+        weight: 34
+  constraints:
+    - expression: 'request.object.metadata.labels["environment"] == "development"'
+      message: "Development environment only"
+    - expression: 'size(request.object.spec.template.spec.containers) <= 3'
+      message: "Maximum 3 containers in development"
+    - expression: 'request.object.metadata.labels has "team"'
+      message: "Team label required for development workloads"
+
+---
+# High Availability Placement Policy
+apiVersion: placement.tmc.io/v1alpha1
+kind: PlacementPolicy
+metadata:
+  name: high-availability-placement
+  namespace: default
+spec:
+  placement:
+    strategy: "availability-zone-spread"
+    targets:
+      - workspace: "prod-az-1a"
+        weight: 34
+        availabilityZone: "us-west-2a"
+      - workspace: "prod-az-1b"
+        weight: 33
+        availabilityZone: "us-west-2b"
+      - workspace: "prod-az-1c"
+        weight: 33
+        availabilityZone: "us-west-2c"
+  constraints:
+    - expression: 'request.object.metadata.labels["high-availability"] == "true"'
+      message: "High availability workloads only"
+    - expression: 'request.object.spec.replicas >= 3'
+      message: "Minimum 3 replicas required for HA"
+  antiAffinity:
+    enabled: true
+    topologyKey: "topology.kubernetes.io/zone"
+
+---
+# Cost-Optimized Placement Policy
+apiVersion: placement.tmc.io/v1alpha1
+kind: PlacementPolicy
+metadata:
+  name: cost-optimized-placement
+  namespace: default
+spec:
+  placement:
+    strategy: "cost-aware"
+    targets:
+      - workspace: "spot-instances"
+        weight: 80
+        costTier: "low"
+        constraints:
+          - expression: 'request.object.metadata.labels["cost-sensitive"] == "true"'
+            message: "Cost-sensitive workloads prefer spot instances"
+      - workspace: "on-demand-instances"
+        weight: 20
+        costTier: "medium"
+  constraints:
+    - expression: 'request.object.metadata.labels has "cost-tier"'
+      message: "Cost tier label required"
+  tolerations:
+    - key: "spot-instance"
+      operator: "Equal"
+      value: "true"
+      effect: "NoSchedule"
