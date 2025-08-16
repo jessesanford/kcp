@@ -126,7 +126,7 @@ func (c *Cache) Get(ctx context.Context, key interfaces.CacheKey) (*interfaces.A
 	c.updateHitRatio()
 
 	klog.V(5).InfoS("Cache hit", "key", c.keyString(key))
-	return entry.status.deepCopy(), true
+	return deepCopyAggregatedStatus(entry.status), true
 }
 
 // Set stores aggregated status with TTL
@@ -144,7 +144,7 @@ func (c *Cache) Set(ctx context.Context, key interfaces.CacheKey, status *interf
 
 	now := time.Now()
 	entry := &cacheEntry{
-		status:       status.deepCopy(),
+		status:       deepCopyAggregatedStatus(status),
 		expiresAt:    now.Add(ttl),
 		lastAccessed: now,
 	}
@@ -261,8 +261,8 @@ func (c *Cache) keyString(key interfaces.CacheKey) string {
 	return fmt.Sprintf("%s/%s:%s", key.GVR.String(), key.NamespacedName.String(), key.AggregationHash[:8])
 }
 
-// deepCopy creates a deep copy of AggregatedStatus
-func (status *interfaces.AggregatedStatus) deepCopy() *interfaces.AggregatedStatus {
+// deepCopyAggregatedStatus creates a deep copy of AggregatedStatus
+func deepCopyAggregatedStatus(status *interfaces.AggregatedStatus) *interfaces.AggregatedStatus {
 	if status == nil {
 		return nil
 	}
