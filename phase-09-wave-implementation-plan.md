@@ -1,40 +1,63 @@
-# Phase 4: Wave-Based Implementation Plan for Advanced Features
+# Phase 9: Wave-Based Implementation Plan for Advanced Features
 
 ## Executive Summary
 
-**Phase**: Phase 4 - Advanced Features (Monitoring, CLI, Canary Deployments)  
+**Phase**: Phase 9 - Advanced Features (Monitoring, CLI, Canary Deployments)  
 **Total Efforts**: 7 branches  
 **Optimal Waves**: 3 waves  
 **Maximum Parallelization**: 3 agents working simultaneously  
 **Total Duration**: 3 days with parallel execution  
 **Total Lines**: ~4,200 lines  
 
-This plan transforms the sequential Phase 4 implementation into an optimally parallelized execution strategy that adds production-ready features to TMC.
+This plan transforms the sequential Phase 9 implementation into an optimally parallelized execution strategy that adds production-ready features to TMC.
+
+## Dependencies
+
+### Phase-Level Dependencies
+- **Depends On**: Phase 5 (APIs), Phase 6 (controllers for monitoring), Phase 7 (syncer metrics), Phase 8 (placement for canary)
+- **Blocks**: Phase 10 (production hardening needs monitoring and CLI tools)
+- **Independent From**: None (Phase 9 enhances all prior phases)
+
+### Wave-Level Dependencies
+- **Wave 1 Depends On**: Phase 7 complete (syncer metrics needed)
+- **Wave 2 Depends On**: Wave 1 metrics (TUI needs metrics), Phase 5 APIs (CLI needs API types)
+- **Wave 3 Depends On**: Wave 1 metrics (canary needs monitoring), Phase 8 placement (canary uses placement)
+
+### Critical Path
+- Internal: Wave 1 (Metrics) → Wave 3 (Canary Controller) → Wave 3 (Rollback Engine)
+- External Blockers: Phase 7 syncer and Phase 8 placement must be complete
+
+### Dependency Notes
+- Metrics foundation enables all observability features
+- CLI tools provide operational interface to entire TMC stack
+- Canary deployments use Phase 8's placement scheduler
+- Health monitoring integrates with Phase 7's syncer status
+- This phase makes TMC production-ready
 
 ## Dependency Graph
 
 ```mermaid
 graph TD
     %% External Dependencies
-    P0[Phase 0 APIs] --> W2E1[CLI Plugin]
-    P0 --> W2E3[API Docs]
-    P2[Phase 2 Runtime] --> W1E1[Metrics]
-    P2[Phase 2 Runtime] --> W1E2[Health Monitor]
-    P3[Phase 3 Placement] --> W3E1[Canary Controller]
+    P5[Phase 5 APIs] --> W2E1[CLI Plugin]
+    P5 --> W2E3[API Docs]
+    P7[Phase 7 Syncer] --> W1E1[Metrics]
+    P7[Phase 7 Syncer] --> W1E2[Health Monitor]
+    P8[Phase 8 Placement] --> W3E1[Canary Controller]
     
     %% Wave 1 - Observability Foundation
-    W1E1[4.1.1 Metrics & Telemetry<br/>650 lines] --> W2E2[TUI Dashboard]
+    W1E1[9.1.1 Metrics & Telemetry<br/>650 lines] --> W2E2[TUI Dashboard]
     W1E1 --> W3E1[Canary Controller]
-    W1E2[4.1.2 Health Monitoring<br/>500 lines] --> W2E2
+    W1E2[9.1.2 Health Monitoring<br/>500 lines] --> W2E2
     
     %% Wave 2 - User Experience
-    W2E1[4.2.1 kubectl-tmc Plugin<br/>700 lines]
-    W2E2[4.2.2 TUI Dashboard<br/>600 lines]
-    W2E3[4.2.3 API Documentation<br/>450 lines]
+    W2E1[9.2.1 kubectl-tmc Plugin<br/>700 lines]
+    W2E2[9.2.2 TUI Dashboard<br/>600 lines]
+    W2E3[9.2.3 API Documentation<br/>450 lines]
     
     %% Wave 3 - Advanced Deployment
-    W3E1[4.3.1 Canary Controller<br/>650 lines] --> W3E2[Rollback Engine]
-    W3E2[4.3.2 Rollback Engine<br/>550 lines]
+    W3E1[9.3.1 Canary Controller<br/>650 lines] --> W3E2[Rollback Engine]
+    W3E2[9.3.2 Rollback Engine<br/>550 lines]
     
     %% Critical Path Highlighting
     classDef critical fill:#ff9999,stroke:#333,stroke-width:3px
@@ -50,9 +73,9 @@ graph TD
 
 | Wave | Branches | Max Parallel Agents | Dependencies | Critical Path | Duration |
 |------|----------|-------------------|--------------|---------------|----------|
-| Wave 1 | 4.1.1 Metrics, 4.1.2 Health | 2 | Phase 2 Runtime | Yes (Metrics) | Day 1 |
-| Wave 2 | 4.2.1 CLI, 4.2.2 TUI, 4.2.3 Docs | 3 | Phase 0-3, Wave 1 Metrics | No | Day 2 |
-| Wave 3 | 4.3.1 Canary, 4.3.2 Rollback | 2 | Phase 3, Wave 1 Metrics | Yes | Day 3 |
+| Wave 1 | 9.1.1 Metrics, 9.1.2 Health | 2 | Phase 7 Syncer | Yes (Metrics) | Day 1 |
+| Wave 2 | 9.2.1 CLI, 9.2.2 TUI, 9.2.3 Docs | 3 | Phase 5-8, Wave 1 Metrics | No | Day 2 |
+| Wave 3 | 9.3.1 Canary, 9.3.2 Rollback | 2 | Phase 8, Wave 1 Metrics | Yes | Day 3 |
 
 ## Wave 1: Observability Foundation (Day 1)
 
@@ -60,14 +83,14 @@ graph TD
 **Purpose**: Establish comprehensive monitoring and observability infrastructure  
 **Parallel Agents**: 2  
 **Total Lines**: ~1,150  
-**Dependencies**: Phase 2 runtime components must be complete  
+**Dependencies**: Phase 7 syncer components must be complete  
 
 ### Branch Assignments
 
 #### Agent 1: Metrics Specialist
-**Branch**: `feature/tmc-completion/p4w1-metrics`  
+**Branch**: `feature/tmc-completion/p9w1-metrics`  
 **Lines**: ~650  
-**Worktree**: `/workspaces/kcp-worktrees/p4w1-metrics`  
+**Worktree**: `/workspaces/kcp-worktrees/p9w1-metrics`  
 **Focus Areas**:
 - Prometheus metrics implementation
 - OpenTelemetry integration
@@ -77,9 +100,9 @@ graph TD
 - Connection monitoring
 
 #### Agent 2: Health Monitoring Specialist
-**Branch**: `feature/tmc-completion/p4w1-health`  
+**Branch**: `feature/tmc-completion/p9w1-health`  
 **Lines**: ~500  
-**Worktree**: `/workspaces/kcp-worktrees/p4w1-health`  
+**Worktree**: `/workspaces/kcp-worktrees/p9w1-health`  
 **Focus Areas**:
 - Component health tracking
 - Syncer health monitoring
