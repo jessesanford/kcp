@@ -39,6 +39,7 @@ import (
 	kcpinternalinterfaces "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/internalinterfaces"
 	kcptenancy "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/tenancy"
 	kcptopology "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/topology"
+	kcpworkload "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/workload"
 )
 
 // SharedInformerOption defines the functional option type for SharedInformerFactory.
@@ -285,6 +286,7 @@ type SharedInformerFactory interface {
 	Core() kcpcore.ClusterInterface
 	Tenancy() kcptenancy.ClusterInterface
 	Topology() kcptopology.ClusterInterface
+	Workload() kcpworkload.ClusterInterface
 }
 
 func (f *sharedInformerFactory) Apis() kcpapis.ClusterInterface {
@@ -305,6 +307,10 @@ func (f *sharedInformerFactory) Tenancy() kcptenancy.ClusterInterface {
 
 func (f *sharedInformerFactory) Topology() kcptopology.ClusterInterface {
 	return kcptopology.New(f, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Workload() kcpworkload.ClusterInterface {
+	return kcpworkload.New(f, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Cluster(clusterName logicalcluster.Name) ScopedDynamicSharedInformerFactory {
@@ -456,6 +462,7 @@ type SharedScopedInformerFactory interface {
 	Core() kcpcore.Interface
 	Tenancy() kcptenancy.Interface
 	Topology() kcptopology.Interface
+	Workload() kcpworkload.Interface
 }
 
 func (f *sharedScopedInformerFactory) Apis() kcpapis.Interface {
@@ -476,4 +483,8 @@ func (f *sharedScopedInformerFactory) Tenancy() kcptenancy.Interface {
 
 func (f *sharedScopedInformerFactory) Topology() kcptopology.Interface {
 	return kcptopology.NewScoped(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedScopedInformerFactory) Workload() kcpworkload.Interface {
+	return kcpworkload.NewScoped(f, f.namespace, f.tweakListOptions)
 }

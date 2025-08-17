@@ -36,6 +36,7 @@ import (
 	corev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/core/v1alpha1"
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/tenancy/v1alpha1"
 	topologyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/topology/v1alpha1"
+	workloadv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/workload/v1alpha1"
 )
 
 type ClusterInterface interface {
@@ -47,6 +48,7 @@ type ClusterInterface interface {
 	CoreV1alpha1() corev1alpha1.CoreV1alpha1ClusterInterface
 	TenancyV1alpha1() tenancyv1alpha1.TenancyV1alpha1ClusterInterface
 	TopologyV1alpha1() topologyv1alpha1.TopologyV1alpha1ClusterInterface
+	WorkloadV1alpha1() workloadv1alpha1.WorkloadV1alpha1ClusterInterface
 }
 
 // ClusterClientset contains the cluster clients for groups.
@@ -59,6 +61,7 @@ type ClusterClientset struct {
 	coreV1alpha1     *corev1alpha1.CoreV1alpha1ClusterClient
 	tenancyV1alpha1  *tenancyv1alpha1.TenancyV1alpha1ClusterClient
 	topologyV1alpha1 *topologyv1alpha1.TopologyV1alpha1ClusterClient
+	workloadV1alpha1 *workloadv1alpha1.WorkloadV1alpha1ClusterClient
 }
 
 // Discovery retrieves the DiscoveryClient.
@@ -97,6 +100,11 @@ func (c *ClusterClientset) TenancyV1alpha1() tenancyv1alpha1.TenancyV1alpha1Clus
 // TopologyV1alpha1 retrieves the TopologyV1alpha1ClusterClient.
 func (c *ClusterClientset) TopologyV1alpha1() topologyv1alpha1.TopologyV1alpha1ClusterInterface {
 	return c.topologyV1alpha1
+}
+
+// WorkloadV1alpha1 retrieves the WorkloadV1alpha1ClusterClient.
+func (c *ClusterClientset) WorkloadV1alpha1() workloadv1alpha1.WorkloadV1alpha1ClusterInterface {
+	return c.workloadV1alpha1
 }
 
 // Cluster scopes this clientset to one cluster.
@@ -175,6 +183,10 @@ func NewForConfigAndClient(c *rest.Config, httpClient *http.Client) (*ClusterCli
 	if err != nil {
 		return nil, err
 	}
+	cs.workloadV1alpha1, err = workloadv1alpha1.NewForConfigAndClient(&configShallowCopy, httpClient)
+	if err != nil {
+		return nil, err
+	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfigAndClient(&configShallowCopy, httpClient)
 	if err != nil {
@@ -202,6 +214,7 @@ func New(c *rest.Config) *ClusterClientset {
 	cs.coreV1alpha1 = corev1alpha1.NewForConfigOrDie(c)
 	cs.tenancyV1alpha1 = tenancyv1alpha1.NewForConfigOrDie(c)
 	cs.topologyV1alpha1 = topologyv1alpha1.NewForConfigOrDie(c)
+	cs.workloadV1alpha1 = workloadv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs

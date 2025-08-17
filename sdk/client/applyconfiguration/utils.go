@@ -32,6 +32,7 @@ import (
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tenancy/v1alpha1"
 	conditionsv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
 	topologyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/topology/v1alpha1"
+	workloadv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/workload/v1alpha1"
 	apisv1alpha1 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/apis/v1alpha1"
 	apisv1alpha2 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/apis/v1alpha2"
 	applyconfigurationcachev1alpha1 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/cache/v1alpha1"
@@ -41,6 +42,7 @@ import (
 	applyconfigurationmetav1 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/meta/v1"
 	applyconfigurationtenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/tenancy/v1alpha1"
 	applyconfigurationtopologyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/topology/v1alpha1"
+	applyconfigurationworkloadv1alpha1 "github.com/kcp-dev/kcp/sdk/client/applyconfiguration/workload/v1alpha1"
 )
 
 // ForKind returns an apply configuration type for the given GroupVersionKind, or nil if no
@@ -260,6 +262,28 @@ func ForKind(kind schema.GroupVersionKind) interface{} {
 		return &applyconfigurationtopologyv1alpha1.PartitionSetStatusApplyConfiguration{}
 	case topologyv1alpha1.SchemeGroupVersion.WithKind("PartitionSpec"):
 		return &applyconfigurationtopologyv1alpha1.PartitionSpecApplyConfiguration{}
+
+		// Group=workload.kcp.io, Version=v1alpha1
+	case workloadv1alpha1.SchemeGroupVersion.WithKind("AggregatedField"):
+		return &applyconfigurationworkloadv1alpha1.AggregatedFieldApplyConfiguration{}
+	case workloadv1alpha1.SchemeGroupVersion.WithKind("AggregatedLocationStatus"):
+		return &applyconfigurationworkloadv1alpha1.AggregatedLocationStatusApplyConfiguration{}
+	case workloadv1alpha1.SchemeGroupVersion.WithKind("AggregationPolicy"):
+		return &applyconfigurationworkloadv1alpha1.AggregationPolicyApplyConfiguration{}
+	case workloadv1alpha1.SchemeGroupVersion.WithKind("ConditionRequirement"):
+		return &applyconfigurationworkloadv1alpha1.ConditionRequirementApplyConfiguration{}
+	case workloadv1alpha1.SchemeGroupVersion.WithKind("HealthPolicy"):
+		return &applyconfigurationworkloadv1alpha1.HealthPolicyApplyConfiguration{}
+	case workloadv1alpha1.SchemeGroupVersion.WithKind("StatusFieldSelector"):
+		return &applyconfigurationworkloadv1alpha1.StatusFieldSelectorApplyConfiguration{}
+	case workloadv1alpha1.SchemeGroupVersion.WithKind("WorkloadReference"):
+		return &applyconfigurationworkloadv1alpha1.WorkloadReferenceApplyConfiguration{}
+	case workloadv1alpha1.SchemeGroupVersion.WithKind("WorkloadStatusAggregation"):
+		return &applyconfigurationworkloadv1alpha1.WorkloadStatusAggregationApplyConfiguration{}
+	case workloadv1alpha1.SchemeGroupVersion.WithKind("WorkloadStatusAggregationSpec"):
+		return &applyconfigurationworkloadv1alpha1.WorkloadStatusAggregationSpecApplyConfiguration{}
+	case workloadv1alpha1.SchemeGroupVersion.WithKind("WorkloadStatusAggregationStatus"):
+		return &applyconfigurationworkloadv1alpha1.WorkloadStatusAggregationStatusApplyConfiguration{}
 
 	}
 	return nil

@@ -34,6 +34,7 @@ import (
 	kcpcorev1alpha1 "github.com/kcp-dev/kcp/sdk/apis/core/v1alpha1"
 	kcptenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tenancy/v1alpha1"
 	kcptopologyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/topology/v1alpha1"
+	kcpworkloadv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/workload/v1alpha1"
 )
 
 type GenericClusterInformer interface {
@@ -143,6 +144,10 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 	case kcptopologyv1alpha1.SchemeGroupVersion.WithResource("partitionsets"):
 		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Topology().V1alpha1().PartitionSets().Informer()}, nil
 
+		// Group=workload.kcp.io, Version=v1alpha1
+	case kcpworkloadv1alpha1.SchemeGroupVersion.WithResource("workloadstatusaggregations"):
+		return &genericClusterInformer{resource: resource.GroupResource(), informer: f.Workload().V1alpha1().WorkloadStatusAggregations().Informer()}, nil
+
 	}
 
 	return nil, fmt.Errorf("no informer found for %v", resource)
@@ -210,6 +215,11 @@ func (f *sharedScopedInformerFactory) ForResource(resource schema.GroupVersionRe
 		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
 	case kcptopologyv1alpha1.SchemeGroupVersion.WithResource("partitionsets"):
 		informer := f.Topology().V1alpha1().PartitionSets().Informer()
+		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
+
+		// Group=workload.kcp.io, Version=v1alpha1
+	case kcpworkloadv1alpha1.SchemeGroupVersion.WithResource("workloadstatusaggregations"):
+		informer := f.Workload().V1alpha1().WorkloadStatusAggregations().Informer()
 		return &genericInformer{lister: cache.NewGenericLister(informer.GetIndexer(), resource.GroupResource()), informer: informer}, nil
 
 	}
