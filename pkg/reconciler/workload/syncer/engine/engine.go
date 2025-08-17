@@ -87,9 +87,7 @@ func NewEngine(
 	if config == nil {
 		config = DefaultEngineConfig()
 	}
-	
 	ctx, cancel := context.WithCancel(context.Background())
-	
 	return &Engine{
 		kcpClient:                 kcpClient,
 		downstreamClient:          downstreamClient,
@@ -117,22 +115,18 @@ func (e *Engine) Start(ctx context.Context) error {
 	// Start informer factories
 	e.kcpInformerFactory.Start(ctx.Done())
 	e.downstreamInformerFactory.Start(ctx.Done())
-	
 	// Wait for caches to sync
 	logger.Info("Waiting for caches to sync")
 	if !cache.WaitForCacheSync(ctx.Done()) {
 		return fmt.Errorf("failed to sync caches")
 	}
-	
 	// Update status to connected
 	e.statusMu.Lock()
 	e.status.Connected = true
 	now := metav1.Now()
 	e.status.LastSyncTime = &now
 	e.statusMu.Unlock()
-	
 	logger.Info("Caches synced, starting workers")
-	
 	// Start worker goroutines
 	for i := 0; i < e.config.WorkerCount; i++ {
 		e.workers.Add(1)
@@ -142,7 +136,6 @@ func (e *Engine) Start(ctx context.Context) error {
 	// Start status reporting
 	e.workers.Add(1)
 	go e.statusReporter(ctx)
-	
 	logger.Info("Sync engine started successfully")
 	return nil
 }
@@ -153,13 +146,10 @@ func (e *Engine) Stop() {
 	
 	// Cancel context to signal shutdown
 	e.cancel()
-	
 	// Shutdown queue
 	e.queue.ShutDown()
-	
 	// Wait for all workers to finish
 	e.workers.Wait()
-	
 	// Update status
 	e.statusMu.Lock()
 	e.status.Connected = false
@@ -176,14 +166,11 @@ func (e *Engine) RegisterResourceSyncer(gvr schema.GroupVersionResource) error {
 	if _, exists := e.resourceSyncers[gvr]; exists {
 		return fmt.Errorf("resource syncer for %s already registered", gvr)
 	}
-	
 	syncer, err := NewResourceSyncer(gvr, e)
 	if err != nil {
 		return fmt.Errorf("failed to create resource syncer for %s: %w", gvr, err)
 	}
-	
 	e.resourceSyncers[gvr] = syncer
-	
 	// Setup informers for this GVR
 	err = e.setupInformers(gvr)
 	if err != nil {
@@ -197,17 +184,8 @@ func (e *Engine) RegisterResourceSyncer(gvr schema.GroupVersionResource) error {
 
 // setupInformers configures informers for the given GVR
 func (e *Engine) setupInformers(gvr schema.GroupVersionResource) error {
-	// For now, we'll use a placeholder implementation for informer setup
-	// In a real implementation, this would properly configure informers
 	// TODO: Implement proper informer setup with KCP and downstream clients
 	klog.V(4).InfoS("Setting up informers for resource", "gvr", gvr)
-	
-	// This is a placeholder - in the real implementation we would:
-	// 1. Setup KCP informer with proper error handling
-	// 2. Setup downstream informer
-	// 3. Add event handlers for both informers
-	// 4. Handle informer lifecycle properly
-	
 	return nil
 }
 
@@ -422,8 +400,6 @@ func (e *Engine) updateStatusCounter(gvr schema.GroupVersionResource, category s
 
 // getGVRFromObject extracts GVR from an object
 func (e *Engine) getGVRFromObject(obj interface{}) (schema.GroupVersionResource, error) {
-	// This is a placeholder implementation
-	// In a real implementation, you would extract the GVR from the object's metadata
-	// For now, we'll return an empty GVR
+	// TODO: Extract GVR from object metadata
 	return schema.GroupVersionResource{}, fmt.Errorf("GVR extraction not implemented")
 }
