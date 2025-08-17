@@ -64,6 +64,7 @@ import (
 	"github.com/kcp-dev/kcp/pkg/admission/shard"
 	kcpvalidatingadmissionpolicy "github.com/kcp-dev/kcp/pkg/admission/validatingadmissionpolicy"
 	kcpvalidatingwebhook "github.com/kcp-dev/kcp/pkg/admission/validatingwebhook"
+	"github.com/kcp-dev/kcp/pkg/admission/webhooks"
 	"github.com/kcp-dev/kcp/pkg/admission/workspace"
 	"github.com/kcp-dev/kcp/pkg/admission/workspacetype"
 	"github.com/kcp-dev/kcp/pkg/admission/workspacetypeexists"
@@ -84,6 +85,8 @@ var AllOrderedPlugins = beforeWebhooks(kubeapiserveroptions.AllOrderedPlugins,
 	apibindingfinalizer.PluginName,
 	apiexportendpointslice.PluginName,
 	kcpmutatingwebhook.PluginName,
+	webhooks.SyncTargetPluginName,
+	webhooks.PlacementPluginName,
 	kcpvalidatingadmissionpolicy.PluginName,
 	kcpvalidatingwebhook.PluginName,
 	reservedcrdannotations.PluginName,
@@ -125,6 +128,8 @@ func RegisterAllKcpAdmissionPlugins(plugins *admission.Plugins) {
 	apiexportendpointslice.Register(plugins)
 	workspacenamespacelifecycle.Register(plugins)
 	kcpmutatingwebhook.Register(plugins)
+	webhooks.RegisterSyncTargetWebhook(plugins)
+	webhooks.RegisterPlacementWebhook(plugins)
 	kcpvalidatingadmissionpolicy.Register(plugins)
 	kcpvalidatingwebhook.Register(plugins)
 	reservedcrdannotations.Register(plugins)
@@ -157,6 +162,8 @@ var defaultOnPluginsInKcp = sets.New[string](
 	apibindingfinalizer.PluginName,
 	apiexportendpointslice.PluginName,
 	kcpmutatingwebhook.PluginName,
+	webhooks.SyncTargetPluginName,
+	webhooks.PlacementPluginName,
 	kcpvalidatingadmissionpolicy.PluginName,
 	kcpvalidatingwebhook.PluginName,
 	reservedcrdannotations.PluginName,
