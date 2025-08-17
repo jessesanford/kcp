@@ -3,16 +3,16 @@
 ## Overview
 This branch implements the Cluster controller responsible for managing ClusterRegistration resources and coordinating cluster lifecycle operations. It builds upon the SyncTarget controller interfaces to provide comprehensive cluster management capabilities.
 
-**Branch**: `feature/tmc-completion/p1w1-cluster-controller`  
+**Branch**: `feature/tmc-completion/p6w1-cluster-controller`  
 **Estimated Lines**: 650 lines  
 **Wave**: 2  
-**Dependencies**: p1w1-synctarget-controller must be complete  
+**Dependencies**: p6w1-synctarget-controller must be complete  
 
 ## Dependencies
 
 ### Required Before Starting
-- Phase 0 APIs complete (ClusterRegistration, SyncTarget types)
-- p1w1-synctarget-controller merged (provides SyncTarget interfaces)
+- Phase 5 APIs complete (ClusterRegistration, SyncTarget types)
+- p6w1-synctarget-controller merged (provides SyncTarget interfaces)
 - Core TMC API types available in pkg/apis/
 
 ### Blocks These Features
@@ -699,16 +699,16 @@ func contains(slice []string, item string) bool {
 
 ## Integration Points
 
-### With SyncTarget Controller (p1w1-synctarget-controller)
+### With SyncTarget Controller (p6w1-synctarget-controller)
 - Creates and manages SyncTarget resources
 - Monitors SyncTarget health
 - Aggregates capacity information
 
-### With Virtual Workspace (p1w2-vw-core)
+### With Virtual Workspace (p6w2-vw-core)
 - Provides cluster information for VW
 - Shares connection details
 
-### With Quota Manager (p1w3-quota-manager)
+### With Quota Manager (p6w3-quota-manager)
 - Reports cluster capacity
 - Updates resource availability
 
@@ -753,8 +753,8 @@ feat(cluster): implement Cluster controller with registration workflow
 - Ensure workspace isolation throughout
 - Add comprehensive status tracking and conditions
 
-Part of TMC Phase 1 Wave 2 implementation
-Depends on: p1w1-synctarget-controller
+Part of TMC Phase 6 Wave 1 implementation
+Depends on: p6w1-synctarget-controller
 ```
 
 ## Next Steps
