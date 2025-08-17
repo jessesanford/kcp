@@ -10,6 +10,29 @@
 - **Total duration**: 4-5 days with optimal parallelization
 - **Critical path**: Sync Engine → Downstream Core → WebSocket Connection
 
+## Dependencies
+
+### Phase-Level Dependencies
+- **Depends On**: Phase 5 (syncer interfaces), Phase 6 (SyncTarget controller for coordination)
+- **Blocks**: Phase 8 (cross-workspace needs working syncer), Phase 9 (observability needs syncer metrics)
+- **Independent From**: Phase 10 (integration can proceed separately)
+
+### Wave-Level Dependencies
+- **Wave 1 Depends On**: Phase 5 complete (syncer interfaces must exist)
+- **Wave 2 Depends On**: Wave 1 (sync engine and transform pipeline needed)
+- **Wave 3 Depends On**: Wave 2 critical path (downstream core must be operational)
+- **Wave 4 Depends On**: Wave 3 (WebSocket manager required for heartbeat)
+
+### Critical Path
+- Internal: Wave 1 (Sync Engine) → Wave 2 (Downstream Core) → Wave 3 (WebSocket) → Wave 4 (Heartbeat)
+- External Blockers: Phase 5 interfaces and Phase 6 SyncTarget controller must be complete
+
+### Dependency Notes
+- Sync Engine is the foundation for all syncer functionality
+- Downstream and upstream sync can partially parallelize within Wave 2
+- WebSocket manager integrates both downstream and upstream channels
+- Phase 8 will directly use our syncer for cross-workspace resource movement
+
 ## Dependency Graph
 
 ```mermaid
