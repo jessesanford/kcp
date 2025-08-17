@@ -9,6 +9,29 @@
 **Total Lines**: ~5,200 lines of code  
 **Critical Path**: 3 waves with sequential dependencies
 
+## Dependencies
+
+### Phase-Level Dependencies
+- **Depends On**: Phase 5 (placement interfaces), Phase 6 (VW infrastructure), Phase 7 (syncer for resource movement)
+- **Blocks**: Phase 9 (advanced features need cross-workspace runtime), Phase 10 (integration testing needs all runtime components)
+- **Independent From**: None (Phase 8 is highly integrated with prior work)
+
+### Wave-Level Dependencies
+- **Wave 1 Depends On**: Phase 5 complete (interfaces must exist), Phase 6 (infrastructure ready)
+- **Wave 2 Depends On**: Wave 1 (discovery results needed for scheduling)
+- **Wave 3 Depends On**: Wave 2 (scheduler and decisions needed), Phase 7 (syncer for status aggregation)
+
+### Critical Path
+- Internal: Wave 1 (Workspace Discovery) → Wave 2 (Placement Scheduler) → Wave 2 (Decision Maker) → Wave 3 (Controller)
+- External Blockers: Phase 5 interfaces, Phase 6 VW core, Phase 7 syncer must all be complete
+
+### Dependency Notes
+- Workspace discovery requires Phase 6's virtual workspace infrastructure
+- Placement scheduler uses Phase 5's placement interfaces
+- Status aggregation directly integrates with Phase 7's syncer
+- Phase 9's advanced policies will extend our CEL evaluator
+- This phase enables true multi-cluster workload distribution
+
 ## Dependency Graph
 
 ```mermaid
