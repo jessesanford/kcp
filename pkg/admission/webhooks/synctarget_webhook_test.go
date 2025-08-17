@@ -305,4 +305,5 @@ func (a *testAdmissionAttributes) AddAnnotation(key, value string) error { retur
 func (a *testAdmissionAttributes) AddAnnotationWithLevel(key, value string, level audit.Level) error { return nil }
 func (a *testAdmissionAttributes) GetReinvocationContext() admission.ReinvocationContext { return nil }
 func (a *testAdmissionAttributes) GetCluster() logicalcluster.Name { return logicalcluster.Name("root:test") }
+func (a *testAdmissionAttributes) SetCluster(cluster logicalcluster.Name) {}
 func (a *testAdmissionAttributes) GetOperationOptions() runtime.Object { return nil }

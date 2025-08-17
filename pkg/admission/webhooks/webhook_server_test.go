@@ -62,7 +62,8 @@ func TestNewWebhookServer(t *testing.T) {
 		t.Error("Expected scheme to be initialized")
 	}
 	
-	if server.codecs.LegacyCodec == nil {
+	// Verify codecs are initialized by checking they can create a codec
+	if server.codecs.LegacyCodec(admissionv1.SchemeGroupVersion) == nil {
 		t.Error("Expected codecs to be initialized")
 	}
 }
