@@ -28,8 +28,6 @@ import (
 )
 
 // setCondition adds or updates a condition in the conditions slice.
-// If a condition with the same type already exists, it will be updated.
-// Otherwise, a new condition will be added to the slice.
 func setCondition(conditions *[]metav1.Condition, newCondition metav1.Condition) {
 	if conditions == nil {
 		*conditions = []metav1.Condition{}
@@ -47,8 +45,7 @@ func setCondition(conditions *[]metav1.Condition, newCondition metav1.Condition)
 	*conditions = append(*conditions, newCondition)
 }
 
-// getCondition retrieves a condition by type from the conditions slice.
-// Returns the condition and true if found, nil and false otherwise.
+// getCondition retrieves a condition by type.
 func getCondition(conditions []metav1.Condition, conditionType string) (*metav1.Condition, bool) {
 	for _, condition := range conditions {
 		if condition.Type == conditionType {
@@ -58,13 +55,13 @@ func getCondition(conditions []metav1.Condition, conditionType string) (*metav1.
 	return nil, false
 }
 
-// isConditionTrue checks if a condition with the given type exists and has status True.
+// isConditionTrue checks if a condition exists and has status True.
 func isConditionTrue(conditions []metav1.Condition, conditionType string) bool {
 	condition, found := getCondition(conditions, conditionType)
 	return found && condition.Status == metav1.ConditionTrue
 }
 
-// isConditionFalse checks if a condition with the given type exists and has status False.
+// isConditionFalse checks if a condition exists and has status False.
 func isConditionFalse(conditions []metav1.Condition, conditionType string) bool {
 	condition, found := getCondition(conditions, conditionType)
 	return found && condition.Status == metav1.ConditionFalse
