@@ -84,7 +84,6 @@ func NewController(
 	})
 
 	// Register event handlers for VirtualWorkspace resources
-	// SyncTargets need to be updated when their associated VirtualWorkspaces change
 	_, _ = virtualWorkspaceInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc:    func(obj interface{}) { c.enqueueVirtualWorkspace(obj) },
 		UpdateFunc: func(_, obj interface{}) { c.enqueueVirtualWorkspace(obj) },
@@ -154,8 +153,7 @@ func (c *Controller) enqueueVirtualWorkspace(obj interface{}) {
 	}
 }
 
-// Start begins the controller's main processing loop with the specified number
-// of worker goroutines. It will continue running until the context is cancelled.
+// Start begins the controller's main processing loop.
 func (c *Controller) Start(ctx context.Context, numThreads int) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
@@ -172,14 +170,13 @@ func (c *Controller) Start(ctx context.Context, numThreads int) {
 	<-ctx.Done()
 }
 
-// startWorker processes work items from the queue until the context is cancelled.
+// startWorker processes work items from the queue.
 func (c *Controller) startWorker(ctx context.Context) {
 	for c.processNextWorkItem(ctx) {
 	}
 }
 
-// processNextWorkItem retrieves and processes the next work item from the queue.
-// It returns false when the queue is shutting down.
+// processNextWorkItem retrieves and processes the next work item.
 func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	// Wait until there is a new item in the working queue
 	k, quit := c.queue.Get()
@@ -209,8 +206,7 @@ func (c *Controller) processNextWorkItem(ctx context.Context) bool {
 	return true
 }
 
-// process handles the reconciliation of a single SyncTarget resource identified by key.
-// It retrieves the resource, performs reconciliation, and commits any changes.
+// process handles the reconciliation of a single SyncTarget resource.
 func (c *Controller) process(ctx context.Context, key string) (bool, error) {
 	logger := klog.FromContext(ctx)
 
@@ -251,8 +247,6 @@ func (c *Controller) process(ctx context.Context, key string) (bool, error) {
 }
 
 // reconcile performs the main reconciliation logic for a SyncTarget resource.
-// It coordinates multiple reconciliation phases including heartbeat monitoring,
-// resource capacity tracking, virtual workspace association, and status management.
 func (c *Controller) reconcile(ctx context.Context, syncTarget *workloadv1alpha1.SyncTarget) (bool, error) {
 	reconcilers := []reconciler{
 		&heartbeatReconciler{},

@@ -46,7 +46,6 @@ type SyncTarget struct {
 type SyncTargetSpec struct {
 	// APIServerURL is the URL of the target cluster's API server.
 	APIServerURL string `json:"apiServerURL,omitempty"`
-
 	// Unschedulable marks the SyncTarget as unschedulable for new workloads.
 	Unschedulable bool `json:"unschedulable,omitempty"`
 }
@@ -55,22 +54,16 @@ type SyncTargetSpec struct {
 type SyncTargetStatus struct {
 	// LastHeartbeat is the time when the last heartbeat was received.
 	LastHeartbeat metav1.Time `json:"lastHeartbeat,omitempty"`
-
 	// LastReconcileTime is the time when this resource was last reconciled.
 	LastReconcileTime metav1.Time `json:"lastReconcileTime,omitempty"`
-
 	// Capacity represents the total resource capacity of the target cluster.
 	Capacity corev1.ResourceList `json:"capacity,omitempty"`
-
 	// Allocatable represents the allocatable resource capacity.
 	Allocatable corev1.ResourceList `json:"allocatable,omitempty"`
-
 	// Available represents the currently available resource capacity.
 	Available corev1.ResourceList `json:"available,omitempty"`
-
 	// VirtualWorkspaces represents the associated virtual workspaces.
 	VirtualWorkspaces []VirtualWorkspaceReference `json:"virtualWorkspaces,omitempty"`
-
 	// Conditions represent the current service state of the SyncTarget.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
@@ -79,7 +72,6 @@ type SyncTargetStatus struct {
 type VirtualWorkspaceReference struct {
 	// Name is the name of the virtual workspace.
 	Name string `json:"name"`
-
 	// URL is the URL of the virtual workspace.
 	URL string `json:"url,omitempty"`
 }
@@ -121,7 +113,6 @@ type VirtualWorkspaceSpec struct {
 type VirtualWorkspaceStatus struct {
 	// URL is the resolved virtual workspace URL.
 	URL string `json:"url,omitempty"`
-
 	// Conditions represent the current state of the VirtualWorkspace.
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
