@@ -11,6 +11,28 @@
 
 This plan reorganizes the Phase 5 implementation into optimally parallelized waves, allowing multiple agents to work simultaneously without conflicts.
 
+## Dependencies
+
+### Phase-Level Dependencies
+- **Depends On**: None (Phase 5 is the foundation)
+- **Blocks**: Phase 6, Phase 7, Phase 8, Phase 9, Phase 10
+- **Independent From**: Phase 1, Phase 2, Phase 3, Phase 4
+
+### Wave-Level Dependencies
+- **Wave 1 Depends On**: None (can start immediately)
+- **Wave 2 Depends On**: Wave 1 (internal - needs core API types)
+- **Wave 3 Depends On**: Wave 1, Wave 2 (internal - needs all API types)
+
+### Critical Path
+- Internal: Wave 1 → Wave 2 → Wave 3
+- External Blockers: None
+
+### Dependency Notes
+- Phase 5 provides foundational APIs for all subsequent phases
+- SyncTarget and APIResource types are critical for Phase 6
+- Placement types are required by Phase 8
+- All API types must be complete before Phase 6 Wave 1 can start
+
 ## Dependency Graph
 
 ```mermaid
