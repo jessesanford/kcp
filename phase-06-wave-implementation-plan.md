@@ -13,6 +13,28 @@
 
 This plan transforms the Phase 6 sequential implementation into an optimally parallelized execution strategy with clear wave boundaries, dependency management, and conflict avoidance.
 
+## Dependencies
+
+### Phase-Level Dependencies
+- **Depends On**: Phase 5 (API types, interfaces, and contracts)
+- **Blocks**: Phase 7 (syncer needs controllers), Phase 8 (cross-workspace needs VW), Phase 9 (observability needs components)
+- **Independent From**: Phase 10 (integration/hardening can proceed independently)
+
+### Wave-Level Dependencies
+- **Wave 1 Depends On**: Phase 5 complete (API types must exist)
+- **Wave 2 Depends On**: Wave 1 p6w1-synctarget-controller (SyncTarget interfaces needed)
+- **Wave 3 Depends On**: Wave 2 p6w2-vw-core (VW infrastructure required)
+
+### Critical Path
+- Internal: Wave 1 (SyncTarget) → Wave 2 (VW Core) → Wave 3 (VW Extensions)
+- External Blockers: Phase 5 must be complete before starting
+
+### Dependency Notes
+- SyncTarget controller provides interfaces for all resource management
+- VW core is critical for Phase 8's cross-workspace runtime
+- Admission webhooks can run independently throughout
+- Phase 7 syncers will directly use our controller patterns
+
 ## Dependency Graph
 
 ```mermaid
