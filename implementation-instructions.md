@@ -3,20 +3,20 @@
 ## Overview
 This branch implements the resource quota management system for TMC, providing quota enforcement, resource tracking, and capacity management across clusters. It ensures fair resource allocation and prevents resource exhaustion.
 
-**Branch**: `feature/tmc-completion/p1w3-quota-manager`  
+**Branch**: `feature/tmc-completion/p6w3-quota-manager`  
 **Estimated Lines**: 550 lines  
 **Wave**: 2  
-**Dependencies**: p1w1-synctarget-controller must be complete  
+**Dependencies**: p6w1-synctarget-controller must be complete  
 
 ## Dependencies
 
 ### Required Before Starting
-- Phase 0 APIs complete
-- p1w1-synctarget-controller merged (provides cluster capacity information)
+- Phase 5 APIs complete
+- p6w1-synctarget-controller merged (provides cluster capacity information)
 - Core TMC types available
 
 ### Blocks These Features
-- p1w3-aggregator may depend on quota information
+- p6w3-aggregator may depend on quota information
 
 ## Files to Create/Modify
 
@@ -1235,12 +1235,12 @@ func (c *ResourceCalculator) CalculateUtilization(used, total ResourceList) map[
 
 ## Integration Points
 
-### With SyncTarget Controller (p1w1-synctarget-controller)
+### With SyncTarget Controller (p6w1-synctarget-controller)
 - Get cluster capacity information
 - Monitor cluster health
 - Track resource availability
 
-### With Resource Aggregator (p1w3-aggregator)
+### With Resource Aggregator (p6w3-aggregator)
 - Share usage data
 - Coordinate metrics collection
 - Provide quota information
@@ -1284,8 +1284,8 @@ feat(quota): implement resource quota management system
 - Add resource calculation utilities
 - Ensure workspace isolation throughout
 
-Part of TMC Phase 1 Wave 2 implementation
-Depends on: p1w1-synctarget-controller
+Part of TMC Phase 6 Wave 3 implementation
+Depends on: p6w1-synctarget-controller
 ```
 
 ## Next Steps
