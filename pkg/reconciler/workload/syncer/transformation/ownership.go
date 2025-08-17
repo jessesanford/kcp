@@ -19,6 +19,7 @@ package transformation
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -273,4 +274,17 @@ func (t *ownerReferenceTransformer) generateCrossClusterUID(originalUID types.UI
 	// and cluster name to generate a deterministic cross-cluster UID
 	// For demonstration purposes, we'll just append the cluster name
 	return types.UID(fmt.Sprintf("%s-%s", string(originalUID), clusterName))
+}
+
+// getObjectKind returns a string representation of the object's kind for logging.
+func getObjectKind(obj runtime.Object) string {
+	if obj == nil {
+		return "unknown"
+	}
+	
+	if gvk := obj.GetObjectKind().GroupVersionKind(); !gvk.Empty() {
+		return gvk.String()
+	}
+	
+	return reflect.TypeOf(obj).String()
 }
