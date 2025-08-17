@@ -114,8 +114,7 @@ func (r *virtualWorkspaceReconciler) reconcile(ctx context.Context, syncTarget *
 	}
 
 	now := metav1.NewTime(time.Now())
-	clusterName := syncTarget.ClusterName()
-	_, err := r.virtualWorkspaceLister.Cluster(clusterName).Get(virtualWorkspaceName)
+	_, err := r.virtualWorkspaceLister.Cluster(syncTarget.ClusterName()).Get(virtualWorkspaceName)
 	
 	condition := metav1.Condition{
 		Type:               "VirtualWorkspaceLinked",
@@ -139,7 +138,6 @@ type statusReconciler struct{}
 
 func (r *statusReconciler) reconcile(ctx context.Context, syncTarget *workloadv1alpha1.SyncTarget) (reconcileStatus, error) {
 	now := metav1.NewTime(time.Now())
-	
 	// Validate APIServerURL
 	urlCondition := metav1.Condition{
 		Type:               "APIServerURLValid",
