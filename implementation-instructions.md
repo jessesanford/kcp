@@ -3,16 +3,16 @@
 ## Overview
 This branch implements the resource aggregation system for TMC, collecting and aggregating resource metrics, capacity information, and usage data across multiple clusters to provide a unified view of resources.
 
-**Branch**: `feature/tmc-completion/p1w3-aggregator`  
+**Branch**: `feature/tmc-completion/p6w3-aggregator`  
 **Estimated Lines**: 500 lines  
 **Wave**: 3  
-**Dependencies**: p1w1-synctarget-controller must be complete  
+**Dependencies**: p6w1-synctarget-controller must be complete  
 
 ## Dependencies
 
 ### Required Before Starting
-- Phase 0 APIs complete
-- p1w1-synctarget-controller merged (provides cluster data)
+- Phase 5 APIs complete
+- p6w1-synctarget-controller merged (provides cluster data)
 - Core TMC types available
 
 ### Blocks These Features
@@ -1406,12 +1406,12 @@ func (rg *ReportGenerator) findTopUtilized(aggregated *AggregatedResources, limi
 
 ## Integration Points
 
-### With SyncTarget Controller (p1w1-synctarget-controller)
+### With SyncTarget Controller (p6w1-synctarget-controller)
 - Collect cluster metrics
 - Monitor health status
 - Track capacity changes
 
-### With Quota Manager (p1w3-quota-manager)
+### With Quota Manager (p6w3-quota-manager)
 - Provide aggregated usage data
 - Share capacity information
 - Support quota decisions
@@ -1455,8 +1455,8 @@ feat(aggregator): implement resource aggregation system
 - Add report generation in multiple formats
 - Ensure accurate resource accounting
 
-Part of TMC Phase 1 Wave 3 implementation
-Depends on: p1w1-synctarget-controller
+Part of TMC Phase 6 Wave 3 implementation
+Depends on: p6w1-synctarget-controller
 ```
 
 ## Next Steps
