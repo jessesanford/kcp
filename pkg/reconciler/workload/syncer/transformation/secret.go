@@ -23,9 +23,45 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 )
+
+// SyncTarget represents a sync target for transformation purposes.
+// This is a placeholder until Phase 5 APIs are available.
+type SyncTarget struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	
+	// Spec contains the sync target specification
+	Spec SyncTargetSpec `json:"spec,omitempty"`
+}
+
+// SyncTargetSpec defines the desired state of a sync target
+type SyncTargetSpec struct {
+	// ClusterName is the name of the target cluster
+	ClusterName string `json:"clusterName,omitempty"`
+	
+	// Namespace is the target namespace for transformations
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// ResourceTransformer defines the interface for transforming resources
+// during synchronization between KCP and physical clusters.
+type ResourceTransformer interface {
+	// ShouldTransform returns true if this transformer should process the given object
+	ShouldTransform(obj runtime.Object) bool
+	
+	// TransformForDownstream transforms a resource when syncing from KCP to a physical cluster
+	TransformForDownstream(ctx context.Context, obj runtime.Object, target *SyncTarget) (runtime.Object, error)
+	
+	// TransformForUpstream transforms a resource when syncing from a physical cluster back to KCP
+	TransformForUpstream(ctx context.Context, obj runtime.Object, source *SyncTarget) (runtime.Object, error)
+	
+	// Name returns a human-readable name for the transformer
+	Name() string
+}
 
 // secretTransformer handles secret sanitization and filtering during synchronization.
 // It prevents sensitive data leakage and validates secret integrity.
@@ -93,12 +129,19 @@ func (t *secretTransformer) TransformForDownstream(ctx context.Context, obj runt
 	}
 	
 	// Check if this secret type is allowed to be synced
-	if allowed, exists := t.allowedSecretTypes[secret.Type]; exists && !allowed {
+	// SECURITY: Default to DENY unknown secret types for safety
+	if allowed, exists := t.allowedSecretTypes[secret.Type]; !exists || !allowed {
 		klog.V(3).InfoS("Blocking secret sync due to type restrictions",
 			"secretName", secret.Name,
 			"secretType", secret.Type,
 			"namespace", secret.Namespace,
-			"targetCluster", target.Spec.ClusterName)
+			"targetCluster", target.Spec.ClusterName,
+			"reason", func() string {
+				if !exists {
+					return "unknown secret type (default deny)"
+				}
+				return "explicitly disallowed secret type"
+			}())
 		return nil, fmt.Errorf("secret type %s is not allowed for synchronization", secret.Type)
 	}
 	
@@ -234,7 +277,8 @@ func (t *secretTransformer) validateSecret(secret *corev1.Secret) error {
 		// Opaque secrets don't have specific validation requirements
 		return nil
 	default:
-		return fmt.Errorf("unsupported secret type: %s", secret.Type)
+		// SECURITY: Explicitly deny unknown secret types by default
+		return fmt.Errorf("secret type %s is not supported (denied for security)", secret.Type)
 	}
 }
 
