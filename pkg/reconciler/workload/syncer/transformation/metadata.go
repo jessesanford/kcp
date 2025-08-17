@@ -115,7 +115,7 @@ func (t *metadataTransformer) TransformForDownstream(ctx context.Context, obj ru
 	
 	_, ok := obj.(metav1.Object)
 	if !ok {
-		return obj, nil // Not a metadata object, pass through
+		return obj.DeepCopyObject(), nil // Not a metadata object, return copy
 	}
 	
 	// Create a copy to avoid modifying the original
@@ -145,7 +145,7 @@ func (t *metadataTransformer) TransformForUpstream(ctx context.Context, obj runt
 	
 	_, ok := obj.(metav1.Object)
 	if !ok {
-		return obj, nil // Not a metadata object, pass through
+		return obj.DeepCopyObject(), nil // Not a metadata object, return copy
 	}
 	
 	// Create a copy to avoid modifying the original

@@ -91,12 +91,12 @@ func (t *ownerReferenceTransformer) TransformForDownstream(ctx context.Context, 
 	
 	metaObj, ok := obj.(metav1.Object)
 	if !ok {
-		return obj, nil // Not a metadata object, pass through
+		return obj.DeepCopyObject(), nil // Not a metadata object, return copy
 	}
 	
 	ownerRefs := metaObj.GetOwnerReferences()
 	if len(ownerRefs) == 0 {
-		return obj, nil // No owner references to transform
+		return obj.DeepCopyObject(), nil // No owner references to transform, return copy
 	}
 	
 	// Create a copy to avoid modifying the original
@@ -144,7 +144,7 @@ func (t *ownerReferenceTransformer) TransformForUpstream(ctx context.Context, ob
 	
 	_, ok := obj.(metav1.Object)
 	if !ok {
-		return obj, nil // Not a metadata object, pass through
+		return obj.DeepCopyObject(), nil // Not a metadata object, return copy
 	}
 	
 	// Create a copy to avoid modifying the original
@@ -154,24 +154,23 @@ func (t *ownerReferenceTransformer) TransformForUpstream(ctx context.Context, ob
 	// For upstream, we generally want to remove cross-cluster owner references
 	// to prevent issues with garbage collection in KCP
 	ownerRefs := metaResult.GetOwnerReferences()
-	if len(ownerRefs) == 0 {
-		return result, nil
+	
+	if len(ownerRefs) > 0 {
+		// Filter owner references for upstream
+		filteredRefs := t.filterOwnerReferencesForUpstream(ownerRefs)
+		
+		klog.V(5).InfoS("Filtering owner references for upstream",
+			"objectKind", getObjectKind(obj),
+			"namespace", metaResult.GetNamespace(),
+			"name", metaResult.GetName(),
+			"originalRefs", len(ownerRefs),
+			"filteredRefs", len(filteredRefs),
+			"sourceCluster", source.Spec.ClusterName)
+		
+		metaResult.SetOwnerReferences(filteredRefs)
 	}
 	
-	// Filter owner references for upstream
-	filteredRefs := t.filterOwnerReferencesForUpstream(ownerRefs)
-	
-	klog.V(5).InfoS("Filtering owner references for upstream",
-		"objectKind", getObjectKind(obj),
-		"namespace", metaResult.GetNamespace(),
-		"name", metaResult.GetName(),
-		"originalRefs", len(ownerRefs),
-		"filteredRefs", len(filteredRefs),
-		"sourceCluster", source.Spec.ClusterName)
-	
-	metaResult.SetOwnerReferences(filteredRefs)
-	
-	// Clean up transformation annotations
+	// Always clean up transformation annotations regardless of owner references
 	annotations := metaResult.GetAnnotations()
 	if annotations != nil {
 		delete(annotations, "syncer.kcp.io/original-owner-count")
