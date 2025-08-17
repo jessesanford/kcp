@@ -16,12 +16,13 @@ require (
 	github.com/evanphx/json-patch v5.6.0+incompatible
 	github.com/fatih/color v1.18.0
 	github.com/go-logr/logr v1.4.2
+	github.com/google/cel-go v0.23.2
 	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/kcp-dev/apimachinery/v2 v2.0.1-0.20250728122101-adbf20db3e51
 	github.com/kcp-dev/client-go v0.0.0-20250728134101-0355faa9361b
 	github.com/kcp-dev/code-generator/v3 v3.0.0-20250728122101-5b4ff5c24054
-	github.com/kcp-dev/embeddedetcd v1.0.3-0.20250805142358-a4839a83564a
+	github.com/kcp-dev/embeddedetcd v1.0.2
 	github.com/kcp-dev/kcp/sdk v0.0.0-00010101000000-000000000000
 	github.com/kcp-dev/logicalcluster/v3 v3.0.5
 	github.com/martinlindhe/base36 v1.1.1
@@ -43,7 +44,7 @@ require (
 	k8s.io/component-base v0.33.3
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
-	k8s.io/kubernetes v1.33.3
+	k8s.io/kubernetes v1.31.6
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0
 	sigs.k8s.io/yaml v1.4.0
@@ -77,7 +78,6 @@ require (
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/cel-go v0.23.2 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
@@ -157,20 +157,20 @@ require (
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/cloud-provider v0.0.0 // indirect
-	k8s.io/cluster-bootstrap v0.0.0 // indirect
-	k8s.io/component-helpers v0.0.0 // indirect
-	k8s.io/controller-manager v0.0.0 // indirect
+	k8s.io/cluster-bootstrap v0.31.6 // indirect
+	k8s.io/component-helpers v0.31.6 // indirect
+	k8s.io/controller-manager v0.31.6 // indirect
 	k8s.io/csi-translation-lib v0.0.0 // indirect
-	k8s.io/dynamic-resource-allocation v0.0.0 // indirect
+	k8s.io/dynamic-resource-allocation v0.31.6 // indirect
 	k8s.io/endpointslice v0.0.0 // indirect
 	k8s.io/externaljwt v0.0.0 // indirect
 	k8s.io/gengo/v2 v2.0.0-20250513215321-e3bc6f1e78b4 // indirect
 	k8s.io/kms v0.33.3 // indirect
-	k8s.io/kube-aggregator v0.0.0 // indirect
-	k8s.io/kube-controller-manager v0.0.0 // indirect
-	k8s.io/kubelet v0.0.0 // indirect
-	k8s.io/mount-utils v0.0.0 // indirect
-	k8s.io/pod-security-admission v0.0.0 // indirect
+	k8s.io/kube-aggregator v0.31.6 // indirect
+	k8s.io/kube-controller-manager v0.31.6 // indirect
+	k8s.io/kubelet v0.31.6 // indirect
+	k8s.io/mount-utils v0.31.6 // indirect
+	k8s.io/pod-security-admission v0.31.6 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
