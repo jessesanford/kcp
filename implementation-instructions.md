@@ -3,16 +3,16 @@
 ## Overview
 This branch implements the endpoint exposure layer for the Virtual Workspace, providing REST API endpoints that expose unified views of resources across multiple clusters. It builds on the VW core infrastructure to deliver accessible API endpoints.
 
-**Branch**: `feature/tmc-completion/p1w2-vw-endpoints`  
+**Branch**: `feature/tmc-completion/p6w2-vw-endpoints`  
 **Estimated Lines**: 600 lines  
 **Wave**: 3  
-**Dependencies**: p1w2-vw-core must be complete  
+**Dependencies**: p6w2-vw-core must be complete  
 
 ## Dependencies
 
 ### Required Before Starting
-- Phase 0 APIs complete
-- p1w2-vw-core merged (provides VW infrastructure)
+- Phase 5 APIs complete
+- p6w2-vw-core merged (provides VW infrastructure)
 - Virtual workspace framework available
 
 ### Blocks These Features
@@ -1119,12 +1119,12 @@ func (m *EndpointMetrics) flush() {
 
 ## Integration Points
 
-### With VW Core (p1w2-vw-core)
+### With VW Core (p6w2-vw-core)
 - Uses virtual workspace for backend
 - Leverages providers for data access
 - Shares transformation logic
 
-### With VW Discovery (p1w2-vw-discovery)
+### With VW Discovery (p6w2-vw-discovery)
 - Coordinates API exposure
 - Shares endpoint information
 - Provides discovery data
@@ -1168,8 +1168,8 @@ feat(endpoints): implement Virtual Workspace endpoint exposure
 - Add metrics collection and monitoring
 - Ensure proper error handling throughout
 
-Part of TMC Phase 1 Wave 3 implementation
-Depends on: p1w2-vw-core
+Part of TMC Phase 6 Wave 2 implementation
+Depends on: p6w2-vw-core
 ```
 
 ## Next Steps
