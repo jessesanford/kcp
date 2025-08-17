@@ -1,0 +1,518 @@
+/*
+Copyright 2024 The KCP Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package cluster
+
+import (
+	"context"
+	"fmt"
+	"time"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilerrors "k8s.io/apimachinery/pkg/util/errors"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/client-go/tools/cache"
+	"k8s.io/client-go/util/workqueue"
+	"k8s.io/klog/v2"
+
+	kcpcache "github.com/kcp-dev/apimachinery/v2/pkg/cache"
+	"github.com/kcp-dev/logicalcluster/v3"
+
+	"github.com/kcp-dev/kcp/pkg/logging"
+	corev1alpha1 "github.com/kcp-dev/kcp/sdk/apis/core/v1alpha1"
+	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
+	corev1alpha1informers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/core/v1alpha1"
+	corev1alpha1listers "github.com/kcp-dev/kcp/sdk/client/listers/core/v1alpha1"
+)
+
+const (
+	// ControllerName is the name of the cluster controller.
+	ControllerName = "kcp-workload-cluster"
+)
+
+// ClusterRegistration represents a cluster registration in the TMC system.
+// For Phase 6 Wave 2, we'll work with a simplified structure that can be
+// extended as the full TMC APIs are developed.
+type ClusterRegistration struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   ClusterRegistrationSpec   `json:"spec,omitempty"`
+	Status ClusterRegistrationStatus `json:"status,omitempty"`
+}
+
+// ClusterRegistrationSpec defines the desired state of ClusterRegistration.
+type ClusterRegistrationSpec struct {
+	// Location specifies the location of the cluster.
+	Location string `json:"location,omitempty"`
+	
+	// Labels contains metadata labels for the cluster.
+	Labels map[string]string `json:"labels,omitempty"`
+	
+	// Capabilities describes the capabilities of the cluster.
+	Capabilities map[string]string `json:"capabilities,omitempty"`
+}
+
+// ClusterRegistrationStatus defines the observed state of ClusterRegistration.
+type ClusterRegistrationStatus struct {
+	// Conditions represents the latest available observations of the cluster registration's state.
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	
+	// Phase represents the current phase of cluster registration.
+	Phase ClusterRegistrationPhase `json:"phase,omitempty"`
+	
+	// SyncTargetRef references the associated SyncTarget.
+	SyncTargetRef *ClusterReference `json:"syncTargetRef,omitempty"`
+}
+
+// ClusterRegistrationPhase defines the phase of cluster registration.
+type ClusterRegistrationPhase string
+
+const (
+	// ClusterRegistrationPhasePending indicates the cluster registration is being processed.
+	ClusterRegistrationPhasePending ClusterRegistrationPhase = "Pending"
+	
+	// ClusterRegistrationPhaseRegistered indicates the cluster is registered.
+	ClusterRegistrationPhaseRegistered ClusterRegistrationPhase = "Registered"
+	
+	// ClusterRegistrationPhaseReady indicates the cluster is ready for workloads.
+	ClusterRegistrationPhaseReady ClusterRegistrationPhase = "Ready"
+	
+	// ClusterRegistrationPhaseFailed indicates the cluster registration failed.
+	ClusterRegistrationPhaseFailed ClusterRegistrationPhase = "Failed"
+)
+
+// ClusterReference represents a reference to a cluster resource.
+type ClusterReference struct {
+	// Name is the name of the referenced resource.
+	Name string `json:"name"`
+	
+	// Namespace is the namespace of the referenced resource.
+	Namespace string `json:"namespace,omitempty"`
+	
+	// Cluster is the logical cluster of the referenced resource.
+	Cluster string `json:"cluster,omitempty"`
+}
+
+// NewController creates a new cluster registration controller that manages
+// ClusterRegistration resources and coordinates with SyncTarget controllers.
+//
+// The controller follows KCP patterns for workspace isolation and integrates
+// with the APIExport system for TMC functionality.
+//
+// Parameters:
+//   - kcpClusterClient: Cluster-aware KCP client for API operations
+//   - logicalClusterInformer: Informer for LogicalCluster resources
+//   - workspace: Logical cluster name for workspace isolation
+//
+// Returns:
+//   - *controller: Configured controller ready to start
+//   - error: Configuration or setup error
+func NewController(
+	kcpClusterClient kcpclientset.ClusterInterface,
+	logicalClusterInformer corev1alpha1informers.LogicalClusterClusterInformer,
+	workspace logicalcluster.Name,
+) (*controller, error) {
+	queue := workqueue.NewTypedRateLimitingQueueWithConfig(
+		workqueue.DefaultTypedControllerRateLimiter[string](),
+		workqueue.TypedRateLimitingQueueConfig[string]{
+			Name: ControllerName,
+		},
+	)
+
+	c := &controller{
+		queue:              queue,
+		kcpClusterClient:   kcpClusterClient,
+		workspace:          workspace,
+		logicalClusterLister: logicalClusterInformer.Lister(),
+		
+		// Cluster registration operations
+		listClusters: func(clusterName logicalcluster.Name) ([]*ClusterRegistration, error) {
+			// In a full implementation, this would use a ClusterRegistration lister
+			// For now, we'll return empty list as a placeholder
+			return []*ClusterRegistration{}, nil
+		},
+		
+		getCluster: func(clusterName logicalcluster.Name, name string) (*ClusterRegistration, error) {
+			// Placeholder for getting a specific ClusterRegistration
+			return nil, apierrors.NewNotFound(corev1alpha1.Resource("clusterregistrations"), name)
+		},
+		
+		createSyncTarget: func(ctx context.Context, cluster *ClusterRegistration) error {
+			// Placeholder for creating associated SyncTarget
+			return nil
+		},
+		
+		updatePlacementTargets: func(ctx context.Context, cluster *ClusterRegistration) error {
+			// Placeholder for notifying placement system of cluster changes
+			return nil
+		},
+	}
+
+	// Set up informer event handlers
+	_, _ = logicalClusterInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    func(obj interface{}) { c.enqueueLogicalCluster(obj) },
+		UpdateFunc: func(oldObj, newObj interface{}) { c.enqueueLogicalCluster(newObj) },
+		DeleteFunc: func(obj interface{}) { c.enqueueLogicalCluster(obj) },
+	})
+
+	return c, nil
+}
+
+// controller manages ClusterRegistration resources and coordinates with
+// SyncTarget controllers for TMC workload placement.
+type controller struct {
+	queue              workqueue.TypedRateLimitingInterface[string]
+	kcpClusterClient   kcpclientset.ClusterInterface
+	workspace          logicalcluster.Name
+	logicalClusterLister corev1alpha1listers.LogicalClusterClusterLister
+
+	// Cluster registration operations
+	listClusters           func(clusterName logicalcluster.Name) ([]*ClusterRegistration, error)
+	getCluster             func(clusterName logicalcluster.Name, name string) (*ClusterRegistration, error)
+	createSyncTarget       func(ctx context.Context, cluster *ClusterRegistration) error
+	updatePlacementTargets func(ctx context.Context, cluster *ClusterRegistration) error
+}
+
+// enqueueLogicalCluster enqueues a LogicalCluster for processing.
+func (c *controller) enqueueLogicalCluster(obj interface{}) {
+	key, err := kcpcache.DeletionHandlingMetaClusterNamespaceKeyFunc(obj)
+	if err != nil {
+		utilruntime.HandleError(err)
+		return
+	}
+	
+	logger := logging.WithQueueKey(logging.WithReconciler(klog.Background(), ControllerName), key)
+	logger.V(2).Info("queueing LogicalCluster")
+	c.queue.Add(key)
+}
+
+// Start starts the controller and blocks until the context is cancelled.
+func (c *controller) Start(ctx context.Context, numThreads int) {
+	defer utilruntime.HandleCrash()
+	defer c.queue.ShutDown()
+
+	logger := logging.WithReconciler(klog.FromContext(ctx), ControllerName)
+	ctx = klog.NewContext(ctx, logger)
+	logger.Info("Starting controller")
+	defer logger.Info("Shutting down controller")
+
+	for i := 0; i < numThreads; i++ {
+		go wait.UntilWithContext(ctx, c.startWorker, time.Second)
+	}
+
+	<-ctx.Done()
+}
+
+// startWorker runs a single worker thread for processing queue items.
+func (c *controller) startWorker(ctx context.Context) {
+	for c.processNextWorkItem(ctx) {
+	}
+}
+
+// processNextWorkItem processes the next item in the work queue.
+func (c *controller) processNextWorkItem(ctx context.Context) bool {
+	key, quit := c.queue.Get()
+	if quit {
+		return false
+	}
+	defer c.queue.Done(key)
+
+	logger := logging.WithQueueKey(klog.FromContext(ctx), key)
+	ctx = klog.NewContext(ctx, logger)
+	
+	err := c.process(ctx, key)
+	if err == nil {
+		c.queue.Forget(key)
+		return true
+	}
+
+	utilruntime.HandleError(fmt.Errorf("failed to process key %q: %w", key, err))
+	c.queue.AddRateLimited(key)
+	return true
+}
+
+// process handles the reconciliation of a single cluster registration.
+func (c *controller) process(ctx context.Context, key string) error {
+	logger := klog.FromContext(ctx)
+	
+	clusterName, _, name, err := kcpcache.SplitMetaClusterNamespaceKey(key)
+	if err != nil {
+		logger.Error(err, "invalid key")
+		return nil
+	}
+
+	obj, err := c.logicalClusterLister.Cluster(clusterName).Get(name)
+	if apierrors.IsNotFound(err) {
+		logger.V(2).Info("LogicalCluster not found")
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+
+	old := obj
+	obj = obj.DeepCopy()
+
+	logger = logging.WithObject(logger, obj)
+	ctx = klog.NewContext(ctx, logger)
+
+	var errs []error
+	if err := c.reconcile(ctx, obj); err != nil {
+		errs = append(errs, err)
+	}
+
+	// Update status if needed
+	oldResource := &Resource{ObjectMeta: old.ObjectMeta, Status: &old.Status}
+	newResource := &Resource{ObjectMeta: obj.ObjectMeta, Status: &obj.Status}
+	updatedObj, updateErr := c.commit(ctx, oldResource, newResource, obj)
+	if updateErr != nil {
+		errs = append(errs, updateErr)
+	}
+	if updatedObj != nil {
+		obj = updatedObj
+	}
+
+	return utilerrors.NewAggregate(errs)
+}
+
+// Resource represents a resource that can be committed.
+type Resource struct {
+	metav1.ObjectMeta
+	Status *corev1alpha1.LogicalClusterStatus `json:"status,omitempty"`
+}
+
+// commit commits the resource using the committer pattern.
+func (c *controller) commit(ctx context.Context, oldResource, newResource *Resource, obj *corev1alpha1.LogicalCluster) (*corev1alpha1.LogicalCluster, error) {
+	clusterName := logicalcluster.From(obj)
+	
+	specOrObjectMetaChanged := !equality.Semantic.DeepEqual(oldResource.ObjectMeta, newResource.ObjectMeta)
+	statusChanged := !equality.Semantic.DeepEqual(oldResource.Status, newResource.Status)
+
+	if specOrObjectMetaChanged && statusChanged {
+		logger := klog.FromContext(ctx)
+		logger.V(2).Info("committing spec and status change")
+		return c.kcpClusterClient.Cluster(clusterName.Path()).CoreV1alpha1().LogicalClusters().Update(ctx, obj, metav1.UpdateOptions{})
+	} else if statusChanged {
+		logger := klog.FromContext(ctx)
+		logger.V(2).Info("committing status change")
+		return c.kcpClusterClient.Cluster(clusterName.Path()).CoreV1alpha1().LogicalClusters().UpdateStatus(ctx, obj, metav1.UpdateOptions{})
+	}
+
+	return obj, nil
+}
+
+// reconcile performs the main reconciliation logic for cluster registration.
+func (c *controller) reconcile(ctx context.Context, logicalCluster *corev1alpha1.LogicalCluster) error {
+	logger := klog.FromContext(ctx)
+	clusterName := logicalcluster.From(logicalCluster)
+	
+	// For Phase 6 Wave 2, we focus on basic cluster registration flow
+	logger.V(2).Info("reconciling logical cluster for workload placement", "cluster", clusterName)
+
+	// Step 1: Process cluster registrations in this logical cluster
+	clusters, err := c.listClusters(clusterName)
+	if err != nil {
+		return fmt.Errorf("failed to list cluster registrations: %w", err)
+	}
+
+	var processingErrors []error
+	for _, cluster := range clusters {
+		if err := c.reconcileClusterRegistration(ctx, cluster); err != nil {
+			processingErrors = append(processingErrors, fmt.Errorf("failed to reconcile cluster %s: %w", cluster.Name, err))
+		}
+	}
+
+	if len(processingErrors) > 0 {
+		return utilerrors.NewAggregate(processingErrors)
+	}
+
+	return nil
+}
+
+// reconcileClusterRegistration reconciles a single cluster registration.
+func (c *controller) reconcileClusterRegistration(ctx context.Context, cluster *ClusterRegistration) error {
+	logger := klog.FromContext(ctx).WithValues("cluster", cluster.Name)
+	logger.V(2).Info("reconciling cluster registration")
+
+	// Phase-based processing
+	switch cluster.Status.Phase {
+	case "", ClusterRegistrationPhasePending:
+		return c.reconcilePendingCluster(ctx, cluster)
+	case ClusterRegistrationPhaseRegistered:
+		return c.reconcileRegisteredCluster(ctx, cluster)
+	case ClusterRegistrationPhaseReady:
+		return c.reconcileReadyCluster(ctx, cluster)
+	case ClusterRegistrationPhaseFailed:
+		return c.reconcileFailedCluster(ctx, cluster)
+	}
+
+	return nil
+}
+
+// reconcilePendingCluster processes a cluster in pending state.
+func (c *controller) reconcilePendingCluster(ctx context.Context, cluster *ClusterRegistration) error {
+	logger := klog.FromContext(ctx)
+	logger.V(2).Info("processing pending cluster registration")
+
+	// Step 1: Validate cluster registration
+	if err := c.validateClusterRegistration(cluster); err != nil {
+		logger.Error(err, "cluster registration validation failed")
+		cluster.Status.Phase = ClusterRegistrationPhaseFailed
+		cluster.Status.Conditions = updateClusterCondition(cluster.Status.Conditions, metav1.Condition{
+			Type:    "ValidationFailed",
+			Status:  metav1.ConditionTrue,
+			Reason:  "ValidationError",
+			Message: err.Error(),
+		})
+		return nil
+	}
+
+	// Step 2: Create associated SyncTarget
+	if err := c.createSyncTarget(ctx, cluster); err != nil {
+		logger.Error(err, "failed to create SyncTarget")
+		return err
+	}
+
+	// Step 3: Update cluster status to registered
+	cluster.Status.Phase = ClusterRegistrationPhaseRegistered
+	cluster.Status.Conditions = updateClusterCondition(cluster.Status.Conditions, metav1.Condition{
+		Type:    "Registered",
+		Status:  metav1.ConditionTrue,
+		Reason:  "RegistrationComplete",
+		Message: "Cluster registration completed successfully",
+	})
+
+	return nil
+}
+
+// reconcileRegisteredCluster processes a cluster in registered state.
+func (c *controller) reconcileRegisteredCluster(ctx context.Context, cluster *ClusterRegistration) error {
+	logger := klog.FromContext(ctx)
+	logger.V(2).Info("processing registered cluster")
+
+	// Check if cluster is ready for workloads
+	ready, err := c.isClusterReady(ctx, cluster)
+	if err != nil {
+		return err
+	}
+
+	if ready {
+		cluster.Status.Phase = ClusterRegistrationPhaseReady
+		cluster.Status.Conditions = updateClusterCondition(cluster.Status.Conditions, metav1.Condition{
+			Type:    "Ready",
+			Status:  metav1.ConditionTrue,
+			Reason:  "ClusterReady",
+			Message: "Cluster is ready for workload placement",
+		})
+
+		// Notify placement system
+		if err := c.updatePlacementTargets(ctx, cluster); err != nil {
+			logger.Error(err, "failed to update placement targets")
+			return err
+		}
+	}
+
+	return nil
+}
+
+// reconcileReadyCluster processes a cluster in ready state.
+func (c *controller) reconcileReadyCluster(ctx context.Context, cluster *ClusterRegistration) error {
+	logger := klog.FromContext(ctx)
+	logger.V(2).Info("processing ready cluster")
+
+	// Perform health checks and maintain cluster state
+	healthy, err := c.checkClusterHealth(ctx, cluster)
+	if err != nil {
+		logger.Error(err, "failed to check cluster health")
+		return err
+	}
+
+	if !healthy {
+		cluster.Status.Conditions = updateClusterCondition(cluster.Status.Conditions, metav1.Condition{
+			Type:    "Healthy",
+			Status:  metav1.ConditionFalse,
+			Reason:  "HealthCheckFailed",
+			Message: "Cluster health check failed",
+		})
+	} else {
+		cluster.Status.Conditions = updateClusterCondition(cluster.Status.Conditions, metav1.Condition{
+			Type:    "Healthy",
+			Status:  metav1.ConditionTrue,
+			Reason:  "HealthCheckPassed",
+			Message: "Cluster is healthy",
+		})
+	}
+
+	return nil
+}
+
+// reconcileFailedCluster processes a cluster in failed state.
+func (c *controller) reconcileFailedCluster(ctx context.Context, cluster *ClusterRegistration) error {
+	logger := klog.FromContext(ctx)
+	logger.V(2).Info("processing failed cluster registration")
+
+	// Attempt to recover or clean up failed cluster
+	// For now, we'll just log the failure
+	logger.Info("cluster registration is in failed state", "cluster", cluster.Name)
+
+	return nil
+}
+
+// Helper functions for cluster operations
+
+// validateClusterRegistration validates a cluster registration.
+func (c *controller) validateClusterRegistration(cluster *ClusterRegistration) error {
+	if cluster.Spec.Location == "" {
+		return fmt.Errorf("cluster location is required")
+	}
+	return nil
+}
+
+// isClusterReady checks if a cluster is ready for workloads.
+func (c *controller) isClusterReady(ctx context.Context, cluster *ClusterRegistration) (bool, error) {
+	// Placeholder implementation - in practice this would check SyncTarget status
+	return true, nil
+}
+
+// checkClusterHealth performs health checks on a cluster.
+func (c *controller) checkClusterHealth(ctx context.Context, cluster *ClusterRegistration) (bool, error) {
+	// Placeholder implementation - in practice this would check cluster connectivity
+	return true, nil
+}
+
+// updateClusterCondition updates or adds a condition to the cluster status.
+func updateClusterCondition(conditions []metav1.Condition, newCondition metav1.Condition) []metav1.Condition {
+	now := metav1.NewTime(time.Now())
+	newCondition.LastTransitionTime = now
+
+	for i, condition := range conditions {
+		if condition.Type == newCondition.Type {
+			if condition.Status != newCondition.Status {
+				newCondition.LastTransitionTime = now
+			} else {
+				newCondition.LastTransitionTime = condition.LastTransitionTime
+			}
+			conditions[i] = newCondition
+			return conditions
+		}
+	}
+
+	return append(conditions, newCondition)
+}
