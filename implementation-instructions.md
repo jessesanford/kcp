@@ -3,15 +3,15 @@
 ## Overview
 This branch implements admission webhooks for TMC resources, providing validation and mutation capabilities for WorkloadPlacement, SyncTarget, and ClusterRegistration resources. These webhooks ensure data integrity and apply defaults.
 
-**Branch**: `feature/tmc-completion/p1w3-webhooks`  
+**Branch**: `feature/tmc-completion/p6w3-webhooks`  
 **Estimated Lines**: 550 lines  
 **Wave**: 1  
-**Dependencies**: Phase 0 APIs must be complete  
+**Dependencies**: Phase 5 APIs must be complete  
 
 ## Dependencies
 
 ### Required Before Starting
-- Phase 0 APIs complete (TMC types defined)
+- Phase 5 APIs complete (TMC types defined)
 - Core webhook framework available
 - Admission control infrastructure
 
@@ -1336,7 +1336,7 @@ feat(webhooks): implement admission webhooks for TMC resources
 - Add comprehensive validation rules
 - Ensure workspace isolation in validations
 
-Part of TMC Phase 1 Wave 1 implementation
+Part of TMC Phase 6 Wave 3 implementation
 Independent component - no dependencies
 ```
 
