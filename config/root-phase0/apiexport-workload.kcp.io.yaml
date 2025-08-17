@@ -1,0 +1,13 @@
+apiVersion: apis.kcp.io/v1alpha2
+kind: APIExport
+metadata:
+  creationTimestamp: null
+  name: workload.kcp.io
+spec:
+  resources:
+  - group: workload.kcp.io
+    name: workloadstatusaggregations
+    schema: v250817-623e10b1.workloadstatusaggregations.workload.kcp.io
+    storage:
+      crd: {}
+status: {}
