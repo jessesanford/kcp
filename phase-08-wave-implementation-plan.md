@@ -85,11 +85,11 @@ graph TD
 
 ## Wave Summary Table
 
-| Wave | Branches | Max Parallel Agents | Dependencies | Critical Path | Duration |
-|------|----------|-------------------|--------------|---------------|----------|
-| 1    | 8.1.1, 8.1.2 | 2 | Phase 5-2 complete | 8.1.1 → Scheduler | Day 1 |
-| 2    | 8.2.1, 8.2.2, 8.2.3 | 3 | Wave 1 complete | 8.2.1 → 8.2.3 → Controller | Days 2-3 |
-| 3    | 8.3.1, 8.3.2, 8.3.3 | 3 | Wave 2 complete | 8.3.1 → Binding | Days 3-4 |
+| Wave | Branches | Max Parallel Agents | Dependencies | Critical Path | Duration | Status |
+|------|----------|-------------------|--------------|---------------|----------|--------|
+| 1    | 8.1.1, 8.1.2 | 2 | Phase 5-2 complete | 8.1.1 → Scheduler | Day 1 | ✅ COMPLETE |
+| 2    | 8.2.1, 8.2.2, 8.2.3 | 3 | Wave 1 complete | 8.2.1 → 8.2.3 → Controller | Days 2-3 | ✅ COMPLETE |
+| 3    | 8.3.1, 8.3.2, 8.3.3 | 3 | Wave 2 complete | 8.3.1 → Binding | Days 3-4 | ⚠️ 67% (8.3.3 blocked) |
 
 ## Detailed Wave Implementation
 
@@ -407,22 +407,22 @@ git merge origin/feature/tmc-completion/p8w2-decision
 ### Per-Wave Validation
 
 **Wave 1 Complete When**:
-- [ ] Can discover workspaces with proper authorization
-- [ ] Can discover APIs across workspaces and clusters
-- [ ] Discovery results properly cached
-- [ ] Unit tests >70% coverage
+- [x] Can discover workspaces with proper authorization ✅
+- [x] Can discover APIs across workspaces and clusters ✅
+- [x] Discovery results properly cached ✅
+- [x] Unit tests >70% coverage ✅
 
 **Wave 2 Complete When**:
-- [ ] Scheduler makes placement decisions
-- [ ] CEL policies evaluate correctly
-- [ ] Decisions include scoring breakdown
-- [ ] Integration with discovery works
+- [x] Scheduler makes placement decisions ✅
+- [x] CEL policies evaluate correctly ✅
+- [x] Decisions include scoring breakdown ✅
+- [x] Integration with discovery works ✅
 
 **Wave 3 Complete When**:
-- [ ] Controller reconciles placements
-- [ ] Bindings created in target clusters
-- [ ] Status aggregated correctly
-- [ ] End-to-end placement works
+- [x] Controller reconciles placements ✅
+- [x] Bindings created in target clusters ✅
+- [ ] Status aggregated correctly (BLOCKED on Phase 7)
+- [ ] End-to-end placement works (needs Status Aggregation)
 
 ### Overall Phase 8 Success Criteria
 
