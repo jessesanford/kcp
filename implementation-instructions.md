@@ -3,21 +3,21 @@
 ## Overview
 This branch implements the core Virtual Workspace infrastructure that provides the foundation for TMC's multi-cluster workload management. It creates the virtual workspace framework that exposes unified APIs across multiple physical clusters.
 
-**Branch**: `feature/tmc-completion/p1w2-vw-core`  
+**Branch**: `feature/tmc-completion/p6w2-vw-core`  
 **Estimated Lines**: 700 lines  
 **Wave**: 2 (Critical Path)  
-**Dependencies**: p1w1-synctarget-controller must be complete  
+**Dependencies**: p6w1-synctarget-controller must be complete  
 
 ## Dependencies
 
 ### Required Before Starting
-- Phase 0 APIs complete (TMC types and interfaces)
-- p1w1-synctarget-controller merged (provides SyncTarget access)
+- Phase 5 APIs complete (TMC types and interfaces)
+- p6w1-synctarget-controller merged (provides SyncTarget access)
 - KCP virtual workspace framework available
 
 ### Blocks These Features
-- p1w2-vw-endpoints (needs core VW infrastructure)
-- p1w2-vw-discovery (needs core VW infrastructure)
+- p6w2-vw-endpoints (needs core VW infrastructure)
+- p6w2-vw-discovery (needs core VW infrastructure)
 
 ## Files to Create/Modify
 
@@ -931,17 +931,17 @@ func (t *ResourceTransformer) TransformClusterRegistration(cr *tmcv1alpha1.Clust
 
 ## Integration Points
 
-### With SyncTarget Controller (p1w1-synctarget-controller)
+### With SyncTarget Controller (p6w1-synctarget-controller)
 - Access SyncTarget information
 - Transform for virtual view
 - Hide sensitive data
 
-### With VW Endpoints (p1w2-vw-endpoints)
+### With VW Endpoints (p6w2-vw-endpoints)
 - Provides core infrastructure
 - Shares cache and transformers
 - Handles base routing
 
-### With VW Discovery (p1w2-vw-discovery)
+### With VW Discovery (p6w2-vw-discovery)
 - Provides resource information
 - Shares virtual workspace context
 - Coordinates API exposure
@@ -985,13 +985,13 @@ feat(virtual): implement Virtual Workspace core infrastructure
 - Ensure workspace isolation throughout
 - Hide sensitive data in virtual views
 
-Part of TMC Phase 1 Wave 2 implementation
-Depends on: p1w1-synctarget-controller
-Critical path for: p1w2-vw-endpoints, p1w2-vw-discovery
+Part of TMC Phase 6 Wave 2 implementation
+Depends on: p6w1-synctarget-controller
+Critical path for: p6w2-vw-endpoints, p6w2-vw-discovery
 ```
 
 ## Next Steps
 After this branch is complete:
-1. p1w2-vw-endpoints can implement endpoint exposure
-2. p1w2-vw-discovery can add discovery features
+1. p6w2-vw-endpoints can implement endpoint exposure
+2. p6w2-vw-discovery can add discovery features
 3. Virtual workspace will be fully operational
