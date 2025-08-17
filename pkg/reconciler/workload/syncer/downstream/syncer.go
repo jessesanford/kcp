@@ -29,13 +29,44 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/klog/v2"
-
-	"github.com/kcp-dev/kcp/pkg/reconciler/workload/syncer/transformation"
-	workloadv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/workload/v1alpha1"
 )
+
+// SyncTarget represents a sync target resource (placeholder for now)
+type SyncTarget struct {
+	metav1.ObjectMeta
+	Spec SyncTargetSpec
+}
+
+// SyncTargetSpec defines the desired state of a sync target
+type SyncTargetSpec struct {
+	ClusterName string
+	Namespace   string
+}
+
+// Transformer interface for resource transformations
+type Transformer interface {
+	TransformForDownstream(ctx context.Context, obj runtime.Object, target *SyncTarget) (runtime.Object, error)
+}
+
+// Pipeline implements the Transformer interface
+type Pipeline struct {
+	workspace logicalcluster.Name
+}
+
+// NewPipeline creates a new transformation pipeline
+func NewPipeline(workspace logicalcluster.Name) *Pipeline {
+	return &Pipeline{workspace: workspace}
+}
+
+// TransformForDownstream transforms an object for downstream deployment
+func (p *Pipeline) TransformForDownstream(ctx context.Context, obj runtime.Object, target *SyncTarget) (runtime.Object, error) {
+	// Basic transformation - just pass through for now
+	return obj, nil
+}
 
 // Syncer handles downstream synchronization operations from KCP to physical clusters
 type Syncer struct {
@@ -45,10 +76,10 @@ type Syncer struct {
 	// Clients
 	kcpClient        kcpclientset.ClusterInterface
 	downstreamClient dynamic.Interface
-	syncTarget       *workloadv1alpha1.SyncTarget
+	syncTarget       *SyncTarget
 	
 	// Transformation pipeline for resource modification
-	transformer *transformation.Pipeline
+	transformer *Pipeline
 	
 	
 	// Configuration
@@ -64,7 +95,7 @@ func NewSyncer(
 	workspace logicalcluster.Name,
 	kcpClient kcpclientset.ClusterInterface,
 	downstreamClient dynamic.Interface,
-	syncTarget *workloadv1alpha1.SyncTarget,
+	syncTarget *SyncTarget,
 	config *DownstreamConfig,
 ) (*Syncer, error) {
 	if config == nil {
@@ -76,7 +107,7 @@ func NewSyncer(
 		kcpClient:        kcpClient,
 		downstreamClient: downstreamClient,
 		syncTarget:       syncTarget,
-		transformer:      transformation.NewPipeline(workspace),
+		transformer:      NewPipeline(workspace),
 		config:           config,
 		stateCache:       make(map[string]*ResourceState),
 	}
@@ -191,7 +222,7 @@ func (s *Syncer) DeleteFromDownstream(ctx context.Context, gvr schema.GroupVersi
 	}
 
 	// Check if object exists
-	existingObj, err := downstreamClient.Get(ctx, name, metav1.GetOptions{})
+	_, err := downstreamClient.Get(ctx, name, metav1.GetOptions{})
 	if apierrors.IsNotFound(err) {
 		// Object already doesn't exist, clean up state cache
 		s.removeFromStateCache(stateKey)
@@ -266,13 +297,8 @@ func (s *Syncer) updateWithConflictResolution(
 
 // transformForDownstream applies transformations for downstream deployment
 func (s *Syncer) transformForDownstream(ctx context.Context, obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
-	// Convert SyncTarget for transformation pipeline
-	target := &transformation.SyncTarget{
-		Spec: transformation.SyncTargetSpec{
-			ClusterName: s.syncTarget.GetName(),
-			Namespace:   s.syncTarget.GetNamespace(),
-		},
-	}
+	// Use local SyncTarget
+	target := s.syncTarget
 
 	transformedObj, err := s.transformer.TransformForDownstream(ctx, obj, target)
 	if err != nil {
