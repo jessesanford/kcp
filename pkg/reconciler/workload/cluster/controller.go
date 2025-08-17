@@ -136,11 +136,21 @@ func NewController(
 		},
 	)
 
+	// Initialize cluster manager with default implementations
+	clusterManager := NewClusterManager(
+		NewDefaultClientBuilder(),
+		NewDefaultCertificateValidator(),
+		NewDefaultRBACManager(),
+		NewDefaultSyncTargetManager(),
+		NewDefaultPlacementNotifier(),
+	)
+
 	c := &controller{
 		queue:              queue,
 		kcpClusterClient:   kcpClusterClient,
 		workspace:          workspace,
 		logicalClusterLister: logicalClusterInformer.Lister(),
+		clusterManager:     clusterManager,
 		
 		// Cluster registration operations
 		listClusters: func(clusterName logicalcluster.Name) ([]*ClusterRegistration, error) {
@@ -152,16 +162,6 @@ func NewController(
 		getCluster: func(clusterName logicalcluster.Name, name string) (*ClusterRegistration, error) {
 			// Placeholder for getting a specific ClusterRegistration
 			return nil, apierrors.NewNotFound(corev1alpha1.Resource("clusterregistrations"), name)
-		},
-		
-		createSyncTarget: func(ctx context.Context, cluster *ClusterRegistration) error {
-			// Placeholder for creating associated SyncTarget
-			return nil
-		},
-		
-		updatePlacementTargets: func(ctx context.Context, cluster *ClusterRegistration) error {
-			// Placeholder for notifying placement system of cluster changes
-			return nil
 		},
 	}
 
@@ -182,12 +182,13 @@ type controller struct {
 	kcpClusterClient   kcpclientset.ClusterInterface
 	workspace          logicalcluster.Name
 	logicalClusterLister corev1alpha1listers.LogicalClusterClusterLister
+	
+	// Cluster management
+	clusterManager *ClusterManager
 
 	// Cluster registration operations
 	listClusters           func(clusterName logicalcluster.Name) ([]*ClusterRegistration, error)
 	getCluster             func(clusterName logicalcluster.Name, name string) (*ClusterRegistration, error)
-	createSyncTarget       func(ctx context.Context, cluster *ClusterRegistration) error
-	updatePlacementTargets func(ctx context.Context, cluster *ClusterRegistration) error
 }
 
 // enqueueLogicalCluster enqueues a LogicalCluster for processing.
@@ -319,14 +320,41 @@ func (c *controller) commit(ctx context.Context, oldResource, newResource *Resou
 }
 
 // reconcile performs the main reconciliation logic for cluster registration.
-// This is a basic skeleton that will be extended in subsequent splits.
+// This integrates with the ClusterManager for full cluster lifecycle management.
 func (c *controller) reconcile(ctx context.Context, logicalCluster *corev1alpha1.LogicalCluster) error {
 	logger := klog.FromContext(ctx)
 	clusterName := logicalcluster.From(logicalCluster)
 	
-	// For Phase 6 Wave 2, we focus on basic cluster registration flow
 	logger.V(2).Info("reconciling logical cluster for workload placement", "cluster", clusterName)
 
-	// Basic reconciliation framework - detailed logic will be added in later splits
+	// Get all cluster registrations for this logical cluster
+	clusters, err := c.listClusters(clusterName)
+	if err != nil {
+		return fmt.Errorf("failed to list clusters: %w", err)
+	}
+
+	// Process each cluster registration
+	var errs []error
+	for _, cluster := range clusters {
+		if err := c.reconcileClusterRegistration(ctx, cluster); err != nil {
+			logger.Error(err, "failed to reconcile cluster registration", "cluster", cluster.Name)
+			errs = append(errs, err)
+		}
+	}
+
+	return utilerrors.NewAggregate(errs)
+}
+
+// reconcileClusterRegistration reconciles a single cluster registration using the ClusterManager.
+func (c *controller) reconcileClusterRegistration(ctx context.Context, cluster *ClusterRegistration) error {
+	logger := klog.FromContext(ctx)
+	logger.V(2).Info("reconciling cluster registration", "cluster", cluster.Name)
+
+	// Use ClusterManager for full reconciliation
+	if err := c.clusterManager.ReconcileCluster(ctx, cluster); err != nil {
+		return fmt.Errorf("cluster manager reconciliation failed: %w", err)
+	}
+
+	logger.V(2).Info("cluster registration reconciled successfully", "cluster", cluster.Name, "phase", cluster.Status.Phase)
 	return nil
 }
