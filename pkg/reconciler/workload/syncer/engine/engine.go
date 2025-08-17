@@ -22,9 +22,11 @@ import (
 	"sync"
 	"time"
 
+	"strings"
 	"k8s.io/klog/v2"
 	
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/dynamic"
@@ -32,6 +34,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	
+	"github.com/kcp-dev/logicalcluster/v3"
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
 )
@@ -46,6 +49,9 @@ const (
 
 // Engine manages the synchronization of resources between KCP and downstream clusters
 type Engine struct {
+	// Workspace isolation
+	workspace logicalcluster.Name
+	
 	// Clients
 	kcpClient         kcpclientset.ClusterInterface
 	downstreamClient  dynamic.Interface
@@ -78,6 +84,7 @@ type Engine struct {
 
 // NewEngine creates a new sync engine instance
 func NewEngine(
+	workspace logicalcluster.Name,
 	kcpClient kcpclientset.ClusterInterface,
 	downstreamClient dynamic.Interface,
 	kcpInformerFactory kcpinformers.SharedInformerFactory,
@@ -89,12 +96,13 @@ func NewEngine(
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Engine{
+		workspace:                 workspace,
 		kcpClient:                 kcpClient,
 		downstreamClient:          downstreamClient,
 		kcpInformerFactory:        kcpInformerFactory,
 		downstreamInformerFactory: downstreamInformerFactory,
 		resourceSyncers:           make(map[schema.GroupVersionResource]*ResourceSyncer),
-		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "sync-engine"),
+		queue:                     workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), fmt.Sprintf("sync-engine-%s", workspace)),
 		config:                    config,
 		status: &SyncStatus{
 			Connected:        false,
@@ -117,8 +125,21 @@ func (e *Engine) Start(ctx context.Context) error {
 	e.downstreamInformerFactory.Start(ctx.Done())
 	// Wait for caches to sync
 	logger.Info("Waiting for caches to sync")
-	if !cache.WaitForCacheSync(ctx.Done()) {
-		return fmt.Errorf("failed to sync caches")
+	
+	// Wait for KCP informer factory caches to sync
+	kcpCaches := e.kcpInformerFactory.WaitForCacheSync(ctx.Done())
+	for informer, synced := range kcpCaches {
+		if !synced {
+			return fmt.Errorf("failed to sync KCP informer cache for %v", informer)
+		}
+	}
+	
+	// Wait for downstream informer factory caches to sync
+	downstreamCaches := e.downstreamInformerFactory.WaitForCacheSync(ctx.Done())
+	for gvr, synced := range downstreamCaches {
+		if !synced {
+			return fmt.Errorf("failed to sync downstream informer cache for %v", gvr)
+		}
 	}
 	// Update status to connected
 	e.statusMu.Lock()
@@ -184,8 +205,39 @@ func (e *Engine) RegisterResourceSyncer(gvr schema.GroupVersionResource) error {
 
 // setupInformers configures informers for the given GVR
 func (e *Engine) setupInformers(gvr schema.GroupVersionResource) error {
-	// TODO: Implement proper informer setup with KCP and downstream clients
-	klog.V(4).InfoS("Setting up informers for resource", "gvr", gvr)
+	logger := klog.Background().WithValues("gvr", gvr, "workspace", e.workspace)
+	logger.V(4).Info("Setting up informers for resource")
+	
+	// Setup KCP informer for this GVR
+	kcpInformer, err := e.kcpInformerFactory.ForResource(gvr)
+	if err != nil {
+		return fmt.Errorf("failed to create KCP informer for %s: %w", gvr, err)
+	}
+	if kcpInformer == nil {
+		return fmt.Errorf("KCP informer is nil for %s", gvr)
+	}
+	
+	// Add event handlers for KCP resources
+	kcpInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    e.handleKCPAdd,
+		UpdateFunc: e.handleKCPUpdate,
+		DeleteFunc: e.handleKCPDelete,
+	})
+	
+	// Setup downstream informer for this GVR (for status sync)
+	downstreamInformer := e.downstreamInformerFactory.ForResource(gvr)
+	if downstreamInformer == nil {
+		return fmt.Errorf("failed to create downstream informer for %s", gvr)
+	}
+	
+	// Add event handlers for downstream resources
+	downstreamInformer.Informer().AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc:    e.handleDownstreamAdd,
+		UpdateFunc: e.handleDownstreamUpdate,
+		DeleteFunc: e.handleDownstreamDelete,
+	})
+	
+	logger.V(2).Info("Successfully set up informers for resource")
 	return nil
 }
 
@@ -400,6 +452,71 @@ func (e *Engine) updateStatusCounter(gvr schema.GroupVersionResource, category s
 
 // getGVRFromObject extracts GVR from an object
 func (e *Engine) getGVRFromObject(obj interface{}) (schema.GroupVersionResource, error) {
-	// TODO: Extract GVR from object metadata
-	return schema.GroupVersionResource{}, fmt.Errorf("GVR extraction not implemented")
+	if obj == nil {
+		return schema.GroupVersionResource{}, fmt.Errorf("object is nil")
+	}
+	
+	// Try to get GVR from unstructured object
+	if u, ok := obj.(*unstructured.Unstructured); ok {
+		gvk := u.GroupVersionKind()
+		if gvk.Empty() {
+			return schema.GroupVersionResource{}, fmt.Errorf("object has empty GroupVersionKind")
+		}
+		
+		// Convert GVK to GVR by pluralizing the kind
+		// This is a basic implementation - in production, you'd use discovery client
+		gvr := schema.GroupVersionResource{
+			Group:    gvk.Group,
+			Version:  gvk.Version,
+			Resource: pluralizeKind(gvk.Kind),
+		}
+		return gvr, nil
+	}
+	
+	// Try to extract from cache.MetaNamespaceKeyFunc compatible objects
+	// For most Kubernetes objects, we need to rely on the informer or client to provide GVR context
+	// This is a limitation of the current implementation - in production, you'd pass GVR context
+	
+	return schema.GroupVersionResource{}, fmt.Errorf("unable to extract GVR from object of type %T", obj)
+}
+
+// pluralizeKind provides basic pluralization for Kubernetes kinds
+// This is a simplified version - in production, use discovery client or a proper pluralization library
+func pluralizeKind(kind string) string {
+	if kind == "" {
+		return ""
+	}
+	
+	// Handle common irregular plurals
+	specialCases := map[string]string{
+		"Endpoints":                    "endpoints",
+		"NetworkPolicy":                "networkpolicies",
+		"PodSecurityPolicy":            "podsecuritypolicies",
+		"ComponentStatus":              "componentstatuses",
+		"HorizontalPodAutoscaler":      "horizontalpodautoscalers",
+		"CronJob":                      "cronjobs",
+		"StorageClass":                 "storageclasses",
+		"VolumeAttachment":             "volumeattachments",
+		"CSIDriver":                    "csidrivers",
+		"CSINode":                      "csinodes",
+		"RuntimeClass":                 "runtimeclasses",
+		"PriorityClass":                "priorityclasses",
+		"VolumeSnapshotClass":          "volumesnapshotclasses",
+		"VolumeSnapshotContent":        "volumesnapshotcontents",
+		"VolumeSnapshot":               "volumesnapshots",
+	}
+	
+	if plural, exists := specialCases[kind]; exists {
+		return plural
+	}
+	
+	// Basic pluralization rules
+	lower := strings.ToLower(kind)
+	if strings.HasSuffix(lower, "s") {
+		return lower + "es"
+	}
+	if strings.HasSuffix(lower, "y") {
+		return lower[:len(lower)-1] + "ies"
+	}
+	return lower + "s"
 }

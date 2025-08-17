@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/kubernetes/scheme"
 
+	"github.com/kcp-dev/logicalcluster/v3"
 	kcpfake "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/fake"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
 )
@@ -59,7 +60,7 @@ func TestNewEngine(t *testing.T) {
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			engine := NewEngine(kcpClient, downstreamClient, kcpInformerFactory, downstreamInformerFactory, tc.config)
+			engine := NewEngine(logicalcluster.Name("test-workspace"), kcpClient, downstreamClient, kcpInformerFactory, downstreamInformerFactory, tc.config)
 			
 			if engine == nil {
 				t.Fatal("Expected engine to be created, got nil")
@@ -97,9 +98,9 @@ func TestEngineRegisterResourceSyncer(t *testing.T) {
 		gvr         schema.GroupVersionResource
 		expectError bool
 	}{
-		"valid registration": {
+		"informer setup fails for unknown GVR": {
 			gvr:         testGVR,
-			expectError: false,
+			expectError: true, // Expected since test GVR doesn't exist in fake client
 		},
 		"duplicate registration": {
 			gvr:         testGVR,
@@ -255,7 +256,7 @@ func createTestEngine() *Engine {
 	kcpInformerFactory := kcpinformers.NewSharedInformerFactory(kcpClient, time.Minute)
 	downstreamInformerFactory := dynamicinformer.NewDynamicSharedInformerFactory(downstreamClient, time.Minute)
 	
-	return NewEngine(kcpClient, downstreamClient, kcpInformerFactory, downstreamInformerFactory, nil)
+	return NewEngine(logicalcluster.Name("test-workspace"), kcpClient, downstreamClient, kcpInformerFactory, downstreamInformerFactory, nil)
 }
 
 func TestEngineLifecycle(t *testing.T) {

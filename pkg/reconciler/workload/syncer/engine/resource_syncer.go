@@ -19,6 +19,7 @@ package engine
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/kcp-dev/kcp/pkg/logging"
 	"k8s.io/klog/v2"
@@ -76,6 +77,9 @@ func (rs *ResourceSyncer) syncToDownstream(ctx context.Context, item *SyncItem) 
 	logger := klog.FromContext(ctx).WithValues("operation", "syncToDownstream")
 	
 	// Extract object from sync item
+	if item.Object == nil {
+		return fmt.Errorf("sync item object is nil")
+	}
 	obj, ok := item.Object.(*unstructured.Unstructured)
 	if !ok {
 		return fmt.Errorf("expected *unstructured.Unstructured, got %T", item.Object)
@@ -176,6 +180,9 @@ func (rs *ResourceSyncer) syncStatusToKCP(ctx context.Context, item *SyncItem) e
 	logger := klog.FromContext(ctx).WithValues("operation", "syncStatusToKCP")
 	
 	// Extract object from sync item (this is the downstream object)
+	if item.Object == nil {
+		return fmt.Errorf("sync item object is nil")
+	}
 	downstreamObj, ok := item.Object.(*unstructured.Unstructured)
 	if !ok {
 		return fmt.Errorf("expected *unstructured.Unstructured, got %T", item.Object)
@@ -300,7 +307,7 @@ func isKCPLabel(key string) bool {
 	}
 	
 	for _, prefix := range kcpPrefixes {
-		if len(key) >= len(prefix) && key[:len(prefix)] == prefix {
+		if strings.HasPrefix(key, prefix) {
 			return true
 		}
 	}
