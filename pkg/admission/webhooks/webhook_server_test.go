@@ -21,12 +21,10 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -39,6 +37,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/apiserver/pkg/admission"
 )
 
 func TestNewWebhookServer(t *testing.T) {
@@ -401,10 +400,10 @@ func createTempTLSFiles(t *testing.T) (certFile, keyFile string) {
 // mockAdmissionWebhook is a simple mock that implements admission.Interface
 type mockAdmissionWebhook struct{}
 
-func (m *mockAdmissionWebhook) Admit(ctx context.Context, a interface{}, o interface{}) error {
+func (m *mockAdmissionWebhook) Admit(ctx context.Context, a admission.Attributes, o admission.ObjectInterfaces) error {
 	return nil
 }
 
-func (m *mockAdmissionWebhook) Handles(operation interface{}) bool {
+func (m *mockAdmissionWebhook) Handles(operation admission.Operation) bool {
 	return true
 }

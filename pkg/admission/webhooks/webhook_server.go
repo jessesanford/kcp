@@ -89,7 +89,7 @@ func (s *WebhookServer) Start(ctx context.Context) error {
 	
 	// Register webhook handlers
 	mux.HandleFunc(SyncTargetWebhookPath, s.handleSyncTargetWebhook)
-	mux.HandleFunc(PlacementWebhookPath, s.handlePlacementWebhook)
+	// PlacementWebhook will be added in a follow-up PR
 	
 	// Register health check handlers
 	mux.HandleFunc(HealthCheckPath, s.handleHealthz)
@@ -150,19 +150,7 @@ func (s *WebhookServer) handleSyncTargetWebhook(w http.ResponseWriter, r *http.R
 	s.handleAdmissionRequest(w, r, webhook)
 }
 
-// handlePlacementWebhook handles admission requests for WorkloadPlacement resources
-func (s *WebhookServer) handlePlacementWebhook(w http.ResponseWriter, r *http.Request) {
-	klog.V(4).Info("Handling WorkloadPlacement webhook request")
-	
-	webhook, err := NewPlacementWebhook(nil)
-	if err != nil {
-		klog.Errorf("Failed to create Placement webhook: %v", err)
-		http.Error(w, fmt.Sprintf("Failed to create webhook: %v", err), http.StatusInternalServerError)
-		return
-	}
-	
-	s.handleAdmissionRequest(w, r, webhook)
-}
+// handlePlacementWebhook will be added in a follow-up PR for WorkloadPlacement resources
 
 // handleAdmissionRequest processes admission webhook requests
 func (s *WebhookServer) handleAdmissionRequest(w http.ResponseWriter, r *http.Request, webhook admission.Interface) {

@@ -303,5 +303,6 @@ func (a *testAdmissionAttributes) IsDryRun() bool                    { return fa
 func (a *testAdmissionAttributes) GetAnnotations(key string) []string { return nil }
 func (a *testAdmissionAttributes) AddAnnotation(key, value string) error { return nil }
 func (a *testAdmissionAttributes) AddAnnotationWithLevel(key, value string, level audit.Level) error { return nil }
+func (a *testAdmissionAttributes) GetReinvocationContext() admission.ReinvocationContext { return nil }
 func (a *testAdmissionAttributes) GetCluster() logicalcluster.Name { return logicalcluster.Name("root:test") }
 func (a *testAdmissionAttributes) GetOperationOptions() runtime.Object { return nil }
