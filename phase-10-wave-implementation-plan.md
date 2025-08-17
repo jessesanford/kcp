@@ -6,6 +6,28 @@ Phase 10 focuses on Integration & Hardening with 5 efforts totaling ~3,000 lines
 
 **Key Optimization**: After Wave 1 completes the E2E framework foundation, all 4 Wave 2 efforts can execute in parallel with proper resource isolation, reducing total execution time from 3 days to 1.5 days.
 
+## Dependencies
+
+### Phase-Level Dependencies
+- **Depends On**: Phase 5-9 (all functionality must exist to test and harden)
+- **Blocks**: None (Phase 10 is the final production hardening phase)
+- **Independent From**: None (integrates and validates all prior work)
+
+### Wave-Level Dependencies
+- **Wave 1 Depends On**: All prior phases complete (need full stack for E2E testing)
+- **Wave 2 Depends On**: Wave 1 (E2E framework required for all testing)
+
+### Critical Path
+- Internal: Wave 1 (E2E Framework) → Wave 2 (All testing in parallel)
+- External Blockers: All phases 5-9 must be complete and functional
+
+### Dependency Notes
+- E2E framework tests the complete TMC stack end-to-end
+- Integration tests validate cross-component interactions
+- Performance benchmarks require all components operational
+- Chaos testing exercises failure scenarios across all phases
+- Documentation synthesizes learnings from entire implementation
+
 ## Dependency Analysis
 
 ### Dependency Graph
