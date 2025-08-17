@@ -3,16 +3,16 @@
 ## Overview
 This branch implements the discovery mechanisms for the Virtual Workspace, providing API discovery, OpenAPI documentation, and resource schema information. It enables clients to discover available TMC APIs and understand their capabilities.
 
-**Branch**: `feature/tmc-completion/p1w2-vw-discovery`  
+**Branch**: `feature/tmc-completion/p6w2-vw-discovery`  
 **Estimated Lines**: 500 lines  
 **Wave**: 3  
-**Dependencies**: p1w2-vw-core must be complete  
+**Dependencies**: p6w2-vw-core must be complete  
 
 ## Dependencies
 
 ### Required Before Starting
-- Phase 0 APIs complete
-- p1w2-vw-core merged (provides VW infrastructure)
+- Phase 5 APIs complete
+- p6w2-vw-core merged (provides VW infrastructure)
 - Virtual workspace framework available
 
 ### Blocks These Features
@@ -1131,12 +1131,12 @@ func (a *DiscoveryAggregator) ClearCache() {
 
 ## Integration Points
 
-### With VW Core (p1w2-vw-core)
+### With VW Core (p6w2-vw-core)
 - Discovers available providers
 - Uses virtual workspace for data
 - Shares resource information
 
-### With VW Endpoints (p1w2-vw-endpoints)
+### With VW Endpoints (p6w2-vw-endpoints)
 - Provides discovery endpoints
 - Shares API information
 - Enables client discovery
@@ -1180,8 +1180,8 @@ feat(discovery): implement Virtual Workspace discovery mechanisms
 - Add discovery aggregation with caching
 - Ensure Kubernetes-compatible discovery
 
-Part of TMC Phase 1 Wave 3 implementation
-Depends on: p1w2-vw-core
+Part of TMC Phase 6 Wave 2 implementation
+Depends on: p6w2-vw-core
 ```
 
 ## Next Steps
