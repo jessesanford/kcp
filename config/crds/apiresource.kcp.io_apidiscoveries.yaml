@@ -1,0 +1,360 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: apidiscoveries.apiresource.kcp.io
+spec:
+  group: apiresource.kcp.io
+  names:
+    categories:
+    - kcp
+    kind: APIDiscovery
+    listKind: APIDiscoveryList
+    plural: apidiscoveries
+    singular: apidiscovery
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.locationRef.name
+      name: Location
+      type: string
+    - jsonPath: .status.discoveredAPIs
+      name: APIs
+      type: integer
+    - jsonPath: .status.discoveredFeatures
+      name: Features
+      type: integer
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: APIDiscovery discovers APIs and capabilities at a location
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: APIDiscoverySpec defines discovery parameters
+            properties:
+              discoveryPolicy:
+                description: DiscoveryPolicy controls discovery behavior
+                properties:
+                  includeAlpha:
+                    description: IncludeAlpha APIs
+                    type: boolean
+                  includeBeta:
+                    description: IncludeBeta APIs
+                    type: boolean
+                  includeDeprecated:
+                    description: IncludeDeprecated APIs
+                    type: boolean
+                  resourceFilters:
+                    description: ResourceFilters to apply
+                    items:
+                      description: ResourceFilter filters discovered resources
+                      properties:
+                        action:
+                          description: Action to take
+                          enum:
+                          - Include
+                          - Exclude
+                          type: string
+                        group:
+                          description: Group to filter
+                          type: string
+                        kind:
+                          description: Kind to filter
+                          type: string
+                        version:
+                          description: Version to filter
+                          type: string
+                      required:
+                      - action
+                      type: object
+                    type: array
+                  scope:
+                    description: Scope of discovery
+                    enum:
+                    - Full
+                    - Partial
+                    - Minimal
+                    type: string
+                required:
+                - scope
+                type: object
+              featureGates:
+                description: FeatureGates to probe
+                items:
+                  type: string
+                type: array
+              locationRef:
+                description: LocationRef references the location to discover
+                properties:
+                  name:
+                    description: Name of the SyncTarget
+                    type: string
+                  namespace:
+                    description: Namespace if applicable
+                    type: string
+                required:
+                - name
+                type: object
+              paused:
+                description: Paused stops discovery
+                type: boolean
+              refreshInterval:
+                description: RefreshInterval for discovery
+                format: duration
+                type: string
+            required:
+            - locationRef
+            type: object
+          status:
+            description: APIDiscoveryStatus contains discovery results
+            properties:
+              apiGroups:
+                description: APIGroups discovered
+                items:
+                  description: DiscoveredAPIGroup represents a discovered API group
+                  properties:
+                    name:
+                      description: Name of the group
+                      type: string
+                    preferredVersion:
+                      description: PreferredVersion
+                      type: string
+                    versions:
+                      description: Versions available
+                      items:
+                        description: DiscoveredVersion represents a discovered version
+                        properties:
+                          deprecated:
+                            description: Deprecated status
+                            type: boolean
+                          resources:
+                            description: Resources in this version
+                            items:
+                              description: DiscoveredResource represents a discovered
+                                resource
+                              properties:
+                                categories:
+                                  description: Categories this resource belongs to
+                                  items:
+                                    type: string
+                                  type: array
+                                kind:
+                                  description: Kind of the resource
+                                  type: string
+                                name:
+                                  description: Name (plural) of the resource
+                                  type: string
+                                namespaced:
+                                  description: Namespaced or cluster-scoped
+                                  type: boolean
+                                shortNames:
+                                  description: ShortNames available
+                                  items:
+                                    type: string
+                                  type: array
+                                storageVersion:
+                                  description: StorageVersion if applicable
+                                  type: string
+                                verbs:
+                                  description: Verbs supported
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - kind
+                              - name
+                              - namespaced
+                              - verbs
+                              type: object
+                            type: array
+                          version:
+                            description: Version string
+                            type: string
+                        required:
+                        - resources
+                        - version
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  - versions
+                  type: object
+                type: array
+              conditions:
+                description: Conditions of discovery
+                items:
+                  description: Condition defines an observation of a object operational
+                    state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              discoveredAPIs:
+                description: DiscoveredAPIs count
+                format: int32
+                type: integer
+              discoveredFeatures:
+                description: DiscoveredFeatures count
+                format: int32
+                type: integer
+              features:
+                description: Features discovered
+                items:
+                  description: DiscoveredFeature represents a discovered feature/capability
+                  properties:
+                    configuration:
+                      description: Configuration if applicable
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                    enabled:
+                      description: Enabled status
+                      type: boolean
+                    name:
+                      description: Name of the feature
+                      type: string
+                    version:
+                      description: Version of the feature
+                      type: string
+                  required:
+                  - enabled
+                  - name
+                  type: object
+                type: array
+              lastDiscoveryTime:
+                description: LastDiscoveryTime
+                format: date-time
+                type: string
+              observedGeneration:
+                description: ObservedGeneration
+                format: int64
+                type: integer
+              phase:
+                description: Phase of discovery
+                enum:
+                - Pending
+                - Discovering
+                - Discovered
+                - Failed
+                type: string
+              serverVersion:
+                description: ServerVersion discovered
+                properties:
+                  buildDate:
+                    type: string
+                  compiler:
+                    type: string
+                  emulationMajor:
+                    description: EmulationMajor is the major version of the emulation
+                      version
+                    type: string
+                  emulationMinor:
+                    description: EmulationMinor is the minor version of the emulation
+                      version
+                    type: string
+                  gitCommit:
+                    type: string
+                  gitTreeState:
+                    type: string
+                  gitVersion:
+                    type: string
+                  goVersion:
+                    type: string
+                  major:
+                    description: Major is the major version of the binary version
+                    type: string
+                  minCompatibilityMajor:
+                    description: MinCompatibilityMajor is the major version of the
+                      minimum compatibility version
+                    type: string
+                  minCompatibilityMinor:
+                    description: MinCompatibilityMinor is the minor version of the
+                      minimum compatibility version
+                    type: string
+                  minor:
+                    description: Minor is the minor version of the binary version
+                    type: string
+                  platform:
+                    type: string
+                required:
+                - buildDate
+                - compiler
+                - gitCommit
+                - gitTreeState
+                - gitVersion
+                - goVersion
+                - major
+                - minor
+                - platform
+                type: object
+            required:
+            - discoveredAPIs
+            - discoveredFeatures
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
