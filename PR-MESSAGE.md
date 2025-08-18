@@ -1,6 +1,6 @@
 ## Summary
 
-This PR adds core APIResource types and registration for TMC's API negotiation system. This is part 1 of 3 splits from the oversized p5w1-apiresource-types branch (originally 1,170 lines).
+This PR introduces the core APIResource types for TMC's Phase 5 API Foundation. This is part 1 of 3 splits from the oversized p5w1-apiresource-types branch (originally 1,170 lines).
 
 - Core NegotiatedAPIResource type definitions with proper KCP integration
 - API registration and scheme setup
