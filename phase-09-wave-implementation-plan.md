@@ -8,24 +8,25 @@
 **Maximum Parallelization**: 3 agents working simultaneously  
 **Total Duration**: 3 days with parallel execution  
 **Total Lines**: ~4,200 lines  
-**STATUS: PARTIALLY COMPLETE** - Some features implemented under tmc-phase4-2X naming
+**STATUS: PARTIALLY COMPLETE** - Wave 1-2 ready for implementation, Wave 3 needs re-implementation
 
 This plan transforms the sequential Phase 9 implementation into an optimally parallelized execution strategy that adds production-ready features to TMC.
 
 ## Implementation Status
 
 ### Branches Created:
-**Note**: Phase 9 features were initially implemented under tmc-phase4 naming but have been moved to proper Phase 9 branches.
+**Note**: Wave 3 was initially implemented prematurely without Wave 1 metrics dependency and has been marked as defunct.
 
-**Completed Branches (Wave 3):**
-- `feature/phase9-advanced/p9w3-canary-strategy` - Canary deployment strategy (migrated from tmc-phase4-20)
-- `feature/phase9-advanced/p9w3-canary-metrics` - Canary metrics collection (migrated from tmc-phase4-20b)
-- `feature/phase9-advanced/p9w3-rollback-engine` - Rollback and recovery engine (migrated from tmc-phase4-22)
+**Defunct Branches (Wave 3 - DO NOT USE):**
+- `feature/defunct-phase9-advanced/p9w3-canary-strategy` - DEFUNCT - Needs re-implementation after Wave 1
+- `feature/defunct-phase9-advanced/p9w3-canary-metrics` - DEFUNCT - Needs re-implementation after Wave 1
+- `feature/defunct-phase9-advanced/p9w3-rollback-engine` - DEFUNCT - Needs re-implementation after Wave 1
 
-**Legacy Branch Names (for reference):**
-- Old: `feature/tmc-phase4-20-canary-strategy` → New: `feature/phase9-advanced/p9w3-canary-strategy`
-- Old: `feature/tmc-phase4-20b-canary-metrics` → New: `feature/phase9-advanced/p9w3-canary-metrics`
-- Old: `feature/tmc-phase4-22-rollback-engine` → New: `feature/phase9-advanced/p9w3-rollback-engine`
+**Reason for Defunct Status:**
+- Wave 3 was implemented before Wave 1 metrics were available
+- Canary deployments require real metrics for threshold evaluation and promotion decisions
+- Current implementation likely uses mock/stub metrics that need replacement
+- Must be re-implemented after Wave 1 completion to properly integrate with metrics infrastructure
 
 **Branches Created for Implementation (Wave 1-2):**
 - `feature/phase9-advanced/p9w1-metrics` - Metrics & Telemetry foundation (worktree ready)
@@ -37,7 +38,7 @@ This plan transforms the sequential Phase 9 implementation into an optimally par
 ### Summary:
 - **Wave 1**: 0/2 branches complete (Worktrees ready for implementation)
 - **Wave 2**: 0/3 branches complete (Worktrees ready for implementation)
-- **Wave 3**: 2/2 branches complete ✅ (Canary and rollback implemented)
+- **Wave 3**: 0/2 branches complete ❌ (NEEDS RE-IMPLEMENTATION after Wave 1)
 
 ## Dependencies
 
@@ -206,6 +207,12 @@ graph TD
 
 ## Wave 3: Advanced Deployment Features (Day 3)
 
+### ⚠️ **IMPORTANT: WAVE 3 REQUIRES RE-IMPLEMENTATION**
+**Status**: Previous implementation marked as DEFUNCT  
+**Reason**: Implemented before Wave 1 metrics were available  
+**Action Required**: Must be re-implemented AFTER Wave 1 completion  
+**Defunct Worktrees**: Located in `/workspaces/kcp-worktrees/phase9/advanced-features/worktrees/defunct-*`  
+
 ### Overview
 **Purpose**: Implement production deployment strategies  
 **Parallel Agents**: 2 (sequential within wave)  
@@ -295,7 +302,7 @@ cd p4w2-apidocs
 # Generate API documentation
 ```
 
-### Wave 3: Canary Deployments (2 Agents, Sequential) - ✅ COMPLETE (2/2)
+### Wave 3: Canary Deployments (2 Agents, Sequential) - ❌ NEEDS RE-IMPLEMENTATION (0/2)
 ```bash
 # Agent 1: Canary Specialist (First)
 cd /workspaces/kcp-worktrees
