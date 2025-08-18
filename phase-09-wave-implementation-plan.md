@@ -8,6 +8,7 @@
 **Maximum Parallelization**: 3 agents working simultaneously  
 **Total Duration**: 3 days with parallel execution  
 **Total Lines**: ~4,200 lines  
+**STATUS: NOT STARTED** - Planning complete, awaiting Phase 7 & 8 completion
 
 This plan transforms the sequential Phase 9 implementation into an optimally parallelized execution strategy that adds production-ready features to TMC.
 
@@ -231,7 +232,7 @@ graph TD
 
 ## Agent Orchestration Instructions
 
-### Wave 1 Orchestration (2 Agents)
+### Wave 1: Observability Foundation (2 Agents) - NOT STARTED
 ```bash
 # Agent 1: Metrics Specialist
 cd /workspaces/kcp-worktrees
@@ -246,7 +247,7 @@ cd p4w1-health
 # Implement health monitoring
 ```
 
-### Wave 2 Orchestration (3 Agents)
+### Wave 2: CLI & Documentation (3 Agents) - NOT STARTED
 ```bash
 # Agent 1: CLI Specialist
 cd /workspaces/kcp-worktrees
@@ -267,7 +268,7 @@ cd p4w2-apidocs
 # Generate API documentation
 ```
 
-### Wave 3 Orchestration (2 Agents, Sequential)
+### Wave 3: Canary Deployments (2 Agents, Sequential) - NOT STARTED
 ```bash
 # Agent 1: Canary Specialist (First)
 cd /workspaces/kcp-worktrees
