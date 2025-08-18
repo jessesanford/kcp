@@ -38,8 +38,6 @@ import (
 
 
 // TestEnvironment provides isolated test environments for TMC integration testing.
-// It manages workspace creation, client initialization, and resource cleanup to ensure
-// that tests don't interfere with each other and have proper isolation.
 type TestEnvironment struct {
 	t        *testing.T
 	ctx      context.Context
@@ -60,16 +58,6 @@ type TestEnvironment struct {
 }
 
 // NewTestEnvironment creates an isolated test environment for TMC integration testing.
-// It automatically sets up workspace isolation, client initialization, and cleanup tracking.
-//
-// Parameters:
-//   - t: The test instance for logging and error reporting
-//   - testName: Unique name for this test (used for resource prefixing)
-//   - parentWorkspace: Parent workspace to create the test workspace in
-//
-// Returns:
-//   - *TestEnvironment: Configured test environment ready for use
-//   - error: Environment setup error
 func NewTestEnvironment(t *testing.T, testName string, parentWorkspace logicalcluster.Name) (*TestEnvironment, error) {
 	t.Helper()
 	

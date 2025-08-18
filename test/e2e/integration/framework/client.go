@@ -109,13 +109,11 @@ func (tc *TestClient) DynamicFor(cluster logicalcluster.Name, gvr schema.GroupVe
 }
 
 // WithTestPrefix returns a resource name prefixed with the test prefix.
-// This ensures test isolation and prevents naming conflicts.
 func (tc *TestClient) WithTestPrefix(name string) string {
 	return tc.TestPrefix + name
 }
 
 // AllocateTestPort returns the next available test port for this test.
-// Ports are allocated sequentially starting from TestPortBase.
 func (tc *TestClient) AllocateTestPort() int {
 	// Simple sequential allocation for integration tests
 	// In a more complex scenario, we might track allocated ports
@@ -123,7 +121,6 @@ func (tc *TestClient) AllocateTestPort() int {
 }
 
 // WaitForAPIGroup waits for a specific API group to become available.
-// This is useful when testing TMC API deployment and availability.
 func (tc *TestClient) WaitForAPIGroup(ctx context.Context, groupName string) error {
 	tc.t.Helper()
 	
@@ -152,7 +149,6 @@ func (tc *TestClient) WaitForAPIGroup(ctx context.Context, groupName string) err
 }
 
 // CreateTestNamespace creates a namespace with test prefix for resource isolation.
-// All TMC integration test resources should be created in test namespaces.
 func (tc *TestClient) CreateTestNamespace(ctx context.Context, cluster logicalcluster.Name, namespaceName string) error {
 	tc.t.Helper()
 	
@@ -177,7 +173,6 @@ func (tc *TestClient) CreateTestNamespace(ctx context.Context, cluster logicalcl
 }
 
 // CleanupTestResources removes all resources created by this test client.
-// This ensures proper cleanup after integration tests complete.
 func (tc *TestClient) CleanupTestResources(ctx context.Context) error {
 	tc.t.Helper()
 	
