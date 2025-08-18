@@ -1,994 +1,423 @@
 # Phase 10: Integration & Hardening Implementation Plan
 
-## Overview
+## Executive Summary
 
-**Theme**: Define all API types, interfaces, and contracts  
-**Duration**: 2-3 days with parallel execution  
-**Total Efforts**: 10  
-**Total Lines**: ~5,500  
-**Engineers Required**: 3-4 working in parallel  
+Phase 10 represents the culmination of the TMC implementation, focusing on ensuring production readiness through comprehensive testing, performance optimization, documentation, and operational hardening. This phase validates that all components from Phases 5-9 work seamlessly together and meet production quality standards.
 
-This phase establishes the complete API surface and contracts that all subsequent implementations will use. No implementation logic, only type definitions, interfaces, and contracts.
+**Key Focus**: Transform the TMC implementation from feature-complete to production-ready through rigorous testing, performance validation, and operational excellence.
 
-## Wave Structure
+## Core Focus Areas
 
-### Wave 1: Core API Types (Day 1 Morning)
-**Dependencies**: None  
-**Parallel Efforts**: 3  
-**Purpose**: Define the fundamental API types for TMC
+### E2E Testing Framework
+**Purpose**: Establish comprehensive end-to-end testing that validates complete TMC workflows across all components.
 
-### Wave 2: Extended APIs & Resources (Day 1 Afternoon)  
-**Dependencies**: Wave 1 APIs for type references  
-**Parallel Efforts**: 4  
-**Purpose**: Define extended API types and resource management
+**Key Components**:
+- Multi-cluster test environment orchestration
+- End-to-end workflow validation framework
+- Cross-workspace testing infrastructure
+- Integration with KCP's existing E2E framework
+- Test data management and cleanup
 
-### Wave 3: Contracts & Interfaces (Day 2)
-**Dependencies**: Wave 1-2 for type usage in interfaces  
-**Parallel Efforts**: 3  
-**Purpose**: Define all interfaces and contracts for implementations
+**Validation Scenarios**:
+- Complete cluster lifecycle (registration → placement → sync → deletion)
+- Cross-workspace workload distribution
+- Virtual workspace API projections
+- Policy-driven placement decisions
+- Failure recovery and reconciliation
 
-## Wave 1: Core API Types
+### Performance & Scale Testing
+**Purpose**: Ensure TMC meets performance requirements and scales to production workloads.
 
-### Effort 0.1.1: SyncTarget API Complete
-**Branch**: `feature/tmc-completion/p0w1-synctarget-api`  
-**Lines**: ~600  
-**Dependencies**: None  
-**Engineer**: API Specialist
+**Key Components**:
+- Performance benchmarking framework
+- Load generation tools
+- Metrics collection and analysis
+- Bottleneck identification
+- Optimization validation
 
-**Implementation**:
+**Target Metrics**:
+- Placement decision latency: <1 second
+- Sync latency: <1 second for 95th percentile
+- Support for 100+ clusters
+- Support for 10,000+ workloads
+- Memory footprint: <100MB per controller
 
+### Documentation Suite
+**Purpose**: Provide comprehensive documentation for operators, developers, and users.
+
+**Documentation Types**:
+- **User Guides**: Getting started, common scenarios, best practices
+- **API Reference**: Complete API documentation with examples
+- **Architecture Documentation**: Design decisions, component interactions
+- **Operational Guides**: Deployment, monitoring, troubleshooting
+- **Developer Documentation**: Contributing guide, testing guide
+
+### Production Hardening
+**Purpose**: Ensure TMC is resilient, secure, and observable in production environments.
+
+**Hardening Areas**:
+- **Security**: RBAC policies, secret management, network policies
+- **Reliability**: Graceful degradation, circuit breakers, retry mechanisms
+- **Observability**: Metrics, logging, tracing, debugging tools
+- **Chaos Engineering**: Failure injection, recovery validation
+- **Resource Management**: Limits, quotas, garbage collection
+
+### Operational Readiness
+**Purpose**: Provide tools and processes for operating TMC in production.
+
+**Components**:
+- **Runbooks**: Standard operating procedures for common tasks
+- **Health Checks**: Liveness and readiness probes
+- **Monitoring Dashboards**: Grafana dashboards for key metrics
+- **Alerting Rules**: Prometheus alerts for critical conditions
+- **Debugging Tools**: CLI commands for troubleshooting
+
+## Test Strategy
+
+### E2E Test Scenarios
+
+#### Cluster Lifecycle Testing
+```yaml
+scenarios:
+  - name: cluster-registration-lifecycle
+    steps:
+      - Register new cluster via ClusterRegistration
+      - Verify SyncTarget creation
+      - Deploy syncer to physical cluster
+      - Validate bidirectional connectivity
+      - Test workload placement
+      - Graceful cluster deregistration
+    validation:
+      - All resources cleaned up
+      - No orphaned workloads
+      - Status properly aggregated
+```
+
+#### Cross-Workspace Distribution
+```yaml
+scenarios:
+  - name: cross-workspace-workload-distribution
+    steps:
+      - Create workload in source workspace
+      - Apply placement policy with multi-workspace targets
+      - Verify workload appears in virtual workspaces
+      - Confirm synchronization to physical clusters
+      - Update workload and verify propagation
+      - Delete workload and verify cleanup
+    validation:
+      - Consistent state across workspaces
+      - Proper status aggregation
+      - Resource quota enforcement
+```
+
+#### Policy-Driven Placement
+```yaml
+scenarios:
+  - name: advanced-placement-policies
+    steps:
+      - Define complex placement policy with CEL expressions
+      - Submit workload matching policy
+      - Verify placement decision follows policy
+      - Update policy and verify re-evaluation
+      - Test policy precedence and conflicts
+    validation:
+      - CEL expressions evaluated correctly
+      - Policy precedence respected
+      - Placement constraints enforced
+```
+
+### Performance Benchmarks
+
+#### Placement Performance
 ```go
-// pkg/apis/workload/v1alpha1/synctarget_types.go
-package v1alpha1
-
-import (
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/apimachinery/pkg/api/resource"
-    conditionsv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/third_party/conditions/apis/conditions/v1alpha1"
-    corev1alpha1 "github.com/kcp-dev/kcp/pkg/apis/core/v1alpha1"
-)
-
-// +crd
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:resource:scope=Cluster,categories=kcp
-// +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Location",type=string,JSONPath=`.spec.location`
-// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`
-// +kubebuilder:printcolumn:name="Syncing",type=string,JSONPath=`.status.conditions[?(@.type=="Syncing")].status`
-// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-
-// SyncTarget defines a physical Kubernetes cluster that can host workloads from KCP
-type SyncTarget struct {
-    metav1.TypeMeta   `json:",inline"`
-    metav1.ObjectMeta `json:"metadata,omitempty"`
+func BenchmarkPlacementDecision(b *testing.B) {
+    scenarios := []struct {
+        name     string
+        clusters int
+        policies int
+    }{
+        {"small", 10, 5},
+        {"medium", 50, 20},
+        {"large", 100, 50},
+        {"xlarge", 500, 100},
+    }
     
-    Spec   SyncTargetSpec   `json:"spec,omitempty"`
-    Status SyncTargetStatus `json:"status,omitempty"`
-}
-
-// SyncTargetSpec defines the desired state of a SyncTarget
-type SyncTargetSpec struct {
-    // Cells define the deployable units within this SyncTarget
-    // +optional
-    Cells []SyncTargetCell `json:"cells,omitempty"`
-    
-    // ClusterReference points to the ClusterRegistration for this target
-    // +required
-    ClusterRef corev1alpha1.ResourceReference `json:"clusterRef"`
-    
-    // SyncerConfig defines configuration for the syncer deployment
-    // +required
-    SyncerConfig SyncerConfig `json:"syncerConfig"`
-    
-    // ResourceQuotas define resource limits for this SyncTarget
-    // +optional
-    ResourceQuotas []ResourceQuota `json:"resourceQuotas,omitempty"`
-    
-    // SupportedAPIResources defines which resources this target can sync
-    // +optional
-    SupportedAPIResources []APIResourceSpec `json:"supportedAPIResources,omitempty"`
-    
-    // EvictionStrategy defines how to handle workload eviction
-    // +optional
-    // +kubebuilder:default=Graceful
-    EvictionStrategy EvictionStrategy `json:"evictionStrategy,omitempty"`
-}
-
-// SyncTargetCell represents a schedulable unit within a SyncTarget
-type SyncTargetCell struct {
-    // Name of the cell
-    Name string `json:"name"`
-    
-    // Labels for the cell (used in placement decisions)
-    // +optional
-    Labels map[string]string `json:"labels,omitempty"`
-    
-    // Capacity defines the resources available in this cell
-    // +optional
-    Capacity corev1.ResourceList `json:"capacity,omitempty"`
-    
-    // Conditions for this cell
-    // +optional
-    Conditions conditionsv1alpha1.Conditions `json:"conditions,omitempty"`
-}
-
-// SyncerConfig defines the syncer deployment configuration
-type SyncerConfig struct {
-    // Image to use for the syncer
-    // +kubebuilder:default="ghcr.io/kcp-dev/kcp/syncer:latest"
-    Image string `json:"image,omitempty"`
-    
-    // Replicas for high availability
-    // +kubebuilder:default=1
-    // +kubebuilder:validation:Minimum=1
-    // +kubebuilder:validation:Maximum=5
-    Replicas int32 `json:"replicas,omitempty"`
-    
-    // Resources for the syncer pod
-    // +optional
-    Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-    
-    // DownstreamNamespace where syncer will be deployed
-    // +kubebuilder:default="kcp-syncer-system"
-    DownstreamNamespace string `json:"downstreamNamespace,omitempty"`
-    
-    // ResyncPeriod for full reconciliation
-    // +optional
-    // +kubebuilder:default="10m"
-    ResyncPeriod metav1.Duration `json:"resyncPeriod,omitempty"`
-    
-    // HeartbeatInterval for liveness checks
-    // +optional
-    // +kubebuilder:default="30s"
-    HeartbeatInterval metav1.Duration `json:"heartbeatInterval,omitempty"`
-}
-
-// ResourceQuota defines resource limits for a SyncTarget
-type ResourceQuota struct {
-    // Scope of the quota (namespace, workspace, etc)
-    Scope QuotaScope `json:"scope"`
-    
-    // Hard limits
-    Hard corev1.ResourceList `json:"hard"`
-    
-    // ScopeSelector for fine-grained targeting
-    // +optional
-    ScopeSelector *ScopeSelector `json:"scopeSelector,omitempty"`
-}
-
-// APIResourceSpec defines a supported API resource
-type APIResourceSpec struct {
-    // Group of the resource
-    Group string `json:"group"`
-    
-    // Version of the resource
-    Version string `json:"version"`
-    
-    // Resource name (plural)
-    Resource string `json:"resource"`
-    
-    // Capabilities for this resource
-    // +optional
-    Capabilities []ResourceCapability `json:"capabilities,omitempty"`
-}
-
-// SyncTargetStatus defines the observed state of a SyncTarget
-type SyncTargetStatus struct {
-    // Phase of the SyncTarget lifecycle
-    // +optional
-    Phase SyncTargetPhase `json:"phase,omitempty"`
-    
-    // Conditions represent the observations of the current state
-    // +optional
-    Conditions conditionsv1alpha1.Conditions `json:"conditions,omitempty"`
-    
-    // AllocatedResources tracks resource usage
-    // +optional
-    AllocatedResources corev1.ResourceList `json:"allocatedResources,omitempty"`
-    
-    // AvailableResources tracks available capacity
-    // +optional  
-    AvailableResources corev1.ResourceList `json:"availableResources,omitempty"`
-    
-    // SyncerStatus tracks the syncer deployment
-    // +optional
-    SyncerStatus *SyncerStatus `json:"syncerStatus,omitempty"`
-    
-    // LastHeartbeatTime from the syncer
-    // +optional
-    LastHeartbeatTime *metav1.Time `json:"lastHeartbeatTime,omitempty"`
-    
-    // VirtualWorkspaceURL for this SyncTarget
-    // +optional
-    VirtualWorkspaceURL string `json:"virtualWorkspaceURL,omitempty"`
-}
-
-// SyncerStatus tracks the syncer deployment state
-type SyncerStatus struct {
-    // Ready indicates if syncer is ready
-    Ready bool `json:"ready"`
-    
-    // ObservedGeneration of the syncer deployment
-    ObservedGeneration int64 `json:"observedGeneration,omitempty"`
-    
-    // Replicas status
-    Replicas int32 `json:"replicas,omitempty"`
-    ReadyReplicas int32 `json:"readyReplicas,omitempty"`
-    
-    // LastSyncTime of successful sync
-    // +optional
-    LastSyncTime *metav1.Time `json:"lastSyncTime,omitempty"`
-    
-    // SyncedResources count
-    SyncedResources int32 `json:"syncedResources,omitempty"`
-}
-
-// +kubebuilder:validation:Enum=Pending;Scheduling;Ready;NotReady;Terminating
-type SyncTargetPhase string
-
-const (
-    SyncTargetPhasePending     SyncTargetPhase = "Pending"
-    SyncTargetPhaseScheduling  SyncTargetPhase = "Scheduling"
-    SyncTargetPhaseReady       SyncTargetPhase = "Ready"
-    SyncTargetPhaseNotReady    SyncTargetPhase = "NotReady"
-    SyncTargetPhaseTerminating SyncTargetPhase = "Terminating"
-)
-
-// +kubebuilder:validation:Enum=Graceful;Immediate
-type EvictionStrategy string
-
-const (
-    EvictionStrategyGraceful  EvictionStrategy = "Graceful"
-    EvictionStrategyImmediate EvictionStrategy = "Immediate"
-)
-
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-
-// SyncTargetList contains a list of SyncTargets
-type SyncTargetList struct {
-    metav1.TypeMeta `json:",inline"`
-    metav1.ListMeta `json:"metadata,omitempty"`
-    Items           []SyncTarget `json:"items"`
+    for _, s := range scenarios {
+        b.Run(s.name, func(b *testing.B) {
+            // Setup test environment
+            // Measure placement decision time
+            // Verify <1s latency
+        })
+    }
 }
 ```
 
-**Key Actions**:
-1. Define complete SyncTarget types with all fields
-2. Add proper kubebuilder markers for CRD generation
-3. Include validation tags
-4. Generate deepcopy and CRDs: `make generate`
-
----
-
-### Effort 0.1.2: APIResourceImport Types
-**Branch**: `feature/tmc-completion/p0w1-apiresource-types`  
-**Lines**: ~500  
-**Dependencies**: None  
-**Engineer**: API Specialist
-
-**Implementation**:
-
+#### Sync Throughput
 ```go
-// pkg/apis/apiresource/v1alpha1/types.go
-package v1alpha1
-
-import (
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/apimachinery/pkg/version"
-)
-
-// +crd
-// +genclient
-// +genclient:nonNamespaced
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:resource:scope=Cluster,categories=kcp
-// +kubebuilder:subresource:status
-
-// APIResourceImport represents an API resource available from a SyncTarget
-type APIResourceImport struct {
-    metav1.TypeMeta   `json:",inline"`
-    metav1.ObjectMeta `json:"metadata,omitempty"`
+func BenchmarkSyncerThroughput(b *testing.B) {
+    workloadCounts := []int{100, 500, 1000, 5000, 10000}
     
-    Spec APIResourceImportSpec `json:"spec"`
-}
-
-type APIResourceImportSpec struct {
-    // Location where this resource is available
-    Location string `json:"location"`
-    
-    // SchemaUID identifying the schema
-    SchemaUID string `json:"schemaUID"`
-    
-    // CommonAPIResourceSpec contains common fields
-    CommonAPIResourceSpec `json:",inline"`
-    
-    // CompatibleWorkloads defines compatible workload types
-    // +optional
-    CompatibleWorkloads []WorkloadReference `json:"compatibleWorkloads,omitempty"`
-}
-
-// CommonAPIResourceSpec defines common resource fields
-type CommonAPIResourceSpec struct {
-    // GroupVersion of the resource
-    GroupVersion GroupVersion `json:"groupVersion"`
-    
-    // Scope of the resource (Namespaced or Cluster)
-    Scope ResourceScope `json:"scope"`
-    
-    // Resource plural name
-    Resource string `json:"resource"`
-    
-    // Kind is the type name
-    Kind string `json:"kind"`
-    
-    // ListKind is the list type name
-    // +optional
-    ListKind string `json:"listKind,omitempty"`
-    
-    // Singular name
-    // +optional
-    Singular string `json:"singular,omitempty"`
-    
-    // ShortNames for CLI
-    // +optional
-    ShortNames []string `json:"shortNames,omitempty"`
-    
-    // Categories for grouping
-    // +optional
-    Categories []string `json:"categories,omitempty"`
-    
-    // Subresources available
-    // +optional
-    Subresources []SubresourceSpec `json:"subresources,omitempty"`
-    
-    // Verbs supported
-    Verbs []string `json:"verbs"`
-    
-    // OpenAPI schema
-    // +optional
-    OpenAPISchema *runtime.RawExtension `json:"openAPISchema,omitempty"`
-}
-
-// +crd
-// +genclient
-// +genclient:nonNamespaced  
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:resource:scope=Cluster,categories=kcp
-// +kubebuilder:subresource:status
-
-// NegotiatedAPIResource represents an agreed-upon API resource version
-type NegotiatedAPIResource struct {
-    metav1.TypeMeta   `json:",inline"`
-    metav1.ObjectMeta `json:"metadata,omitempty"`
-    
-    Spec   NegotiatedAPIResourceSpec   `json:"spec"`
-    Status NegotiatedAPIResourceStatus `json:"status,omitempty"`
-}
-
-type NegotiatedAPIResourceSpec struct {
-    // CommonAPIResourceSpec from the negotiation
-    CommonAPIResourceSpec `json:",inline"`
-    
-    // Publish indicates this should be published to APIExport
-    Publish bool `json:"publish"`
-    
-    // SyncTargets that support this resource
-    SyncTargets []SyncTargetReference `json:"syncTargets"`
-}
-
-type NegotiatedAPIResourceStatus struct {
-    // Conditions of the negotiation
-    // +optional
-    Conditions conditionsv1alpha1.Conditions `json:"conditions,omitempty"`
-    
-    // SupportMatrix shows version support across targets
-    // +optional
-    SupportMatrix []TargetSupport `json:"supportMatrix,omitempty"`
-}
-
-// TargetSupport describes API support for a specific target
-type TargetSupport struct {
-    // Target name
-    Target string `json:"target"`
-    
-    // SupportedVersions available on this target
-    SupportedVersions []GroupVersion `json:"supportedVersions"`
-    
-    // PreferredVersion for this target
-    // +optional
-    PreferredVersion *GroupVersion `json:"preferredVersion,omitempty"`
-    
-    // Limitations on this target
-    // +optional
-    Limitations []string `json:"limitations,omitempty"`
-}
-
-// +crd
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:resource:scope=Namespaced,categories=kcp
-
-// CompatibilityConstraint defines version compatibility requirements
-type CompatibilityConstraint struct {
-    metav1.TypeMeta   `json:",inline"`
-    metav1.ObjectMeta `json:"metadata,omitempty"`
-    
-    Spec CompatibilityConstraintSpec `json:"spec"`
-}
-
-type CompatibilityConstraintSpec struct {
-    // Resource this constraint applies to
-    Resource GroupVersionResource `json:"resource"`
-    
-    // MinVersion required
-    // +optional
-    MinVersion *version.Info `json:"minVersion,omitempty"`
-    
-    // MaxVersion supported
-    // +optional  
-    MaxVersion *version.Info `json:"maxVersion,omitempty"`
-    
-    // RequiredFeatures that must be present
-    // +optional
-    RequiredFeatures []string `json:"requiredFeatures,omitempty"`
-    
-    // ForbiddenFields that must not be used
-    // +optional
-    ForbiddenFields []string `json:"forbiddenFields,omitempty"`
+    for _, count := range workloadCounts {
+        b.Run(fmt.Sprintf("workloads-%d", count), func(b *testing.B) {
+            // Create workloads
+            // Measure sync time
+            // Calculate throughput
+            // Verify meets SLA
+        })
+    }
 }
 ```
 
----
+### Failure Testing
 
-### Effort 0.1.3: Placement Enhanced Types
-**Branch**: `feature/tmc-completion/p0w1-placement-types`  
-**Lines**: ~550  
-**Dependencies**: None  
-**Engineer**: Placement Specialist
-
-**Implementation**:
-
-```go
-// pkg/apis/placement/v1alpha1/enhanced_types.go
-package v1alpha1
-
-import (
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/apimachinery/pkg/util/intstr"
-)
-
-// +crd
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:resource:scope=Namespaced,categories=kcp
-// +kubebuilder:subresource:status
-
-// PlacementPolicy defines advanced placement rules with CEL expressions
-type PlacementPolicy struct {
-    metav1.TypeMeta   `json:",inline"`
-    metav1.ObjectMeta `json:"metadata,omitempty"`
-    
-    Spec   PlacementPolicySpec   `json:"spec"`
-    Status PlacementPolicyStatus `json:"status,omitempty"`
-}
-
-type PlacementPolicySpec struct {
-    // Priority of this policy (higher wins)
-    // +kubebuilder:validation:Minimum=0
-    // +kubebuilder:validation:Maximum=1000
-    Priority int32 `json:"priority"`
-    
-    // WorkloadSelector targets specific workloads
-    // +optional
-    WorkloadSelector *metav1.LabelSelector `json:"workloadSelector,omitempty"`
-    
-    // ClusterSelector targets specific clusters
-    // +optional
-    ClusterSelector *ClusterSelector `json:"clusterSelector,omitempty"`
-    
-    // Rules define placement rules
-    Rules []PlacementRule `json:"rules"`
-    
-    // Strategy for placement decisions
-    // +kubebuilder:default=BestFit
-    Strategy PlacementStrategy `json:"strategy,omitempty"`
-    
-    // Enforcement level
-    // +kubebuilder:default=Preferred
-    Enforcement EnforcementLevel `json:"enforcement,omitempty"`
-}
-
-// PlacementRule defines a single placement rule
-type PlacementRule struct {
-    // Name of the rule
-    Name string `json:"name"`
-    
-    // CELExpression for evaluation
-    // +optional
-    CELExpression *string `json:"celExpression,omitempty"`
-    
-    // Weight for scoring (0-100)
-    // +kubebuilder:validation:Minimum=0
-    // +kubebuilder:validation:Maximum=100
-    // +kubebuilder:default=50
-    Weight int32 `json:"weight,omitempty"`
-    
-    // Effect when rule matches
-    Effect RuleEffect `json:"effect"`
-    
-    // Clusters explicitly included/excluded
-    // +optional
-    Clusters *ClusterList `json:"clusters,omitempty"`
-}
-
-// +kubebuilder:validation:Enum=Require;Prefer;Avoid;Forbid
-type RuleEffect string
-
-const (
-    RuleEffectRequire RuleEffect = "Require"
-    RuleEffectPrefer  RuleEffect = "Prefer"
-    RuleEffectAvoid   RuleEffect = "Avoid"
-    RuleEffectForbid  RuleEffect = "Forbid"
-)
-
-// +kubebuilder:validation:Enum=BestFit;Spread;Binpack;Random;LeastLoaded
-type PlacementStrategy string
-
-const (
-    PlacementStrategyBestFit     PlacementStrategy = "BestFit"
-    PlacementStrategySpread      PlacementStrategy = "Spread"
-    PlacementStrategyBinpack     PlacementStrategy = "Binpack"
-    PlacementStrategyRandom      PlacementStrategy = "Random"
-    PlacementStrategyLeastLoaded PlacementStrategy = "LeastLoaded"
-)
-
-// +crd
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:resource:scope=Namespaced,categories=kcp
-// +kubebuilder:subresource:status
-
-// PlacementDecision represents a placement decision for workloads
-type PlacementDecision struct {
-    metav1.TypeMeta   `json:",inline"`
-    metav1.ObjectMeta `json:"metadata,omitempty"`
-    
-    Spec   PlacementDecisionSpec   `json:"spec"`
-    Status PlacementDecisionStatus `json:"status,omitempty"`
-}
-
-type PlacementDecisionSpec struct {
-    // PlacementRef references the placement request
-    PlacementRef corev1.LocalObjectReference `json:"placementRef"`
-    
-    // Clusters selected for placement
-    Clusters []ClusterDecision `json:"clusters"`
-    
-    // Strategy used for this decision
-    Strategy PlacementStrategy `json:"strategy"`
-    
-    // Overrides for specific clusters
-    // +optional
-    Overrides []PlacementOverride `json:"overrides,omitempty"`
-}
-
-// ClusterDecision represents the decision for a single cluster
-type ClusterDecision struct {
-    // ClusterName selected
-    ClusterName string `json:"clusterName"`
-    
-    // Weight/priority for this cluster
-    Weight int32 `json:"weight"`
-    
-    // Reason for selection
-    Reason string `json:"reason"`
-    
-    // Score from evaluation
-    Score float64 `json:"score"`
-}
-
-// +crd
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:resource:scope=Namespaced,categories=kcp
-// +kubebuilder:subresource:status
-
-// SchedulingConstraint defines advanced scheduling constraints
-type SchedulingConstraint struct {
-    metav1.TypeMeta   `json:",inline"`
-    metav1.ObjectMeta `json:"metadata,omitempty"`
-    
-    Spec SchedulingConstraintSpec `json:"spec"`
-}
-
-type SchedulingConstraintSpec struct {
-    // MinReplicas per cluster
-    // +optional
-    MinReplicas *int32 `json:"minReplicas,omitempty"`
-    
-    // MaxReplicas per cluster
-    // +optional
-    MaxReplicas *int32 `json:"maxReplicas,omitempty"`
-    
-    // MaxClusters to spread across
-    // +optional
-    MaxClusters *int32 `json:"maxClusters,omitempty"`
-    
-    // ResourceRequirements for placement
-    // +optional
-    ResourceRequirements *corev1.ResourceRequirements `json:"resourceRequirements,omitempty"`
-    
-    // TopologySpreadConstraints for distribution
-    // +optional
-    TopologySpreadConstraints []TopologySpreadConstraint `json:"topologySpreadConstraints,omitempty"`
-    
-    // AntiAffinity rules
-    // +optional
-    AntiAffinity *AntiAffinitySpec `json:"antiAffinity,omitempty"`
-}
-
-// TopologySpreadConstraint ensures even distribution
-type TopologySpreadConstraint struct {
-    // TopologyKey to spread across
-    TopologyKey string `json:"topologyKey"`
-    
-    // MaxSkew allowed
-    MaxSkew int32 `json:"maxSkew"`
-    
-    // WhenUnsatisfiable action
-    WhenUnsatisfiable UnsatisfiableConstraintAction `json:"whenUnsatisfiable"`
-}
+#### Chaos Scenarios
+```yaml
+chaos_tests:
+  - name: syncer-disconnect
+    fault: network-partition
+    duration: 5m
+    validation:
+      - Workloads remain available
+      - Status updates queued
+      - Automatic recovery on reconnect
+      
+  - name: controller-crash
+    fault: pod-delete
+    target: tmc-controller
+    validation:
+      - New controller takes over
+      - No duplicate processing
+      - State consistency maintained
+      
+  - name: workspace-unavailable
+    fault: api-server-slow
+    latency: 5s
+    validation:
+      - Graceful degradation
+      - Circuit breaker activates
+      - Recovery when available
 ```
 
-## Wave 2: Extended APIs & Resources
+## Documentation Plan
 
-### Effort 0.2.1: Workload Distribution Types
-**Branch**: `feature/tmc-completion/p0w2-workload-dist`  
-**Lines**: ~500  
-**Dependencies**: Wave 1 types  
-**Engineer**: Distribution Specialist
-
-**Implementation**:
-
-```go
-// pkg/apis/workload/v1alpha1/distribution_types.go
-package v1alpha1
-
-// WorkloadDistribution defines how to distribute workloads
-type WorkloadDistribution struct {
-    metav1.TypeMeta   `json:",inline"`
-    metav1.ObjectMeta `json:"metadata,omitempty"`
-    
-    Spec   WorkloadDistributionSpec   `json:"spec"`
-    Status WorkloadDistributionStatus `json:"status,omitempty"`
-}
-
-type WorkloadDistributionSpec struct {
-    // Resource to distribute
-    Resource GroupVersionResource `json:"resource"`
-    
-    // Targets for distribution
-    Targets []DistributionTarget `json:"targets"`
-    
-    // RolloutStrategy for updates
-    // +optional
-    RolloutStrategy *RolloutStrategy `json:"rolloutStrategy,omitempty"`
-    
-    // Placement configuration
-    Placement PlacementConfig `json:"placement"`
-}
-
-type DistributionTarget struct {
-    // Name of the target
-    Name string `json:"name"`
-    
-    // SyncTargetRef references the sync target
-    SyncTargetRef *corev1.LocalObjectReference `json:"syncTargetRef,omitempty"`
-    
-    // Replicas for this target
-    // +optional
-    Replicas *intstr.IntOrString `json:"replicas,omitempty"`
-    
-    // Weight for weighted distribution
-    // +kubebuilder:validation:Minimum=0
-    // +kubebuilder:validation:Maximum=100
-    Weight int32 `json:"weight,omitempty"`
-}
+### User Documentation Structure
+```
+docs/
+├── getting-started/
+│   ├── installation.md
+│   ├── first-cluster.md
+│   ├── first-workload.md
+│   └── troubleshooting.md
+├── concepts/
+│   ├── architecture.md
+│   ├── synctargets.md
+│   ├── placement.md
+│   └── virtual-workspaces.md
+├── guides/
+│   ├── cluster-registration.md
+│   ├── workload-distribution.md
+│   ├── placement-policies.md
+│   ├── monitoring.md
+│   └── upgrades.md
+├── api-reference/
+│   ├── synctarget-api.md
+│   ├── placement-api.md
+│   └── workload-api.md
+└── operations/
+    ├── deployment.md
+    ├── configuration.md
+    ├── monitoring.md
+    ├── backup-restore.md
+    └── disaster-recovery.md
 ```
 
-### Effort 0.2.2: Transformation Types
-**Branch**: `feature/tmc-completion/p0w2-transform-types`  
-**Lines**: ~450  
-**Dependencies**: Wave 1 types  
-**Engineer**: Transform Specialist
+### API Documentation
+- OpenAPI specifications for all TMC APIs
+- Interactive API explorer
+- Code examples in multiple languages
+- SDK documentation
+- Webhook documentation
 
-### Effort 0.2.3: Status Aggregation Types  
-**Branch**: `feature/tmc-completion/p0w2-status-types`  
-**Lines**: ~400  
-**Dependencies**: Wave 1 types  
-**Engineer**: Status Specialist
+## Hardening Checklist
 
-### Effort 0.2.4: Discovery Types
-**Branch**: `feature/tmc-completion/p0w2-discovery-types`  
-**Lines**: ~450  
-**Dependencies**: Wave 1 types  
-**Engineer**: Discovery Specialist
+### Security Hardening
+- [ ] RBAC policies defined and tested
+- [ ] Network policies implemented
+- [ ] Secret rotation mechanisms
+- [ ] Admission webhooks for validation
+- [ ] Security scanning (container images, dependencies)
+- [ ] CVE tracking and patching process
+- [ ] Audit logging enabled
+- [ ] Compliance validation (PCI, HIPAA if needed)
 
-## Wave 3: Contracts & Interfaces
+### Reliability Hardening
+- [ ] Circuit breakers for external calls
+- [ ] Retry logic with exponential backoff
+- [ ] Graceful degradation strategies
+- [ ] Leader election for HA
+- [ ] State recovery mechanisms
+- [ ] Data consistency validation
+- [ ] Backup and restore procedures
+- [ ] Disaster recovery plan
 
-### Effort 0.3.1: Syncer Interfaces
-**Branch**: `feature/tmc-completion/p0w3-syncer-interfaces`  
-**Lines**: ~600  
-**Dependencies**: Wave 1-2 types  
-**Engineer**: Interface Specialist
+### Performance Hardening
+- [ ] Resource limits and requests set
+- [ ] Horizontal pod autoscaling configured
+- [ ] Caching strategies implemented
+- [ ] Database connection pooling
+- [ ] Batch processing for bulk operations
+- [ ] Rate limiting implemented
+- [ ] Memory leak detection
+- [ ] CPU profiling and optimization
 
-**Implementation**:
-
-```go
-// pkg/syncer/interfaces/core.go
-package interfaces
-
-import (
-    "context"
-    "k8s.io/apimachinery/pkg/runtime"
-    "k8s.io/apimachinery/pkg/runtime/schema"
-    workloadv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/workload/v1alpha1"
-)
-
-// SyncEngine is the core interface for synchronization
-type SyncEngine interface {
-    // Start begins the sync engine
-    Start(ctx context.Context) error
-    
-    // Stop gracefully stops the engine
-    Stop() error
-    
-    // RegisterTransformer adds a resource transformer
-    RegisterTransformer(gvr schema.GroupVersionResource, transformer ResourceTransformer)
-    
-    // RegisterFilter adds a sync filter
-    RegisterFilter(filter SyncFilter)
-    
-    // GetStatus returns current sync status
-    GetStatus() (*SyncStatus, error)
-    
-    // ForceSync triggers immediate synchronization
-    ForceSync(gvr schema.GroupVersionResource) error
-}
-
-// DownstreamSyncer syncs from KCP to physical clusters
-type DownstreamSyncer interface {
-    // SyncResource syncs a single resource downstream
-    SyncResource(ctx context.Context, obj runtime.Object) error
-    
-    // SyncBatch syncs multiple resources
-    SyncBatch(ctx context.Context, objs []runtime.Object) error
-    
-    // DeleteResource removes from downstream
-    DeleteResource(ctx context.Context, gvr schema.GroupVersionResource, name, namespace string) error
-    
-    // GetDownstreamStatus checks downstream resource status
-    GetDownstreamStatus(ctx context.Context, gvr schema.GroupVersionResource, name, namespace string) (*ResourceStatus, error)
-}
-
-// UpstreamSyncer syncs from physical clusters to KCP
-type UpstreamSyncer interface {
-    // SyncStatus syncs resource status upstream
-    SyncStatus(ctx context.Context, gvr schema.GroupVersionResource, name, namespace string, status interface{}) error
-    
-    // SyncEvents syncs events upstream
-    SyncEvents(ctx context.Context, events []*corev1.Event) error
-    
-    // RegisterStatusExtractor registers custom status extraction
-    RegisterStatusExtractor(gvr schema.GroupVersionResource, extractor StatusExtractor)
-}
-
-// ResourceTransformer transforms resources for sync
-type ResourceTransformer interface {
-    // TransformForDownstream prepares resource for downstream
-    TransformForDownstream(obj runtime.Object, target *workloadv1alpha1.SyncTarget) (runtime.Object, error)
-    
-    // TransformForUpstream prepares resource for upstream
-    TransformForUpstream(obj runtime.Object, source *workloadv1alpha1.SyncTarget) (runtime.Object, error)
-    
-    // ShouldTransform determines if transformation is needed
-    ShouldTransform(obj runtime.Object) bool
-}
-
-// SyncFilter determines what should be synced
-type SyncFilter interface {
-    // ShouldSync determines if resource should sync
-    ShouldSync(obj runtime.Object) bool
-    
-    // ShouldDelete determines if deletion should sync
-    ShouldDelete(gvr schema.GroupVersionResource, name, namespace string) bool
-    
-    // Priority returns filter priority (higher = earlier)
-    Priority() int
-}
-
-// StatusExtractor extracts status from resources
-type StatusExtractor interface {
-    // ExtractStatus gets status from an object
-    ExtractStatus(obj runtime.Object) (interface{}, error)
-    
-    // MergeStatus merges multiple statuses
-    MergeStatus(statuses []interface{}) (interface{}, error)
-}
-
-// ConflictResolver handles sync conflicts
-type ConflictResolver interface {
-    // ResolveConflict handles conflicting updates
-    ResolveConflict(local, remote runtime.Object) (runtime.Object, error)
-    
-    // Strategy returns the resolution strategy
-    Strategy() ConflictResolutionStrategy
-}
-
-// SyncStatus represents current sync state
-type SyncStatus struct {
-    // Connected to downstream
-    Connected bool
-    
-    // LastSyncTime of successful sync
-    LastSyncTime *metav1.Time
-    
-    // SyncedResources count
-    SyncedResources int
-    
-    // PendingResources count
-    PendingResources int
-    
-    // FailedResources count
-    FailedResources int
-    
-    // Errors from sync
-    Errors []SyncError
-}
-```
-
-### Effort 0.3.2: Placement Interfaces
-**Branch**: `feature/tmc-completion/p0w3-placement-interfaces`  
-**Lines**: ~500  
-**Dependencies**: Wave 1-2 types  
-**Engineer**: Interface Specialist
-
-**Implementation**:
-
-```go
-// pkg/placement/interfaces/scheduler.go
-package interfaces
-
-// Scheduler makes placement decisions
-type Scheduler interface {
-    // Schedule determines placement for workload
-    Schedule(ctx context.Context, workload runtime.Object, policy *PlacementPolicy) (*PlacementDecision, error)
-    
-    // Reschedule triggers rescheduling
-    Reschedule(ctx context.Context, decision *PlacementDecision) (*PlacementDecision, error)
-    
-    // RegisterStrategy adds a scheduling strategy
-    RegisterStrategy(name string, strategy SchedulingStrategy)
-    
-    // RegisterScorer adds a scoring plugin
-    RegisterScorer(scorer Scorer)
-}
-
-// SchedulingStrategy implements a placement strategy
-type SchedulingStrategy interface {
-    // Name of the strategy
-    Name() string
-    
-    // Select chooses targets from candidates
-    Select(candidates []ScoredTarget, constraints *SchedulingConstraints) ([]string, error)
-}
-
-// Scorer scores placement targets
-type Scorer interface {
-    // Score evaluates a target
-    Score(ctx context.Context, target *SyncTarget, workload runtime.Object) (float64, error)
-    
-    // Priority of this scorer
-    Priority() int
-}
-
-// PolicyEvaluator evaluates placement policies
-type PolicyEvaluator interface {
-    // Evaluate runs policy evaluation
-    Evaluate(ctx context.Context, policy *PlacementPolicy, target *SyncTarget) (bool, error)
-    
-    // EvaluateCEL evaluates a CEL expression
-    EvaluateCEL(expression string, variables map[string]interface{}) (interface{}, error)
-}
-```
-
-### Effort 0.3.3: Virtual Workspace Interfaces
-**Branch**: `feature/tmc-completion/p0w3-vw-interfaces`  
-**Lines**: ~450  
-**Dependencies**: Wave 1-2 types  
-**Engineer**: VW Specialist
+### Observability
+- [ ] Structured logging implemented
+- [ ] Metrics exposed (Prometheus format)
+- [ ] Distributed tracing (OpenTelemetry)
+- [ ] Error tracking and alerting
+- [ ] Performance dashboards
+- [ ] SLI/SLO definitions
+- [ ] Custom metrics for business logic
+- [ ] Debug endpoints available
 
 ## Implementation Guidelines
 
-### For Each Effort
+### Testing Best Practices
+1. **Test Isolation**: Each test must be independent and idempotent
+2. **Resource Cleanup**: Automatic cleanup of test resources
+3. **Parallel Execution**: Tests should run in parallel where possible
+4. **Deterministic Results**: No flaky tests allowed
+5. **Coverage Requirements**: Minimum 80% code coverage
+6. **Integration Points**: Test all component boundaries
 
-1. **File Organization**:
-   ```
-   pkg/
-   ├── apis/
-   │   ├── workload/v1alpha1/
-   │   ├── apiresource/v1alpha1/
-   │   └── placement/v1alpha1/
-   └── interfaces/
-       ├── syncer/
-       ├── placement/
-       └── virtualworkspace/
-   ```
+### Documentation Standards
+1. **Code Comments**: Every public function documented
+2. **Examples**: Working examples for all features
+3. **Diagrams**: Architecture and flow diagrams
+4. **Versioning**: Documentation versioned with code
+5. **Review Process**: Docs reviewed with code changes
+6. **Accessibility**: Documentation follows WCAG guidelines
 
-2. **Code Generation**:
-   ```bash
-   # After adding types
-   make generate-apiregister
-   make codegen
-   make generate-crd
-   ```
+### Performance Testing Guidelines
+1. **Baseline Establishment**: Measure current performance
+2. **Incremental Testing**: Test after each optimization
+3. **Real-World Scenarios**: Use production-like data
+4. **Resource Monitoring**: Track CPU, memory, network
+5. **Regression Detection**: Automated performance regression tests
+6. **Profiling**: Regular profiling of hot paths
 
-3. **Validation**:
-   - Add kubebuilder validation markers
-   - Implement ValidateCreate/Update/Delete webhooks
-   - Add defaulting webhooks where needed
+### Chaos Engineering Approach
+1. **Hypothesis-Driven**: Define expected behavior
+2. **Controlled Experiments**: Start small, expand gradually
+3. **Automated Execution**: Integrate with CI/CD
+4. **Monitoring**: Observe system behavior during chaos
+5. **Documentation**: Document failure scenarios and recovery
+6. **Game Days**: Regular chaos engineering exercises
 
-4. **Testing**:
-   ```go
-   func TestSyncTargetValidation(t *testing.T) {
-       tests := []struct {
-           name    string
-           obj     *SyncTarget
-           wantErr bool
-       }{
-           // Test cases
-       }
-   }
-   ```
+## Success Metrics
 
-## Quality Checklist
+### Testing Metrics
+- ✅ 100% E2E test coverage of user journeys
+- ✅ 80%+ unit test coverage
+- ✅ All integration points tested
+- ✅ Zero flaky tests
+- ✅ <5 minute E2E test execution time
 
-For each effort:
-- [ ] All types have deepcopy generation markers
-- [ ] CRD markers are complete and correct
-- [ ] Validation markers added
-- [ ] Interface documentation complete
-- [ ] Generated code committed
-- [ ] Unit tests for validation
-- [ ] No circular dependencies
-- [ ] Under 800 lines limit
+### Performance Metrics
+- ✅ Placement decision: <1s for 95th percentile
+- ✅ Sync latency: <1s for 95th percentile
+- ✅ Support 100+ clusters without degradation
+- ✅ Support 10,000+ workloads
+- ✅ Controller memory: <100MB
+- ✅ API response time: <100ms for 95th percentile
 
-## Dependencies Between Efforts
+### Documentation Metrics
+- ✅ 100% API documentation coverage
+- ✅ All user journeys documented
+- ✅ Troubleshooting guide for common issues
+- ✅ Architecture documentation current
+- ✅ All code examples tested and working
 
-```mermaid
-graph TD
-    W1E1[SyncTarget API] --> W2E1[Workload Dist]
-    W1E1 --> W2E2[Transform Types]
-    W1E2[APIResource] --> W2E4[Discovery]
-    W1E3[Placement] --> W2E1
-    W1E1 --> W3E1[Syncer Interfaces]
-    W1E3 --> W3E2[Placement Interfaces]
-    W2E4 --> W3E3[VW Interfaces]
-```
+### Production Readiness
+- ✅ 99.9% availability SLO defined
+- ✅ Recovery time objective (RTO): <5 minutes
+- ✅ Recovery point objective (RPO): <1 minute
+- ✅ All critical alerts defined
+- ✅ Runbooks for all alerts
+- ✅ Security scan passing
+- ✅ Chaos testing scenarios passing
 
-## Success Criteria
+## Risk Mitigation
 
-Phase 0 is complete when:
-1. ✅ All API types defined and generated
-2. ✅ All interfaces documented and complete
-3. ✅ CRDs can be installed successfully
-4. ✅ Generated clients compile
-5. ✅ No circular dependencies
-6. ✅ All validation in place
-7. ✅ Tests passing for all types
+### Technical Risks
+1. **Performance Degradation**
+   - Mitigation: Continuous performance testing
+   - Early detection through benchmarks
+   - Profiling and optimization sprints
+
+2. **Integration Failures**
+   - Mitigation: Comprehensive integration tests
+   - Contract testing between components
+   - Backward compatibility validation
+
+3. **Scale Limitations**
+   - Mitigation: Load testing at 2x expected scale
+   - Horizontal scaling validation
+   - Resource optimization
+
+### Operational Risks
+1. **Complex Deployment**
+   - Mitigation: Automated deployment scripts
+   - Detailed deployment documentation
+   - Deployment validation tests
+
+2. **Difficult Troubleshooting**
+   - Mitigation: Enhanced observability
+   - Comprehensive logging
+   - Debugging tools and utilities
+
+3. **Upgrade Challenges**
+   - Mitigation: Upgrade testing automation
+   - Rollback procedures
+   - Version compatibility matrix
+
+## Timeline and Phases
+
+### Wave 1: Foundation (Day 1)
+- **E2E Test Framework** (700 lines)
+  - Test harness setup
+  - Helper utilities
+  - Base test scenarios
+  - CI/CD integration
+
+### Wave 2: Parallel Execution (Day 2-3)
+- **Integration Testing** (650 lines)
+  - Component integration tests
+  - API contract validation
+  - Cross-workspace scenarios
+  
+- **Performance Testing** (550 lines)
+  - Benchmark framework
+  - Load generation
+  - Performance validation
+  
+- **Chaos Testing** (600 lines)
+  - Failure injection framework
+  - Recovery validation
+  - Resilience testing
+  
+- **Documentation** (500 lines)
+  - User guides
+  - API documentation
+  - Operational guides
+
+## Conclusion
+
+Phase 10 transforms the TMC implementation from feature-complete to production-ready. Through comprehensive testing, performance validation, thorough documentation, and operational hardening, this phase ensures TMC meets the quality standards required for production deployment in KCP environments.
+
+The success of Phase 10 depends on the complete implementation of Phases 5-9, as it validates and hardens the entire TMC stack. The parallel execution strategy in Wave 2 allows for efficient completion while maintaining thorough coverage of all aspects of production readiness.
 
 ---
 
-*Phase 0 establishes the complete API foundation for TMC. These types and interfaces will be imported and implemented by all subsequent phases.*
+*Phase 10: Integration & Hardening - Ensuring TMC is production-ready*
+*Total Efforts: 5 | Total Lines: ~3,000 | Duration: 2-3 days with parallelization*
