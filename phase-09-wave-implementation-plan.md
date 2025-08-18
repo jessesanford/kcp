@@ -14,13 +14,18 @@ This plan transforms the sequential Phase 9 implementation into an optimally par
 
 ## Implementation Status
 
-### Branches Created (Under tmc-phase4 naming):
-**Note**: Phase 9 features were partially implemented using the old Phase 4 naming convention.
+### Branches Created:
+**Note**: Phase 9 features were initially implemented under tmc-phase4 naming but have been moved to proper Phase 9 branches.
 
-**Completed Branches:**
-- `feature/tmc-phase4-20-canary-strategy` - Canary deployment strategy
-- `feature/tmc-phase4-20b-canary-metrics` - Canary metrics collection  
-- `feature/tmc-phase4-22-rollback-engine` - Rollback and recovery engine
+**Completed Branches (Wave 3):**
+- `feature/phase9-advanced/p9w3-canary-strategy` - Canary deployment strategy (migrated from tmc-phase4-20)
+- `feature/phase9-advanced/p9w3-canary-metrics` - Canary metrics collection (migrated from tmc-phase4-20b)
+- `feature/phase9-advanced/p9w3-rollback-engine` - Rollback and recovery engine (migrated from tmc-phase4-22)
+
+**Legacy Branch Names (for reference):**
+- Old: `feature/tmc-phase4-20-canary-strategy` → New: `feature/phase9-advanced/p9w3-canary-strategy`
+- Old: `feature/tmc-phase4-20b-canary-metrics` → New: `feature/phase9-advanced/p9w3-canary-metrics`
+- Old: `feature/tmc-phase4-22-rollback-engine` → New: `feature/phase9-advanced/p9w3-rollback-engine`
 
 **Missing Components:**
 - Wave 1: Metrics & Telemetry foundation (p9w1-metrics)
