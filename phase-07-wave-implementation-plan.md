@@ -88,7 +88,7 @@ graph TD
 | Wave | Status | Branches Completed | Notes |
 |------|--------|-------------------|-------|
 | Wave 1 | ✅ COMPLETE | p7w1-sync-engine (split into 3), p7w1-transform (split into 3) | All splits under 800 lines |
-| Wave 2 | ✅ COMPLETE | p7w2-downstream-core, p7w2-applier, p7w2-conflict | Tests need improvement |
+| Wave 2 | ✅ COMPLETE | p7w2-downstream-core, p7w2-applier, p7w2-conflict | ✅ Tests added (>70% coverage) |
 | Wave 3 | ✅ COMPLETE | p7w3-upstream-status, p7w3-events (split into 2) | All compliant |
 | Wave 4 | ✅ COMPLETE | p7w4-websocket (split into 4), p7w4-heartbeat | All compliant |
 
@@ -515,9 +515,9 @@ This is a critical integration point that requires:
 ### Next Steps for Other Agents
 
 1. **Review Phase**: All branches ready for PR submission
-2. **Testing**: Wave 2 branches need additional test coverage
+2. **Testing**: ✅ COMPLETE - Wave 2 branches now have >70% coverage
 3. **Integration**: Phase 8 can now proceed with syncer available
-4. **Documentation**: PR messages needed for split branches
+4. **Documentation**: PR messages needed for 9 split branches (final task)
 
 ## Conclusion
 
