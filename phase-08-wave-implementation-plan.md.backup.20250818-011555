@@ -1,12 +1,5 @@
 # Phase 8: Cross-Workspace Runtime - Wave Implementation Plan
 
-## 🎯 STATUS: COMPLETE ✅
-
-**Completion Date**: 2025-08-18  
-**All Waves**: ✅ Complete  
-**Implementation**: 100% Complete  
-**Ready for**: PR Creation and Review  
-
 ## Executive Summary
 
 **Phase**: Phase 8 - Cross-Workspace Runtime Implementation  
@@ -96,7 +89,7 @@ graph TD
 |------|----------|-------------------|--------------|---------------|----------|--------|
 | 1    | 8.1.1, 8.1.2 | 2 | Phase 5-2 complete | 8.1.1 → Scheduler | Day 1 | ✅ COMPLETE |
 | 2    | 8.2.1, 8.2.2, 8.2.3 | 3 | Wave 1 complete | 8.2.1 → 8.2.3 → Controller | Days 2-3 | ✅ COMPLETE |
-| 3    | 8.3.1, 8.3.2, 8.3.3 | 3 | Wave 2 complete | 8.3.1 → Binding | Days 3-4 | ✅ COMPLETE |
+| 3    | 8.3.1, 8.3.2, 8.3.3 | 3 | Wave 2 complete | 8.3.1 → Binding | Days 3-4 | ⚠️ 67% (8.3.3 blocked) |
 
 ## Detailed Wave Implementation
 
@@ -261,17 +254,6 @@ graph TD
 
 ## Agent Orchestration Instructions
 
-### 📁 IMPORTANT: Worktree Locations
-All Phase 8 worktrees are located under `/workspaces/kcp-worktrees/phase8/`:
-- `/workspaces/kcp-worktrees/phase8/p8w1-workspace-discovery` - Branch: feature/tmc-completion/p8w2-scheduler
-- `/workspaces/kcp-worktrees/phase8/p8w2-decision-maker` - Branch: feature/tmc-completion/p8w2c-validator-split
-- `/workspaces/kcp-worktrees/phase8/p8w3-binding` - Branch: feature/tmc-completion/p8w3-binding-core
-- `/workspaces/kcp-worktrees/phase8/p8w3-controller` - Branch: feature/tmc-completion/p8w3-controller
-- `/workspaces/kcp-worktrees/phase8/p8w3-status-aggregation` - Branch: feature/tmc-completion/p8w3-status-aggregation
-- `/workspaces/kcp-worktrees/phase8/planning` - Planning documents
-
-**Note**: These worktrees were reorganized on 2025-08-18 to follow the standard phase structure.
-
 ### Pre-Wave Setup (All Agents)
 ```bash
 # Each agent sets up their environment
@@ -284,33 +266,22 @@ make test  # Ensure base system works
 # Check available worktrees
 wt-list
 wt-status
-
-# Navigate to Phase 8 worktrees
-cd /workspaces/kcp-worktrees/phase8/
 ```
 
 ### Wave 1 Execution
 
 **Agent 1 (Workspace Discovery)**:
 ```bash
-# From Phase 8 directory
-cd /workspaces/kcp-worktrees/phase8/
 wt-create feature/tmc-completion/p8w1-workspace-discovery p8w1-workspace-discovery
 wt-switch p8w1-workspace-discovery
-# OR directly navigate to:
-cd /workspaces/kcp-worktrees/phase8/p8w1-workspace-discovery
 # Implement workspace discovery (~700 lines)
 # Focus: workspace traversal, authorization, sync target discovery
 ```
 
 **Agent 2 (API Discovery)**:
 ```bash
-# From Phase 8 directory
-cd /workspaces/kcp-worktrees/phase8/
 wt-create feature/tmc-completion/p8w1-api-discovery p8w1-api-discovery
 wt-switch p8w1-api-discovery
-# OR directly navigate to:
-cd /workspaces/kcp-worktrees/phase8/p8w1-api-discovery
 # Implement API discovery (~600 lines)
 # Focus: API resource discovery, version negotiation
 ```
@@ -450,8 +421,8 @@ git merge origin/feature/tmc-completion/p8w2-decision
 **Wave 3 Complete When**:
 - [x] Controller reconciles placements ✅
 - [x] Bindings created in target clusters ✅
-- [x] Status aggregated correctly ✅
-- [x] End-to-end placement works ✅
+- [ ] Status aggregated correctly (BLOCKED on Phase 7)
+- [ ] End-to-end placement works (needs Status Aggregation)
 
 ### Overall Phase 8 Success Criteria
 
