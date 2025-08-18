@@ -36,16 +36,6 @@ import (
 	e2eframework "github.com/kcp-dev/kcp/test/e2e/framework"
 )
 
-const (
-	// IntegrationTestNamespace is the dedicated namespace for TMC integration tests
-	IntegrationTestNamespace = "integration-tests"
-	
-	// TestTimeout is the default timeout for integration test operations
-	TestTimeout = 5 * time.Minute
-	
-	// TestPollInterval is the default polling interval for integration tests
-	TestPollInterval = 2 * time.Second
-)
 
 // TestEnvironment provides isolated test environments for TMC integration testing.
 // It manages workspace creation, client initialization, and resource cleanup to ensure
@@ -105,7 +95,7 @@ func NewTestEnvironment(t *testing.T, testName string, parentWorkspace logicalcl
 	}
 	
 	// Initialize test client
-	testClient, err := NewTestClient(t, config, parentWorkspace, testPrefix, 30100)
+	testClient, err := NewTestClient(t, config, parentWorkspace, testPrefix, DefaultTestPortBase)
 	if err != nil {
 		cancel()
 		return nil, fmt.Errorf("failed to create test client: %w", err)
@@ -137,19 +127,19 @@ func (te *TestEnvironment) createTestWorkspace(parentWorkspace logicalcluster.Na
 		ObjectMeta: metav1.ObjectMeta{
 			Name: workspaceName,
 			Labels: map[string]string{
-				"test-suite":      "tmc-integration",
-				"test-run":        te.TestName,
-				"test-workspace":  "true",
+				TestSuiteLabelKey:     TestSuiteLabelValue,
+				TestRunLabelKey:       te.TestName,
+				TestWorkspaceLabelKey: "true",
 			},
 			Annotations: map[string]string{
-				"test.kcp.io/test-name": te.TestName,
-				"test.kcp.io/created":   time.Now().Format(time.RFC3339),
+				TestNameAnnotationKey:    te.TestName,
+				TestCreatedAnnotationKey: time.Now().Format(time.RFC3339),
 			},
 		},
 		Spec: tenancyv1alpha1.WorkspaceSpec{
 			Type: tenancyv1alpha1.WorkspaceTypeReference{
-				Name: "universal",
-				Path: "root",
+				Name: UniversalWorkspaceType,
+				Path: RootWorkspacePath,
 			},
 		},
 	}
@@ -208,9 +198,9 @@ func (te *TestEnvironment) CreateTestNamespace(namespaceSuffix string) (*corev1.
 		ObjectMeta: metav1.ObjectMeta{
 			Name: namespaceName,
 			Labels: map[string]string{
-				"test-suite":     "tmc-integration",
-				"test-run":       te.TestName,
-				"test-namespace": "true",
+				TestSuiteLabelKey:      TestSuiteLabelValue,
+				TestRunLabelKey:        te.TestName,
+				TestNamespaceLabelKey:  "true",
 			},
 		},
 	}

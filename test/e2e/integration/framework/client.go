@@ -69,10 +69,10 @@ func NewTestClient(t *testing.T, config *rest.Config, workspace logicalcluster.N
 	t.Helper()
 
 	if testPrefix == "" {
-		testPrefix = "it-"
+		testPrefix = DefaultTestPrefix
 	}
 	if testPortBase == 0 {
-		testPortBase = 30100
+		testPortBase = DefaultTestPortBase
 	}
 
 	// Initialize cluster-aware KCP client
@@ -176,8 +176,8 @@ func (tc *TestClient) CreateTestNamespace(ctx context.Context, cluster logicalcl
 		ObjectMeta: metav1.ObjectMeta{
 			Name: tc.WithTestPrefix(namespaceName),
 			Labels: map[string]string{
-				"test-suite": "tmc-integration",
-				"test-run":   tc.t.Name(),
+				TestSuiteLabelKey: TestSuiteLabelValue,
+				TestRunLabelKey:   tc.t.Name(),
 			},
 		},
 	}
@@ -201,7 +201,7 @@ func (tc *TestClient) CleanupTestResources(ctx context.Context) error {
 	
 	// Delete test namespaces
 	namespaces, err := tc.KubeClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{
-		LabelSelector: "test-suite=tmc-integration,test-run=" + tc.t.Name(),
+		LabelSelector: TestSuiteLabelKey + "=" + TestSuiteLabelValue + "," + TestRunLabelKey + "=" + tc.t.Name(),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to list test namespaces: %w", err)

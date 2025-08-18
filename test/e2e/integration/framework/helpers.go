@@ -41,7 +41,7 @@ import (
 func WaitForResourceReady(ctx context.Context, t *testing.T, client *TestClient, cluster logicalcluster.Name, gvr schema.GroupVersionResource, name, namespace string) error {
 	t.Helper()
 	
-	return wait.PollUntilContextTimeout(ctx, 2*time.Second, 5*time.Minute, true, func(ctx context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, ResourceReadyPollInterval, ResourceReadyTimeout, true, func(ctx context.Context) (bool, error) {
 		dynamicClient := client.DynamicFor(cluster, gvr)
 		
 		var resource *unstructured.Unstructured
@@ -76,7 +76,7 @@ func WaitForResourceReady(ctx context.Context, t *testing.T, client *TestClient,
 			}
 			
 			condType, found, err := unstructured.NestedString(conditionMap, "type")
-			if err != nil || !found || condType != "Ready" {
+			if err != nil || !found || condType != ReadyConditionType {
 				continue
 			}
 			
@@ -85,7 +85,7 @@ func WaitForResourceReady(ctx context.Context, t *testing.T, client *TestClient,
 				continue
 			}
 			
-			if status == "True" {
+			if status == TrueConditionStatus {
 				t.Logf("Resource %s/%s is ready", gvr.Resource, name)
 				return true, nil
 			}
@@ -104,7 +104,7 @@ func WaitForResourceReady(ctx context.Context, t *testing.T, client *TestClient,
 func WaitForResourceDeleted(ctx context.Context, t *testing.T, client *TestClient, cluster logicalcluster.Name, gvr schema.GroupVersionResource, name, namespace string) error {
 	t.Helper()
 	
-	return wait.PollUntilContextTimeout(ctx, 2*time.Second, 2*time.Minute, true, func(ctx context.Context) (bool, error) {
+	return wait.PollUntilContextTimeout(ctx, ResourceDeletionPollInterval, ResourceDeletionTimeout, true, func(ctx context.Context) (bool, error) {
 		dynamicClient := client.DynamicFor(cluster, gvr)
 		
 		var err error
@@ -131,7 +131,7 @@ func WaitForResourceDeleted(ctx context.Context, t *testing.T, client *TestClien
 func CreateTestWorkspace(ctx context.Context, t *testing.T, env *TestEnvironment, name string) (*tenancyv1alpha1.Workspace, error) {
 	t.Helper()
 	
-	parentWorkspace := logicalcluster.Name("root:default")
+	parentWorkspace := logicalcluster.Name(DefaultParentWorkspace)
 	workspaceName := env.TestClient.WithTestPrefix(name)
 	
 	workspace := &unstructured.Unstructured{
@@ -141,17 +141,17 @@ func CreateTestWorkspace(ctx context.Context, t *testing.T, env *TestEnvironment
 			"metadata": map[string]interface{}{
 				"name": workspaceName,
 				"labels": map[string]interface{}{
-					"test-suite":     "tmc-integration",
-					"test-workspace": "true",
+					TestSuiteLabelKey:      TestSuiteLabelValue,
+					TestWorkspaceLabelKey:  "true",
 				},
 				"annotations": map[string]interface{}{
-					"test.kcp.io/test-name": env.TestName,
+					TestNameAnnotationKey: env.TestName,
 				},
 			},
 			"spec": map[string]interface{}{
 				"type": map[string]interface{}{
-					"name": "universal",
-					"path": "root",
+					"name": UniversalWorkspaceType,
+					"path": RootWorkspacePath,
 				},
 			},
 		},
@@ -254,11 +254,11 @@ type ExpectedCondition struct {
 // This ensures consistent labeling across all TMC integration test resources.
 func CreateResourceLabel(testSuite, testType, testName string) map[string]string {
 	return map[string]string{
-		"test-suite":      testSuite,
-		"test-type":       testType,
-		"test-name":       testName,
-		"managed-by":      "tmc-integration-tests",
-		"cleanup-policy":  "automatic",
+		TestSuiteLabelKey:       testSuite,
+		TestTypeLabelKey:        testType,
+		TestNameLabelKey:        testName,
+		ManagedByLabelKey:       ManagedByLabelValue,
+		CleanupPolicyLabelKey:   AutomaticCleanupPolicyValue,
 	}
 }
 
