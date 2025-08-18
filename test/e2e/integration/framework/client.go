@@ -34,8 +34,6 @@ import (
 )
 
 // TestClient provides unified access to all client interfaces needed for TMC integration tests.
-// It wraps both cluster-aware KCP clients and standard Kubernetes clients with TMC-specific
-// functionality for testing workload placement, cluster registration, and resource synchronization.
 type TestClient struct {
 	t *testing.T
 
@@ -53,18 +51,6 @@ type TestClient struct {
 }
 
 // NewTestClient creates a new TestClient with all necessary client interfaces initialized.
-// It configures the clients for TMC integration testing with proper workspace isolation.
-//
-// Parameters:
-//   - t: The test instance for logging and error reporting
-//   - config: REST configuration for connecting to the KCP server
-//   - workspace: Logical cluster name for workspace isolation
-//   - testPrefix: Prefix for test resources (default: "it-")
-//   - testPortBase: Base port for test services (default: 30100)
-//
-// Returns:
-//   - *TestClient: Configured client ready for integration testing
-//   - error: Configuration or initialization error
 func NewTestClient(t *testing.T, config *rest.Config, workspace logicalcluster.Name, testPrefix string, testPortBase int) (*TestClient, error) {
 	t.Helper()
 
@@ -113,13 +99,11 @@ func NewTestClient(t *testing.T, config *rest.Config, workspace logicalcluster.N
 }
 
 // ClusterFor returns a cluster-scoped client for the given logical cluster.
-// This is essential for TMC operations that need to work across different clusters.
 func (tc *TestClient) ClusterFor(cluster logicalcluster.Name) kcpclientset.Interface {
 	return tc.KcpClusterClient.Cluster(cluster.Path())
 }
 
 // DynamicFor returns a dynamic client scoped to the given logical cluster and GVR.
-// This enables generic resource operations for TMC workload placement testing.
 func (tc *TestClient) DynamicFor(cluster logicalcluster.Name, gvr schema.GroupVersionResource) dynamic.ResourceInterface {
 	return tc.DynamicClient.Resource(gvr).Cluster(cluster.Path())
 }
