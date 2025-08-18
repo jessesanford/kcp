@@ -718,3 +718,213 @@ type DecisionStorage interface {
 	// Purge removes records based on retention policy
 	Purge(ctx context.Context, policy *RetentionPolicy) (int, error)
 }
+
+// ==============================================================================
+// Override Management Types
+// ==============================================================================
+
+// CreateOverrideRequest represents a request to create a placement override.
+type CreateOverrideRequest struct {
+	// PlacementID is the ID of the placement this override applies to
+	PlacementID string
+	
+	// OverrideType specifies the type of override
+	OverrideType OverrideType
+	
+	// TargetWorkspaces specifies workspaces to target (for Force/Prefer overrides)
+	TargetWorkspaces []logicalcluster.Name
+	
+	// ExcludedWorkspaces specifies workspaces to exclude (for Exclude overrides)
+	ExcludedWorkspaces []logicalcluster.Name
+	
+	// Reason explains why this override is being created
+	Reason string
+	
+	// AppliedBy indicates who is creating this override
+	AppliedBy string
+	
+	// ExpiresAt is when this override should expire (optional)
+	ExpiresAt *time.Time
+	
+	// Priority is the priority of this override (higher values take precedence)
+	Priority int32
+}
+
+// Validate validates the create override request.
+func (r *CreateOverrideRequest) Validate() error {
+	if r.PlacementID == "" {
+		return fmt.Errorf("placement ID cannot be empty")
+	}
+	if r.Reason == "" {
+		return fmt.Errorf("reason cannot be empty")
+	}
+	if r.AppliedBy == "" {
+		return fmt.Errorf("applied by cannot be empty")
+	}
+	
+	// Validate override-type specific requirements
+	switch r.OverrideType {
+	case OverrideTypeForce:
+		if len(r.TargetWorkspaces) == 0 {
+			return fmt.Errorf("force override requires target workspaces")
+		}
+	case OverrideTypeExclude:
+		if len(r.ExcludedWorkspaces) == 0 {
+			return fmt.Errorf("exclude override requires excluded workspaces")
+		}
+	case OverrideTypePrefer:
+		if len(r.TargetWorkspaces) == 0 {
+			return fmt.Errorf("prefer override requires target workspaces")
+		}
+	case OverrideTypeAvoid:
+		if len(r.TargetWorkspaces) == 0 {
+			return fmt.Errorf("avoid override requires target workspaces")
+		}
+	default:
+		return fmt.Errorf("invalid override type: %s", r.OverrideType)
+	}
+	
+	return nil
+}
+
+// OverrideFilter provides filtering criteria for override queries.
+type OverrideFilter struct {
+	// PlacementID filters by placement ID
+	PlacementID string
+	
+	// OverrideType filters by override type
+	OverrideType OverrideType
+	
+	// AppliedBy filters by who applied the override
+	AppliedBy string
+	
+	// Active filters for active (not expired) overrides only
+	Active bool
+	
+	// TimeRange filters by creation time
+	TimeRange *TimeRange
+	
+	// Limit limits the number of results
+	Limit int
+	
+	// Offset specifies the result offset for pagination
+	Offset int
+}
+
+// OverrideHistoryEntry represents an entry in override history.
+type OverrideHistoryEntry struct {
+	// OverrideID is the ID of the override
+	OverrideID string
+	
+	// PlacementID is the ID of the placement
+	PlacementID string
+	
+	// Action is the action that was performed
+	Action OverrideAction
+	
+	// Timestamp is when the action occurred
+	Timestamp time.Time
+	
+	// Message provides additional context about the action
+	Message string
+	
+	// AppliedBy indicates who performed the action
+	AppliedBy string
+}
+
+// OverrideAction represents an action performed on an override.
+type OverrideAction string
+
+const (
+	// OverrideActionCreated indicates an override was created
+	OverrideActionCreated OverrideAction = "Created"
+	
+	// OverrideActionApplied indicates an override was applied to a decision
+	OverrideActionApplied OverrideAction = "Applied"
+	
+	// OverrideActionExpired indicates an override expired
+	OverrideActionExpired OverrideAction = "Expired"
+	
+	// OverrideActionDeleted indicates an override was deleted
+	OverrideActionDeleted OverrideAction = "Deleted"
+)
+
+// OverrideValidator provides validation for placement overrides.
+type OverrideValidator interface {
+	// ValidateOverride validates an override against system policies
+	ValidateOverride(ctx context.Context, override *PlacementOverride) error
+}
+
+// OverrideStorage provides storage operations for placement overrides.
+type OverrideStorage interface {
+	// StoreOverride stores a placement override
+	StoreOverride(ctx context.Context, override *PlacementOverride) error
+	
+	// UpdateOverride updates an existing override
+	UpdateOverride(ctx context.Context, override *PlacementOverride) error
+	
+	// DeleteOverride deletes an override
+	DeleteOverride(ctx context.Context, overrideID string) error
+	
+	// QueryOverrides retrieves overrides based on filter criteria
+	QueryOverrides(ctx context.Context, filter *OverrideFilter) ([]*PlacementOverride, error)
+	
+	// GetOverrideHistory retrieves override history for a placement
+	GetOverrideHistory(ctx context.Context, placementID string) ([]*OverrideHistoryEntry, error)
+	
+	// CleanupExpiredOverrides removes expired overrides from storage
+	CleanupExpiredOverrides(ctx context.Context) error
+}
+
+// OverrideManagerConfig configures the override manager.
+type OverrideManagerConfig struct {
+	// MaxActiveOverridesPerPlacement limits active overrides per placement
+	MaxActiveOverridesPerPlacement int
+	
+	// DefaultOverridePriority is the default priority for new overrides
+	DefaultOverridePriority int32
+	
+	// CleanupInterval is how often to run cleanup operations
+	CleanupInterval time.Duration
+	
+	// CleanupTimeout is the timeout for cleanup operations
+	CleanupTimeout time.Duration
+	
+	// PreferenceScoreBoost is the score boost for preference overrides
+	PreferenceScoreBoost float64
+	
+	// AvoidanceScorePenalty is the score penalty for avoidance overrides
+	AvoidanceScorePenalty float64
+}
+
+// Validate validates the override manager configuration.
+func (c *OverrideManagerConfig) Validate() error {
+	if c.MaxActiveOverridesPerPlacement <= 0 {
+		return fmt.Errorf("max active overrides per placement must be positive")
+	}
+	if c.CleanupInterval <= 0 {
+		return fmt.Errorf("cleanup interval must be positive")
+	}
+	if c.CleanupTimeout <= 0 {
+		return fmt.Errorf("cleanup timeout must be positive")
+	}
+	if c.PreferenceScoreBoost < 0 {
+		return fmt.Errorf("preference score boost cannot be negative")
+	}
+	if c.AvoidanceScorePenalty < 0 {
+		return fmt.Errorf("avoidance score penalty cannot be negative")
+	}
+	return nil
+}
+
+// DefaultOverrideManagerConfig returns a default override manager configuration.
+func DefaultOverrideManagerConfig() *OverrideManagerConfig {
+	return &OverrideManagerConfig{
+		MaxActiveOverridesPerPlacement: 10,
+		DefaultOverridePriority:        50,
+		CleanupInterval:                time.Hour,
+		CleanupTimeout:                 5 * time.Minute,
+		PreferenceScoreBoost:           20.0,
+		AvoidanceScorePenalty:          15.0,
+	}
+}
