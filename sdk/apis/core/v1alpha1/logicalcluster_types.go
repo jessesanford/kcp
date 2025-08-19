@@ -20,9 +20,10 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	"github.com/kcp-dev/logicalcluster/v3"
+
 	conditionsv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
 	"github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/util/conditions"
-	"github.com/kcp-dev/logicalcluster/v3"
 )
 
 // LogicalCluster describes the current logical cluster. It is used to authorize

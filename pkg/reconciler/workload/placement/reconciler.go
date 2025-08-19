@@ -18,53 +18,30 @@ package placement
 
 import (
 	"context"
-	"fmt"
+
+	"k8s.io/klog/v2"
 
 	"github.com/kcp-dev/logicalcluster/v3"
 
-	"github.com/kcp-dev/kcp/pkg/reconciler/committer"
-	workloadv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/workload/v1alpha1"
-
-	"k8s.io/klog/v2"
+	tmcv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/tmc/v1alpha1"
 )
 
-// reconcile handles the core placement reconciliation logic.
+// reconcileWorkloadPlacement handles the core placement reconciliation logic.
 // This is a stub implementation that will be completed in a subsequent PR.
 // The full reconciler logic including placement scheduling, validation,
-// and decision making will be implemented in part2b-reconciler-core.
-func (c *placementController) reconcile(ctx context.Context, placement *workloadv1alpha1.Placement) error {
+// and decision making will be implemented in future PRs.
+func (c *placementController) reconcileWorkloadPlacement(ctx context.Context, placement *tmcv1alpha1.WorkloadPlacement) error {
 	logger := klog.FromContext(ctx).WithValues("placement", placement.Name, "cluster", logicalcluster.From(placement))
 
-	// Convert to the committer's Resource type for proper patch generation
-	oldResource := &committer.Resource[workloadv1alpha1.PlacementSpec, workloadv1alpha1.PlacementStatus]{
-		ObjectMeta: placement.ObjectMeta,
-		Spec:       placement.Spec,
-		Status:     placement.Status,
-	}
-
-	// Create a working copy for modifications
-	newResource := &committer.Resource[workloadv1alpha1.PlacementSpec, workloadv1alpha1.PlacementStatus]{
-		ObjectMeta: placement.ObjectMeta,
-		Spec:       placement.Spec,
-		Status:     placement.Status,
-	}
+	logger.V(2).Info("placement reconciler stub - full logic coming in future PRs")
 
 	// TODO: This is a stub implementation.
-	// The full reconciler implementation will be added in part2b-reconciler-core PR.
+	// The full reconciler implementation will be added in future PRs.
 	// This includes:
-	// - Placement specification validation
+	// - Placement specification validation  
 	// - Location candidate filtering and scoring
 	// - Placement decision selection
 	// - Status updates and condition management
 
-	logger.V(2).Info("placement reconciler stub - committer pattern implemented, full logic coming in part2b")
-
-	// For now, just ensure we have basic status structure
-	if newResource.Status.ObservedGeneration != newResource.Generation {
-		newResource.Status.ObservedGeneration = newResource.Generation
-	}
-
-	// Use the committer pattern for any status updates
-	// This ensures proper batching and optimistic concurrency control
-	return c.commit(ctx, oldResource, newResource)
+	return nil
 }

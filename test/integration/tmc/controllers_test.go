@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/klog/v2"
@@ -22,7 +23,7 @@ func TestTMCControllerIntegration(t *testing.T) {
 			TestCases:   clusterRegistrationControllerTests(),
 		},
 		{
-			Name:        "WorkloadPlacementController", 
+			Name:        "WorkloadPlacementController",
 			Description: "Tests for TMC WorkloadPlacement controller integration",
 			TestCases:   workloadPlacementControllerTests(),
 		},
@@ -32,7 +33,7 @@ func TestTMCControllerIntegration(t *testing.T) {
 			TestCases:   controllerWorkspaceIsolationTests(),
 		},
 	}
-	
+
 	for _, suite := range suites {
 		RunTMCTestSuite(t, suite)
 	}
@@ -88,7 +89,7 @@ func workloadPlacementControllerTests() []TMCTestCase {
 			Timeout: 30 * time.Second,
 		},
 		{
-			Name:        "PlacementStrategyExecution", 
+			Name:        "PlacementStrategyExecution",
 			Description: "Test different placement strategy execution",
 			TestFunc: func(ctx *TestContext) error {
 				// TODO: Test RoundRobin, Spread, Affinity strategies
@@ -99,7 +100,7 @@ func workloadPlacementControllerTests() []TMCTestCase {
 		},
 		{
 			Name:        "LocationSelectorFiltering",
-			Description: "Test cluster filtering by location selectors", 
+			Description: "Test cluster filtering by location selectors",
 			TestFunc: func(ctx *TestContext) error {
 				// TODO: Test location-based filtering
 				ctx.t.Skip("WorkloadPlacement controller not yet available")
@@ -153,16 +154,16 @@ func controllerWorkspaceIsolationTests() []TMCTestCase {
 // testMultiWorkspaceIsolation tests that TMC controllers respect workspace boundaries
 func testMultiWorkspaceIsolation(ctx *TestContext) error {
 	ctx.t.Helper()
-	
+
 	// Create two separate workspaces
 	workspace1Name := "tmc-test-workspace-1"
 	workspace2Name := "tmc-test-workspace-2"
-	
+
 	klog.V(2).Infof("Testing multi-workspace isolation between %s and %s", workspace1Name, workspace2Name)
-	
+
 	// TODO: Create resources in workspace1 and verify workspace2 controller can't see them
 	// This will be implemented when TMC controllers are available
-	
+
 	ctx.t.Logf("Multi-workspace isolation test passed")
 	return nil
 }
@@ -170,14 +171,14 @@ func testMultiWorkspaceIsolation(ctx *TestContext) error {
 // testCrossWorkspaceResourceAccess tests that controllers cannot access resources across workspaces
 func testCrossWorkspaceResourceAccess(ctx *TestContext) error {
 	ctx.t.Helper()
-	
+
 	klog.V(2).Infof("Testing cross-workspace resource access restrictions")
-	
+
 	// TODO: Implement cross-workspace access tests
 	// 1. Create TMC resources in workspace A
 	// 2. Start TMC controller watching workspace B
 	// 3. Verify controller cannot see/modify resources in workspace A
-	
+
 	ctx.t.Logf("Cross-workspace resource access test passed")
 	return nil
 }
@@ -185,15 +186,15 @@ func testCrossWorkspaceResourceAccess(ctx *TestContext) error {
 // testWorkspaceAPIBindings tests that TMC controllers properly use APIBindings
 func testWorkspaceAPIBindings(ctx *TestContext) error {
 	ctx.t.Helper()
-	
+
 	klog.V(2).Infof("Testing workspace API bindings for TMC controllers")
-	
+
 	// TODO: Test APIBinding creation and usage
 	// 1. Verify TMC APIExport is available
 	// 2. Create APIBinding for TMC APIs in workspace
 	// 3. Verify controller can access bound APIs
 	// 4. Verify controller respects APIBinding permissions
-	
+
 	ctx.t.Logf("Workspace API bindings test passed")
 	return nil
 }
@@ -202,21 +203,21 @@ func testWorkspaceAPIBindings(ctx *TestContext) error {
 func TestTMCControllerManager(t *testing.T) {
 	ctx := NewTestContext(t)
 	defer ctx.Cleanup()
-	
+
 	workspaceName := "tmc-controller-manager-test"
 	require.NoError(t, ctx.SetupWorkspace(workspaceName))
 	require.NoError(t, ctx.WaitForWorkspaceReady())
-	
+
 	t.Run("ControllerManagerStartup", func(t *testing.T) {
 		// TODO: Test TMC controller manager startup
 		t.Skip("TMC controller manager not yet available")
 	})
-	
+
 	t.Run("ControllerManagerShutdown", func(t *testing.T) {
 		// TODO: Test TMC controller manager graceful shutdown
 		t.Skip("TMC controller manager not yet available")
 	})
-	
+
 	t.Run("ControllerManagerLeaderElection", func(t *testing.T) {
 		// TODO: Test leader election if multiple controller managers
 		t.Skip("TMC controller manager not yet available")
@@ -227,21 +228,21 @@ func TestTMCControllerManager(t *testing.T) {
 func TestTMCControllerMetrics(t *testing.T) {
 	ctx := NewTestContext(t)
 	defer ctx.Cleanup()
-	
+
 	workspaceName := "tmc-metrics-test"
 	require.NoError(t, ctx.SetupWorkspace(workspaceName))
 	require.NoError(t, ctx.WaitForWorkspaceReady())
-	
+
 	t.Run("ControllerMetricsExposure", func(t *testing.T) {
 		// TODO: Test controller metrics are properly exposed
 		t.Skip("TMC controller metrics not yet available")
 	})
-	
+
 	t.Run("PlacementDecisionMetrics", func(t *testing.T) {
 		// TODO: Test placement decision metrics
-		t.Skip("TMC controller metrics not yet available") 
+		t.Skip("TMC controller metrics not yet available")
 	})
-	
+
 	t.Run("ClusterHealthMetrics", func(t *testing.T) {
 		// TODO: Test cluster health metrics
 		t.Skip("TMC controller metrics not yet available")
@@ -253,24 +254,24 @@ func TestTMCControllerPerformance(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping performance tests in short mode")
 	}
-	
+
 	ctx := NewTestContext(t)
 	defer ctx.Cleanup()
-	
+
 	workspaceName := "tmc-performance-test"
 	require.NoError(t, ctx.SetupWorkspace(workspaceName))
 	require.NoError(t, ctx.WaitForWorkspaceReady())
-	
+
 	t.Run("HighVolumeClusterRegistrations", func(t *testing.T) {
 		// TODO: Test performance with many cluster registrations
 		t.Skip("TMC performance tests not yet available")
 	})
-	
+
 	t.Run("HighVolumeWorkloadPlacements", func(t *testing.T) {
 		// TODO: Test performance with many workload placements
 		t.Skip("TMC performance tests not yet available")
 	})
-	
+
 	t.Run("PlacementDecisionLatency", func(t *testing.T) {
 		// TODO: Test placement decision latency
 		t.Skip("TMC performance tests not yet available")
@@ -280,7 +281,7 @@ func TestTMCControllerPerformance(t *testing.T) {
 // Helper function to wait for controller readiness
 func waitForControllerReady(ctx *TestContext, controllerName string) error {
 	ctx.t.Helper()
-	
+
 	return wait.PollImmediateWithContext(ctx.ctx, time.Second, 30*time.Second, func(context.Context) (bool, error) {
 		// TODO: Implement controller readiness checking
 		// This would check controller pods, metrics endpoints, etc.
@@ -291,7 +292,7 @@ func waitForControllerReady(ctx *TestContext, controllerName string) error {
 // Helper function to create test cluster registrations
 func createTestClusterRegistration(ctx *TestContext, name, location string) error {
 	ctx.t.Helper()
-	
+
 	// TODO: Create ClusterRegistration object when API is available
 	klog.V(2).Infof("Would create ClusterRegistration %s in location %s", name, location)
 	return nil
@@ -300,7 +301,7 @@ func createTestClusterRegistration(ctx *TestContext, name, location string) erro
 // Helper function to create test workload placements
 func createTestWorkloadPlacement(ctx *TestContext, name, strategy string) error {
 	ctx.t.Helper()
-	
+
 	// TODO: Create WorkloadPlacement object when API is available
 	klog.V(2).Infof("Would create WorkloadPlacement %s with strategy %s", name, strategy)
 	return nil

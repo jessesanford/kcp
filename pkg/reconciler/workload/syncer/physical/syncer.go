@@ -34,9 +34,10 @@ import (
 	"k8s.io/klog/v2"
 
 	"github.com/kcp-dev/logicalcluster/v3"
-	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
-	tmcv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tmc/v1alpha1"
+
 	"github.com/kcp-dev/kcp/pkg/reconciler/workload/tmc"
+	tmcv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tmc/v1alpha1"
+	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 )
 
 // PhysicalSyncer implements WorkloadSyncer for physical Kubernetes clusters
@@ -44,15 +45,15 @@ type PhysicalSyncer struct {
 	// Cluster configuration
 	cluster       *tmcv1alpha1.ClusterRegistration
 	clusterConfig *rest.Config
-	
+
 	// Clients
 	dynamicClient dynamic.Interface
 	kubeClient    kubernetes.Interface
-	
+
 	// State
 	healthy bool
 	mu      sync.RWMutex
-	
+
 	// Configuration
 	options *SyncerOptions
 }
@@ -61,16 +62,16 @@ type PhysicalSyncer struct {
 type SyncerOptions struct {
 	// ResyncPeriod defines how often to refresh status
 	ResyncPeriod time.Duration
-	
+
 	// RetryStrategy for failed operations
 	RetryStrategy *tmc.RetryStrategy
-	
+
 	// EventHandler for sync events
 	EventHandler SyncEventHandler
-	
+
 	// Timeout for sync operations
 	SyncTimeout time.Duration
-	
+
 	// LogicalCluster context
 	LogicalCluster logicalcluster.Name
 }
@@ -81,7 +82,7 @@ func NewPhysicalSyncer(
 	clusterConfig *rest.Config,
 	options *SyncerOptions,
 ) (*PhysicalSyncer, error) {
-	
+
 	if cluster == nil {
 		return nil, fmt.Errorf("cluster registration cannot be nil")
 	}
@@ -91,19 +92,19 @@ func NewPhysicalSyncer(
 	if options == nil {
 		options = DefaultSyncerOptions()
 	}
-	
+
 	// Create dynamic client for resource operations
 	dynamicClient, err := dynamic.NewForConfig(clusterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create dynamic client for cluster %s: %w", cluster.Name, err)
 	}
-	
+
 	// Create Kubernetes client for core operations
 	kubeClient, err := kubernetes.NewForConfig(clusterConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create kubernetes client for cluster %s: %w", cluster.Name, err)
 	}
-	
+
 	syncer := &PhysicalSyncer{
 		cluster:       cluster,
 		clusterConfig: clusterConfig,
@@ -112,7 +113,7 @@ func NewPhysicalSyncer(
 		healthy:       false,
 		options:       options,
 	}
-	
+
 	return syncer, nil
 }
 
@@ -121,17 +122,17 @@ func (s *PhysicalSyncer) SyncWorkload(ctx context.Context,
 	cluster *tmcv1alpha1.ClusterRegistration,
 	workload runtime.Object,
 ) error {
-	
+
 	logger := klog.FromContext(ctx).WithValues(
 		"cluster", cluster.Name,
 		"syncer", "physical",
 	)
-	
+
 	// Validate cluster matches
 	if cluster.Name != s.cluster.Name {
 		return fmt.Errorf("cluster name mismatch: expected %s, got %s", s.cluster.Name, cluster.Name)
 	}
-	
+
 	// Convert to unstructured for dynamic operations
 	unstructuredWorkload, err := runtime.DefaultUnstructuredConverter.ToUnstructured(workload)
 	if err != nil {
@@ -141,9 +142,9 @@ func (s *PhysicalSyncer) SyncWorkload(ctx context.Context,
 			WithCluster(cluster.Name, string(s.options.LogicalCluster)).
 			Build()
 	}
-	
+
 	obj := &unstructured.Unstructured{Object: unstructuredWorkload}
-	
+
 	// Extract resource information
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	workloadRef := WorkloadRef{
@@ -151,7 +152,7 @@ func (s *PhysicalSyncer) SyncWorkload(ctx context.Context,
 		Namespace: obj.GetNamespace(),
 		Name:      obj.GetName(),
 	}
-	
+
 	// Emit sync started event
 	if s.options.EventHandler != nil {
 		event := &SyncEvent{
@@ -165,7 +166,7 @@ func (s *PhysicalSyncer) SyncWorkload(ctx context.Context,
 			logger.Error(err, "Failed to handle sync event")
 		}
 	}
-	
+
 	// Prepare workload for cluster deployment
 	clusterWorkload, err := s.prepareWorkloadForCluster(obj)
 	if err != nil {
@@ -177,12 +178,12 @@ func (s *PhysicalSyncer) SyncWorkload(ctx context.Context,
 			WithResource(gvk, obj.GetNamespace(), obj.GetName()).
 			Build()
 	}
-	
+
 	// Apply workload to cluster with retry
 	operation := func() error {
 		return s.applyWorkloadToCluster(ctx, clusterWorkload)
 	}
-	
+
 	if err := tmc.ExecuteWithRetry(operation, s.options.RetryStrategy); err != nil {
 		s.emitSyncFailedEvent(ctx, cluster.Name, workloadRef, err)
 		return tmc.NewTMCError(tmc.TMCErrorTypeSyncFailure, "physical-syncer", "sync").
@@ -192,7 +193,7 @@ func (s *PhysicalSyncer) SyncWorkload(ctx context.Context,
 			WithResource(gvk, obj.GetNamespace(), obj.GetName()).
 			Build()
 	}
-	
+
 	// Emit sync completed event
 	if s.options.EventHandler != nil {
 		event := &SyncEvent{
@@ -206,11 +207,11 @@ func (s *PhysicalSyncer) SyncWorkload(ctx context.Context,
 			logger.Error(err, "Failed to handle sync event")
 		}
 	}
-	
-	logger.Info("Successfully synced workload to physical cluster", 
+
+	logger.Info("Successfully synced workload to physical cluster",
 		"resource", workloadRef.Name,
 		"namespace", workloadRef.Namespace)
-	
+
 	return nil
 }
 
@@ -219,12 +220,12 @@ func (s *PhysicalSyncer) GetStatus(ctx context.Context,
 	cluster *tmcv1alpha1.ClusterRegistration,
 	workload runtime.Object,
 ) (*WorkloadStatus, error) {
-	
+
 	// Validate cluster matches
 	if cluster.Name != s.cluster.Name {
 		return nil, fmt.Errorf("cluster name mismatch: expected %s, got %s", s.cluster.Name, cluster.Name)
 	}
-	
+
 	// Convert to unstructured for dynamic operations
 	unstructuredWorkload, err := runtime.DefaultUnstructuredConverter.ToUnstructured(workload)
 	if err != nil {
@@ -234,10 +235,10 @@ func (s *PhysicalSyncer) GetStatus(ctx context.Context,
 			WithCluster(cluster.Name, string(s.options.LogicalCluster)).
 			Build()
 	}
-	
+
 	obj := &unstructured.Unstructured{Object: unstructuredWorkload}
 	gvk := obj.GetObjectKind().GroupVersionKind()
-	
+
 	// Get current resource from cluster
 	gvr, err := s.gvkToGVR(gvk)
 	if err != nil {
@@ -247,12 +248,12 @@ func (s *PhysicalSyncer) GetStatus(ctx context.Context,
 			WithResource(gvk, obj.GetNamespace(), obj.GetName()).
 			Build()
 	}
-	
+
 	var resourceInterface dynamic.ResourceInterface = s.dynamicClient.Resource(gvr)
 	if obj.GetNamespace() != "" {
 		resourceInterface = resourceInterface.Namespace(obj.GetNamespace())
 	}
-	
+
 	clusterResource, err := resourceInterface.Get(ctx, obj.GetName(), metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
@@ -272,7 +273,7 @@ func (s *PhysicalSyncer) GetStatus(ctx context.Context,
 				},
 			}, nil
 		}
-		
+
 		return nil, tmc.NewTMCError(tmc.TMCErrorTypeSyncFailure, "physical-syncer", "get-status").
 			WithMessage("Failed to get workload from cluster").
 			WithCause(err).
@@ -280,10 +281,10 @@ func (s *PhysicalSyncer) GetStatus(ctx context.Context,
 			WithResource(gvk, obj.GetNamespace(), obj.GetName()).
 			Build()
 	}
-	
+
 	// Extract status from cluster resource
 	status := s.extractWorkloadStatus(clusterResource, cluster.Name)
-	
+
 	return status, nil
 }
 
@@ -292,12 +293,12 @@ func (s *PhysicalSyncer) DeleteWorkload(ctx context.Context,
 	cluster *tmcv1alpha1.ClusterRegistration,
 	workload runtime.Object,
 ) error {
-	
+
 	// Validate cluster matches
 	if cluster.Name != s.cluster.Name {
 		return fmt.Errorf("cluster name mismatch: expected %s, got %s", s.cluster.Name, cluster.Name)
 	}
-	
+
 	// Convert to unstructured for dynamic operations
 	unstructuredWorkload, err := runtime.DefaultUnstructuredConverter.ToUnstructured(workload)
 	if err != nil {
@@ -307,10 +308,10 @@ func (s *PhysicalSyncer) DeleteWorkload(ctx context.Context,
 			WithCluster(cluster.Name, string(s.options.LogicalCluster)).
 			Build()
 	}
-	
+
 	obj := &unstructured.Unstructured{Object: unstructuredWorkload}
 	gvk := obj.GetObjectKind().GroupVersionKind()
-	
+
 	// Get GVR for resource
 	gvr, err := s.gvkToGVR(gvk)
 	if err != nil {
@@ -320,18 +321,18 @@ func (s *PhysicalSyncer) DeleteWorkload(ctx context.Context,
 			WithResource(gvk, obj.GetNamespace(), obj.GetName()).
 			Build()
 	}
-	
+
 	var resourceInterface dynamic.ResourceInterface = s.dynamicClient.Resource(gvr)
 	if obj.GetNamespace() != "" {
 		resourceInterface = resourceInterface.Namespace(obj.GetNamespace())
 	}
-	
+
 	// Delete resource from cluster
 	deletePolicy := metav1.DeletePropagationForeground
 	err = resourceInterface.Delete(ctx, obj.GetName(), metav1.DeleteOptions{
 		PropagationPolicy: &deletePolicy,
 	})
-	
+
 	if err != nil && !errors.IsNotFound(err) {
 		return tmc.NewTMCError(tmc.TMCErrorTypeSyncFailure, "physical-syncer", "delete").
 			WithMessage("Failed to delete workload from cluster").
@@ -340,12 +341,12 @@ func (s *PhysicalSyncer) DeleteWorkload(ctx context.Context,
 			WithResource(gvk, obj.GetNamespace(), obj.GetName()).
 			Build()
 	}
-	
+
 	klog.FromContext(ctx).Info("Successfully deleted workload from physical cluster",
 		"cluster", cluster.Name,
 		"resource", obj.GetName(),
 		"namespace", obj.GetNamespace())
-	
+
 	return nil
 }
 
@@ -353,12 +354,12 @@ func (s *PhysicalSyncer) DeleteWorkload(ctx context.Context,
 func (s *PhysicalSyncer) HealthCheck(ctx context.Context,
 	cluster *tmcv1alpha1.ClusterRegistration,
 ) error {
-	
+
 	// Validate cluster matches
 	if cluster.Name != s.cluster.Name {
 		return fmt.Errorf("cluster name mismatch: expected %s, got %s", s.cluster.Name, cluster.Name)
 	}
-	
+
 	// Perform basic connectivity test
 	_, err := s.kubeClient.Discovery().ServerVersion()
 	if err != nil {
@@ -369,7 +370,7 @@ func (s *PhysicalSyncer) HealthCheck(ctx context.Context,
 			WithCluster(cluster.Name, string(s.options.LogicalCluster)).
 			Build()
 	}
-	
+
 	s.setHealthy(true)
 	return nil
 }
@@ -379,7 +380,7 @@ func (s *PhysicalSyncer) HealthCheck(ctx context.Context,
 func (s *PhysicalSyncer) prepareWorkloadForCluster(obj *unstructured.Unstructured) (*unstructured.Unstructured, error) {
 	// Create a deep copy to avoid modifying the original
 	clusterObj := obj.DeepCopy()
-	
+
 	// Remove KCP-specific annotations and labels
 	annotations := clusterObj.GetAnnotations()
 	if annotations != nil {
@@ -387,21 +388,21 @@ func (s *PhysicalSyncer) prepareWorkloadForCluster(obj *unstructured.Unstructure
 		delete(annotations, "kcp.io/placement")
 		clusterObj.SetAnnotations(annotations)
 	}
-	
+
 	labels := clusterObj.GetLabels()
 	if labels != nil {
 		delete(labels, "kcp.io/workspace")
 		clusterObj.SetLabels(labels)
 	}
-	
+
 	// Clear resource version and UID for cluster creation
 	clusterObj.SetResourceVersion("")
 	clusterObj.SetUID("")
 	clusterObj.SetSelfLink("")
-	
+
 	// Remove managed fields
 	clusterObj.SetManagedFields(nil)
-	
+
 	return clusterObj, nil
 }
 
@@ -411,12 +412,12 @@ func (s *PhysicalSyncer) applyWorkloadToCluster(ctx context.Context, obj *unstru
 	if err != nil {
 		return fmt.Errorf("failed to convert GVK to GVR: %w", err)
 	}
-	
+
 	var resourceInterface dynamic.ResourceInterface = s.dynamicClient.Resource(gvr)
 	if obj.GetNamespace() != "" {
 		resourceInterface = resourceInterface.Namespace(obj.GetNamespace())
 	}
-	
+
 	// Try to create, if it exists, update
 	_, err = resourceInterface.Create(ctx, obj, metav1.CreateOptions{})
 	if errors.IsAlreadyExists(err) {
@@ -425,13 +426,13 @@ func (s *PhysicalSyncer) applyWorkloadToCluster(ctx context.Context, obj *unstru
 		if getErr != nil {
 			return fmt.Errorf("failed to get current resource for update: %w", getErr)
 		}
-		
+
 		// Preserve resource version for update
 		obj.SetResourceVersion(current.GetResourceVersion())
-		
+
 		_, err = resourceInterface.Update(ctx, obj, metav1.UpdateOptions{})
 	}
-	
+
 	return err
 }
 
@@ -442,7 +443,7 @@ func (s *PhysicalSyncer) extractWorkloadStatus(obj *unstructured.Unstructured, c
 		Resources:   []ResourceStatus{},
 		Conditions:  []WorkloadCondition{},
 	}
-	
+
 	// Extract status from the resource
 	statusObj, found, err := unstructured.NestedMap(obj.Object, "status")
 	if err != nil || !found {
@@ -450,7 +451,7 @@ func (s *PhysicalSyncer) extractWorkloadStatus(obj *unstructured.Unstructured, c
 		status.Phase = WorkloadPhaseUnknown
 		return status
 	}
-	
+
 	// Check for ready condition
 	conditions, found, _ := unstructured.NestedSlice(statusObj, "conditions")
 	if found {
@@ -458,36 +459,36 @@ func (s *PhysicalSyncer) extractWorkloadStatus(obj *unstructured.Unstructured, c
 			if conditionMap, ok := condition.(map[string]interface{}); ok {
 				conditionType, _ := conditionMap["type"].(string)
 				conditionStatus, _ := conditionMap["status"].(string)
-				
+
 				if conditionType == "Ready" {
 					status.Ready = conditionStatus == "True"
 				}
-				
+
 				// Add to conditions list
 				wc := WorkloadCondition{
 					Type:   conditionType,
 					Status: ConditionStatus(conditionStatus),
 				}
-				
+
 				if reason, ok := conditionMap["reason"].(string); ok {
 					wc.Reason = reason
 				}
 				if message, ok := conditionMap["message"].(string); ok {
 					wc.Message = message
 				}
-				
+
 				status.Conditions = append(status.Conditions, wc)
 			}
 		}
 	}
-	
+
 	// Determine phase based on ready status
 	if status.Ready {
 		status.Phase = WorkloadPhaseReady
 	} else {
 		status.Phase = WorkloadPhasePending
 	}
-	
+
 	// Add resource status
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	resourceStatus := ResourceStatus{
@@ -498,7 +499,7 @@ func (s *PhysicalSyncer) extractWorkloadStatus(obj *unstructured.Unstructured, c
 		Phase:     string(status.Phase),
 	}
 	status.Resources = append(status.Resources, resourceStatus)
-	
+
 	return status
 }
 
@@ -506,21 +507,21 @@ func (s *PhysicalSyncer) gvkToGVR(gvk schema.GroupVersionKind) (schema.GroupVers
 	// Simple conversion - in a real implementation, this would use discovery
 	// For now, implement common mappings
 	mapping := map[schema.GroupVersionKind]schema.GroupVersionResource{
-		{Group: "", Version: "v1", Kind: "Pod"}:                                {Group: "", Version: "v1", Resource: "pods"},
-		{Group: "", Version: "v1", Kind: "Service"}:                            {Group: "", Version: "v1", Resource: "services"},
-		{Group: "", Version: "v1", Kind: "ConfigMap"}:                          {Group: "", Version: "v1", Resource: "configmaps"},
-		{Group: "", Version: "v1", Kind: "Secret"}:                             {Group: "", Version: "v1", Resource: "secrets"},
-		{Group: "apps", Version: "v1", Kind: "Deployment"}:                     {Group: "apps", Version: "v1", Resource: "deployments"},
-		{Group: "apps", Version: "v1", Kind: "ReplicaSet"}:                     {Group: "apps", Version: "v1", Resource: "replicasets"},
-		{Group: "apps", Version: "v1", Kind: "DaemonSet"}:                      {Group: "apps", Version: "v1", Resource: "daemonsets"},
-		{Group: "apps", Version: "v1", Kind: "StatefulSet"}:                    {Group: "apps", Version: "v1", Resource: "statefulsets"},
+		{Group: "", Version: "v1", Kind: "Pod"}:             {Group: "", Version: "v1", Resource: "pods"},
+		{Group: "", Version: "v1", Kind: "Service"}:         {Group: "", Version: "v1", Resource: "services"},
+		{Group: "", Version: "v1", Kind: "ConfigMap"}:       {Group: "", Version: "v1", Resource: "configmaps"},
+		{Group: "", Version: "v1", Kind: "Secret"}:          {Group: "", Version: "v1", Resource: "secrets"},
+		{Group: "apps", Version: "v1", Kind: "Deployment"}:  {Group: "apps", Version: "v1", Resource: "deployments"},
+		{Group: "apps", Version: "v1", Kind: "ReplicaSet"}:  {Group: "apps", Version: "v1", Resource: "replicasets"},
+		{Group: "apps", Version: "v1", Kind: "DaemonSet"}:   {Group: "apps", Version: "v1", Resource: "daemonsets"},
+		{Group: "apps", Version: "v1", Kind: "StatefulSet"}: {Group: "apps", Version: "v1", Resource: "statefulsets"},
 	}
-	
+
 	gvr, found := mapping[gvk]
 	if !found {
 		return schema.GroupVersionResource{}, fmt.Errorf("no GVR mapping found for GVK %s", gvk)
 	}
-	
+
 	return gvr, nil
 }
 

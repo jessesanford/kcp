@@ -1888,8 +1888,7 @@ func (s *Server) installWorkloadPlacementController(ctx context.Context, config 
 
 	placementController, err := placement.NewController(
 		kcpClusterClient,
-		s.KcpSharedInformerFactory.Workload().V1alpha1().Placements(),
-		s.KcpSharedInformerFactory.Workload().V1alpha1().Locations(),
+		logicalcluster.Name("root:default"), // TODO: Make this configurable
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create placement controller: %w", err)
@@ -1898,14 +1897,11 @@ func (s *Server) installWorkloadPlacementController(ctx context.Context, config 
 	return s.registerController(&controllerWrapper{
 		Name: controllerName,
 		Wait: func(ctx context.Context, s *Server) error {
-			return wait.PollUntilContextCancel(ctx, waitPollInterval, true, func(ctx context.Context) (bool, error) {
-				workloadInformers := s.KcpSharedInformerFactory.Workload().V1alpha1()
-				return workloadInformers.Placements().Informer().HasSynced() &&
-					workloadInformers.Locations().Informer().HasSynced(), nil
-			})
+			// TODO: Add proper informer sync once TMC informers are available
+			return nil
 		},
 		Runner: func(ctx context.Context) {
-			placementController.Start(ctx, 2)
+			placementController.Start(ctx)
 		},
 	})
 }

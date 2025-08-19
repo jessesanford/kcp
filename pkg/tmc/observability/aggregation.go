@@ -22,10 +22,11 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/klog/v2"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	"k8s.io/klog/v2"
 
 	"github.com/kcp-dev/logicalcluster/v3"
+
 	"github.com/kcp-dev/kcp/pkg/features"
 )
 
@@ -80,7 +81,7 @@ type TimeRange struct {
 type WorkspaceAwareMetricsCollector interface {
 	// ListClusters returns the list of cluster names in a workspace
 	ListClusters(ctx context.Context, workspace logicalcluster.Name) ([]string, error)
-	
+
 	// CollectClusterMetrics collects metrics from a specific cluster in a workspace
 	CollectClusterMetrics(ctx context.Context, clusterName string, workspace logicalcluster.Name) (*ClusterMetrics, error)
 }

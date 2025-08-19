@@ -25,10 +25,10 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/klog/v2"
 
 	"github.com/kcp-dev/kcp/pkg/features"
-	utilfeature "k8s.io/apiserver/pkg/util/feature"
 )
 
 func main() {
@@ -67,8 +67,8 @@ func run(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 
 	// Check if TMC feature flag is enabled
-	if !utilfeature.DefaultFeatureGate.Enabled(features.TMC) {
-		return fmt.Errorf("TMC feature flag is not enabled. Use --feature-gates=TMC=true to enable")
+	if !utilfeature.DefaultFeatureGate.Enabled(features.TMCFeature) {
+		return fmt.Errorf("TMC feature flag is not enabled. Use --feature-gates=TMCFeature=true to enable")
 	}
 
 	logger.Info("Starting TMC controller", "version", "v0.1.0", "build", "dev")
@@ -84,27 +84,27 @@ func run(ctx context.Context) error {
 	}
 
 	logger.Info("TMC controller initialized successfully")
-	
+
 	// Keep running until context is cancelled
 	<-ctx.Done()
 	logger.Info("TMC controller shutting down")
-	
+
 	return nil
 }
 
 // startControllers initializes and starts all TMC controllers
 func startControllers(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
-	
+
 	// For this foundation PR, we create a placeholder informer
 	// In future PRs, this will be replaced with actual TMC API informers
 	logger.Info("TMC controller foundation ready - actual controllers will be added in future PRs")
-	
+
 	// TODO: In future PRs, initialize actual TMC controllers:
 	// 1. Create KCP clients
 	// 2. Set up informer factories
 	// 3. Create specific controllers (cluster registration, workload placement, etc.)
 	// 4. Start controller managers
-	
+
 	return nil
 }

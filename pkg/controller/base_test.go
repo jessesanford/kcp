@@ -45,7 +45,7 @@ func TestNewBaseController(t *testing.T) {
 		assert.NotNil(t, controller)
 		assert.Equal(t, "test-controller", controller.Name())
 		// Note: IsHealthy() returns false until the controller is started
-		
+
 		// Test KCP-specific functionality
 		impl := controller.(*baseControllerImpl)
 		assert.Equal(t, logicalcluster.Name("test-workspace"), impl.GetWorkspace())
@@ -89,7 +89,7 @@ func createTestMetrics(registry *prometheus.Registry) *ManagerMetrics {
 		),
 		controllersHealthy: prometheus.NewGauge(
 			prometheus.GaugeOpts{
-				Name: "test_controllers_healthy", 
+				Name: "test_controllers_healthy",
 				Help: "Number of healthy test controllers",
 			},
 		),
@@ -130,7 +130,7 @@ func (r *testReconcilerWithCommitter) GetCommitFunc() interface{} {
 func TestCommitterPatternSupport(t *testing.T) {
 	testRegistry := prometheus.NewRegistry()
 	testMetrics := createTestMetrics(testRegistry)
-	
+
 	t.Run("reconciler without committer pattern", func(t *testing.T) {
 		config := &BaseControllerConfig{
 			Name:       "test-controller",
@@ -141,7 +141,7 @@ func TestCommitterPatternSupport(t *testing.T) {
 
 		controller := NewBaseController(config)
 		impl := controller.(*baseControllerImpl)
-		
+
 		assert.False(t, impl.SupportsCommitterPattern())
 	})
 
@@ -155,7 +155,7 @@ func TestCommitterPatternSupport(t *testing.T) {
 
 		controller := NewBaseController(config)
 		impl := controller.(*baseControllerImpl)
-		
+
 		assert.True(t, impl.SupportsCommitterPattern())
 	})
 }
@@ -202,7 +202,7 @@ func TestWorkspaceKeyParsing(t *testing.T) {
 
 func TestWorkspaceKeyGeneration(t *testing.T) {
 	cluster := logicalcluster.Name("root:org:workspace")
-	
+
 	t.Run("cluster-scoped key", func(t *testing.T) {
 		key := MakeClusterScopedKey(cluster, "resource-name")
 		expected := "root:org:workspace|resource-name"
@@ -240,7 +240,7 @@ func TestBaseControllerHealthCheck(t *testing.T) {
 	}
 
 	controller := NewBaseController(config)
-	
+
 	// Before starting, controller should not be healthy
 	assert.False(t, controller.IsHealthy())
 

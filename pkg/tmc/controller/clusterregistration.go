@@ -22,16 +22,16 @@ import (
 	"fmt"
 	"time"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/client-go/util/workqueue"
-
 	"github.com/kcp-dev/logicalcluster/v3"
+
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 )
 
@@ -44,18 +44,18 @@ import (
 type ClusterRegistrationController struct {
 	// Core components
 	queue workqueue.RateLimitingInterface
-	
+
 	// KCP client for future TMC API consumption
 	kcpClusterClient kcpclientset.ClusterInterface
-	
+
 	// Physical cluster clients for health checking
 	clusterClients map[string]kubernetes.Interface
-	
+
 	// Configuration
 	workspace    logicalcluster.Name
 	resyncPeriod time.Duration
 	workerCount  int
-	
+
 	// Health checking state
 	clusterHealth map[string]*ClusterHealthStatus
 }
@@ -64,19 +64,19 @@ type ClusterRegistrationController struct {
 type ClusterHealthStatus struct {
 	// Name of the cluster
 	Name string
-	
+
 	// LastCheck time of last health check
 	LastCheck time.Time
-	
+
 	// Healthy indicates if the cluster is healthy
 	Healthy bool
-	
+
 	// Error message if unhealthy
 	Error string
-	
+
 	// NodeCount from the latest health check
 	NodeCount int
-	
+
 	// Version of the Kubernetes cluster
 	Version string
 }
@@ -91,15 +91,15 @@ func NewClusterRegistrationController(
 	resyncPeriod time.Duration,
 	workerCount int,
 ) (*ClusterRegistrationController, error) {
-	
+
 	if len(clusterConfigs) == 0 {
 		return nil, fmt.Errorf("at least one cluster configuration is required")
 	}
-	
+
 	// Build cluster clients
 	clusterClients := make(map[string]kubernetes.Interface)
 	clusterHealth := make(map[string]*ClusterHealthStatus)
-	
+
 	for name, config := range clusterConfigs {
 		client, err := kubernetes.NewForConfig(config)
 		if err != nil {
@@ -110,10 +110,10 @@ func NewClusterRegistrationController(
 			Name:    name,
 			Healthy: false, // Start as unhealthy until first check
 		}
-		
+
 		klog.V(2).InfoS("Configured cluster client", "cluster", name)
 	}
-	
+
 	c := &ClusterRegistrationController{
 		queue: workqueue.NewNamedRateLimitingQueue(
 			workqueue.DefaultControllerRateLimiter(),
@@ -125,12 +125,12 @@ func NewClusterRegistrationController(
 		workerCount:      workerCount,
 		clusterHealth:    clusterHealth,
 	}
-	
+
 	klog.InfoS("Created cluster registration controller",
 		"workspace", workspace,
 		"clusters", len(clusterConfigs),
 		"resyncPeriod", resyncPeriod)
-	
+
 	return c, nil
 }
 
@@ -140,25 +140,25 @@ func NewClusterRegistrationController(
 func (c *ClusterRegistrationController) Start(ctx context.Context) error {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
-	
-	klog.InfoS("Starting ClusterRegistration controller", 
+
+	klog.InfoS("Starting ClusterRegistration controller",
 		"workspace", c.workspace,
 		"clusters", len(c.clusterClients))
 	defer klog.InfoS("Shutting down ClusterRegistration controller")
-	
+
 	// Start periodic health checks
 	go c.startHealthChecking(ctx)
-	
+
 	// Start workers
 	for i := 0; i < c.workerCount; i++ {
 		go wait.UntilWithContext(ctx, c.runWorker, time.Second)
 	}
-	
+
 	// Initial health check for all clusters
 	for clusterName := range c.clusterClients {
 		c.queue.Add(clusterName)
 	}
-	
+
 	<-ctx.Done()
 	return nil
 }
@@ -179,14 +179,14 @@ func (c *ClusterRegistrationController) processNextWorkItem(ctx context.Context)
 		return false
 	}
 	defer c.queue.Done(obj)
-	
+
 	clusterName := obj.(string)
 	if err := c.syncCluster(ctx, clusterName); err != nil {
 		utilruntime.HandleError(fmt.Errorf("error syncing cluster %s: %w", clusterName, err))
 		c.queue.AddRateLimited(obj)
 		return true
 	}
-	
+
 	c.queue.Forget(obj)
 	return true
 }
@@ -194,29 +194,34 @@ func (c *ClusterRegistrationController) processNextWorkItem(ctx context.Context)
 // syncCluster performs health checking for a single cluster
 func (c *ClusterRegistrationController) syncCluster(ctx context.Context, clusterName string) error {
 	klog.V(4).InfoS("Syncing cluster", "cluster", clusterName)
-	
+
 	client, exists := c.clusterClients[clusterName]
 	if !exists {
 		return fmt.Errorf("cluster client not found: %s", clusterName)
 	}
-	
+
 	// Perform health check
 	healthy, err := c.performHealthCheck(ctx, clusterName, client)
-	
+
 	// Update health status
 	c.clusterHealth[clusterName] = &ClusterHealthStatus{
 		Name:      clusterName,
 		LastCheck: time.Now(),
 		Healthy:   healthy,
-		Error:     func() string { if err != nil { return err.Error() }; return "" }(),
+		Error: func() string {
+			if err != nil {
+				return err.Error()
+			}
+			return ""
+		}(),
 	}
-	
+
 	if healthy {
 		klog.V(2).InfoS("Cluster health check passed", "cluster", clusterName)
 	} else {
 		klog.V(2).InfoS("Cluster health check failed", "cluster", clusterName, "error", err)
 	}
-	
+
 	return nil
 }
 
@@ -227,24 +232,24 @@ func (c *ClusterRegistrationController) performHealthCheck(ctx context.Context, 
 	if err != nil {
 		return false, fmt.Errorf("failed to list nodes: %w", err)
 	}
-	
+
 	// Test 2: Get cluster version
 	version, err := client.Discovery().ServerVersion()
 	if err != nil {
 		return false, fmt.Errorf("failed to get server version: %w", err)
 	}
-	
+
 	// Update health status with additional info
 	if health, exists := c.clusterHealth[clusterName]; exists {
 		health.NodeCount = len(nodeList.Items)
 		health.Version = version.String()
 	}
-	
+
 	klog.V(4).InfoS("Cluster health check details",
 		"cluster", clusterName,
 		"nodes", len(nodeList.Items),
 		"version", version.String())
-	
+
 	return true, nil
 }
 
@@ -252,7 +257,7 @@ func (c *ClusterRegistrationController) performHealthCheck(ctx context.Context, 
 func (c *ClusterRegistrationController) startHealthChecking(ctx context.Context) {
 	ticker := time.NewTicker(c.resyncPeriod)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -272,7 +277,7 @@ func (c *ClusterRegistrationController) GetClusterHealth(clusterName string) (*C
 	if !exists {
 		return nil, false
 	}
-	
+
 	// Return a copy to avoid race conditions
 	return &ClusterHealthStatus{
 		Name:      health.Name,
@@ -287,7 +292,7 @@ func (c *ClusterRegistrationController) GetClusterHealth(clusterName string) (*C
 // GetAllClusterHealth returns health status for all clusters
 func (c *ClusterRegistrationController) GetAllClusterHealth() map[string]*ClusterHealthStatus {
 	result := make(map[string]*ClusterHealthStatus)
-	
+
 	for name, health := range c.clusterHealth {
 		result[name] = &ClusterHealthStatus{
 			Name:      health.Name,
@@ -298,7 +303,7 @@ func (c *ClusterRegistrationController) GetAllClusterHealth() map[string]*Cluste
 			Version:   health.Version,
 		}
 	}
-	
+
 	return result
 }
 

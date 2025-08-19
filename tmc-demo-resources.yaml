@@ -1,0 +1,253 @@
+# TMC Demo Resources - Additional test cases for TMC functionality
+
+---
+# Multi-region cluster setup
+apiVersion: tmc.kcp.io/v1alpha1
+kind: ClusterRegistration
+metadata:
+  name: cluster-asia-1
+  namespace: tmc-demo
+spec:
+  clusterID: "cluster-004"
+  region: "ap-southeast-1"
+  provider: "GCP"
+  capacity:
+    cpu: "1200"
+    memory: "10000Gi"
+  labels:
+    tier: "production"
+    zone: "asia"
+    gpu: "available"
+
+---
+apiVersion: tmc.kcp.io/v1alpha1
+kind: ClusterRegistration
+metadata:
+  name: cluster-edge-1
+  namespace: tmc-demo
+spec:
+  clusterID: "cluster-005"
+  region: "edge-location-1"
+  provider: "OnPrem"
+  capacity:
+    cpu: "100"
+    memory: "512Gi"
+  labels:
+    tier: "edge"
+    connectivity: "intermittent"
+
+---
+# Complex placement with affinity rules
+apiVersion: tmc.kcp.io/v1alpha1
+kind: WorkloadPlacement
+metadata:
+  name: ml-training-placement
+  namespace: tmc-demo
+spec:
+  workloadRef:
+    apiVersion: "batch/v1"
+    kind: "Job"
+    name: "ml-training-job"
+    namespace: "tmc-demo"
+  placement:
+    strategy: "Pack"
+    constraints:
+    - key: "gpu"
+      operator: "Exists"
+    - key: "tier"
+      operator: "In"
+      values: ["production"]
+    preferredClusters:
+    - weight: 100
+      preference:
+        - key: "region"
+          operator: "In"
+          values: ["us-west-2", "ap-southeast-1"]
+
+---
+# Spread placement for high availability
+apiVersion: tmc.kcp.io/v1alpha1
+kind: WorkloadPlacement
+metadata:
+  name: ha-service-placement
+  namespace: tmc-demo
+spec:
+  workloadRef:
+    apiVersion: "apps/v1"
+    kind: "Deployment"
+    name: "critical-service"
+    namespace: "tmc-demo"
+  placement:
+    strategy: "Spread"
+    minClusters: 3
+    maxClusters: 5
+    constraints:
+    - key: "tier"
+      operator: "NotIn"
+      values: ["edge"]
+    - key: "provider"
+      operator: "In"
+      values: ["AWS", "Azure", "GCP"]
+    replicationPolicy:
+      replicasPerCluster: 2
+
+---
+# Edge placement for IoT workloads
+apiVersion: tmc.kcp.io/v1alpha1
+kind: WorkloadPlacement
+metadata:
+  name: iot-processor-placement
+  namespace: tmc-demo
+spec:
+  workloadRef:
+    apiVersion: "apps/v1"
+    kind: "DaemonSet"
+    name: "iot-processor"
+    namespace: "tmc-demo"
+  placement:
+    strategy: "Manual"
+    clusters:
+    - "cluster-005"
+    constraints:
+    - key: "tier"
+      operator: "In"
+      values: ["edge"]
+
+---
+# Sample workloads to be placed
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: critical-service
+  namespace: tmc-demo
+  labels:
+    app: critical-service
+    tmc.kcp.io/placement: "required"
+spec:
+  replicas: 6
+  selector:
+    matchLabels:
+      app: critical-service
+  template:
+    metadata:
+      labels:
+        app: critical-service
+    spec:
+      containers:
+      - name: service
+        image: busybox
+        command: ["sh", "-c", "while true; do echo 'Critical service running'; sleep 30; done"]
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ml-training-job
+  namespace: tmc-demo
+  labels:
+    tmc.kcp.io/placement: "required"
+    workload-type: "gpu"
+spec:
+  template:
+    spec:
+      containers:
+      - name: trainer
+        image: tensorflow/tensorflow:latest-gpu
+        command: ["echo", "Training model..."]
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2"
+            nvidia.com/gpu: "1"
+      restartPolicy: Never
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: iot-processor
+  namespace: tmc-demo
+  labels:
+    tmc.kcp.io/placement: "edge"
+spec:
+  selector:
+    matchLabels:
+      app: iot-processor
+  template:
+    metadata:
+      labels:
+        app: iot-processor
+    spec:
+      containers:
+      - name: processor
+        image: busybox
+        command: ["sh", "-c", "while true; do echo 'Processing IoT data'; sleep 10; done"]
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+
+---
+# ConfigMap with placement policies
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tmc-placement-policies
+  namespace: tmc-demo
+data:
+  default-policy: |
+    {
+      "version": "v1",
+      "rules": [
+        {
+          "name": "prefer-same-region",
+          "weight": 100,
+          "selector": {
+            "matchLabels": {
+              "tmc.kcp.io/cross-region": "false"
+            }
+          }
+        },
+        {
+          "name": "avoid-edge-for-stateful",
+          "weight": 200,
+          "selector": {
+            "matchLabels": {
+              "workload-type": "stateful"
+            }
+          },
+          "constraints": [
+            {
+              "key": "tier",
+              "operator": "NotIn",
+              "values": ["edge"]
+            }
+          ]
+        }
+      ]
+    }
+
+---
+# Service to demonstrate multi-cluster connectivity
+apiVersion: v1
+kind: Service
+metadata:
+  name: multi-cluster-service
+  namespace: tmc-demo
+  annotations:
+    tmc.kcp.io/expose: "multi-cluster"
+spec:
+  selector:
+    app: critical-service
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: ClusterIP

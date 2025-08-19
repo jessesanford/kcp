@@ -19,9 +19,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	v3 "github.com/kcp-dev/logicalcluster/v3"
+
 	corev1alpha1 "github.com/kcp-dev/kcp/sdk/apis/core/v1alpha1"
 	conditionsv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
-	v3 "github.com/kcp-dev/logicalcluster/v3"
 )
 
 // LogicalClusterStatusApplyConfiguration represents a declarative configuration of the LogicalClusterStatus type for use

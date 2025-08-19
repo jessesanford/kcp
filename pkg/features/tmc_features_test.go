@@ -24,11 +24,11 @@ import (
 
 func TestTMCFeatureFlags(t *testing.T) {
 	tests := map[string]struct {
-		wantTMCEnabled  bool
-		wantAPIsEnabled bool
+		wantTMCEnabled         bool
+		wantAPIsEnabled        bool
 		wantControllersEnabled bool
-		wantPlacementEnabled bool
-		wantAnyEnabled bool
+		wantPlacementEnabled   bool
+		wantAnyEnabled         bool
 	}{
 		"default configuration": {
 			// By default, all TMC features should be disabled
@@ -106,7 +106,7 @@ func TestTMCFeatureFlagConstants(t *testing.T) {
 
 func TestTMCFeatureFlagDefaultConfiguration(t *testing.T) {
 	tests := []struct {
-		feature featuregate.Feature
+		feature   featuregate.Feature
 		wantInMap bool
 	}{
 		{TMCFeature, true},
@@ -131,7 +131,7 @@ func TestTMCFeatureFlagDefaultConfiguration(t *testing.T) {
 				if len(specs) == 0 {
 					t.Errorf("Feature %s has empty version specs", tc.feature)
 				}
-				
+
 				// Check that all TMC features default to false and are Alpha
 				for _, spec := range specs {
 					if spec.Default != false {
@@ -149,7 +149,7 @@ func TestTMCFeatureFlagDefaultConfiguration(t *testing.T) {
 func TestTMCFeatureFlagLogic(t *testing.T) {
 	// Test that TMC feature utility functions have the correct hierarchical logic
 	// Note: This tests the function logic, not the actual feature gate state
-	
+
 	tests := []struct {
 		name     string
 		funcName string
@@ -161,13 +161,13 @@ func TestTMCFeatureFlagLogic(t *testing.T) {
 			desc:     "returns true only if TMCFeature is enabled",
 		},
 		{
-			name:     "TMCAPIsEnabled", 
+			name:     "TMCAPIsEnabled",
 			funcName: "TMCAPIsEnabled()",
 			desc:     "returns true only if both TMCFeature and TMCAPIs are enabled",
 		},
 		{
 			name:     "TMCControllersEnabled",
-			funcName: "TMCControllersEnabled()", 
+			funcName: "TMCControllersEnabled()",
 			desc:     "returns true only if both TMCFeature and TMCControllers are enabled",
 		},
 		{
@@ -176,7 +176,7 @@ func TestTMCFeatureFlagLogic(t *testing.T) {
 			desc:     "returns true only if both TMCFeature and TMCPlacement are enabled",
 		},
 	}
-	
+
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Logf("Testing that %s %s", tc.funcName, tc.desc)

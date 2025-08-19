@@ -23,19 +23,21 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	featuregate "k8s.io/component-base/featuregate"
 
 	"github.com/kcp-dev/logicalcluster/v3"
+
 	"github.com/kcp-dev/kcp/pkg/features"
 )
 
 // MockWorkspaceAwareMetricsCollector provides a mock implementation for testing
 type MockWorkspaceAwareMetricsCollector struct {
-	clusters      map[logicalcluster.Name][]string
+	clusters       map[logicalcluster.Name][]string
 	clusterMetrics map[string]*MockClusterMetrics
-	shouldError   bool
-	errorMessage  string
+	shouldError    bool
+	errorMessage   string
 }
 
 // MockClusterMetrics represents metrics from a single cluster
@@ -76,7 +78,7 @@ func (m *MockWorkspaceAwareMetricsCollector) CollectClusterMetrics(ctx context.C
 func TestNewMetricsAggregator(t *testing.T) {
 	mockCollector := &MockWorkspaceAwareMetricsCollector{}
 	aggregator := NewMetricsAggregator(mockCollector)
-	
+
 	require.NotNil(t, aggregator)
 	impl, ok := aggregator.(*MetricsAggregatorImpl)
 	require.True(t, ok)
@@ -93,7 +95,7 @@ func TestAggregateMetrics_FeatureFlagDisabled(t *testing.T) {
 
 	mockCollector := &MockWorkspaceAwareMetricsCollector{}
 	aggregator := NewMetricsAggregator(mockCollector)
-	
+
 	ctx := context.Background()
 	workspace := logicalcluster.Name("test-workspace")
 	timeRange := TimeRange{
@@ -102,7 +104,7 @@ func TestAggregateMetrics_FeatureFlagDisabled(t *testing.T) {
 	}
 
 	result, err := aggregator.AggregateMetrics(ctx, workspace, "cpu.usage", AggregationSum, timeRange)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "TMC metrics aggregation is disabled")
@@ -112,14 +114,14 @@ func TestAggregateMetrics_AllStrategies(t *testing.T) {
 	// Enable feature flags
 	featureGate := featuregate.NewFeatureGate()
 	featureGate.Add(map[featuregate.Feature]featuregate.FeatureSpec{
-		features.TMCMetricsAggregation:    {Default: true, PreRelease: featuregate.Alpha},
-		features.TMCAdvancedAggregation:   {Default: true, PreRelease: featuregate.Alpha},
+		features.TMCMetricsAggregation:  {Default: true, PreRelease: featuregate.Alpha},
+		features.TMCAdvancedAggregation: {Default: true, PreRelease: featuregate.Alpha},
 	})
 	utilfeature.DefaultFeatureGate = featureGate
 
 	workspace := logicalcluster.Name("test-workspace")
 	clusters := []string{"cluster1", "cluster2", "cluster3"}
-	
+
 	mockCollector := &MockWorkspaceAwareMetricsCollector{
 		clusters: map[logicalcluster.Name][]string{
 			workspace: clusters,
@@ -185,10 +187,10 @@ func TestAggregateMetrics_AllStrategies(t *testing.T) {
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
 			result, err := aggregator.AggregateMetrics(ctx, workspace, tc.metricName, tc.strategy, timeRange)
-			
+
 			require.NoError(t, err)
 			require.NotNil(t, result)
-			
+
 			assert.Equal(t, tc.expectedValue, result.Value)
 			assert.Equal(t, tc.metricName, result.MetricName)
 			assert.Equal(t, tc.strategy, result.Strategy)
@@ -257,7 +259,7 @@ func TestAggregateMetrics_WorkspaceIsolation(t *testing.T) {
 
 	workspace1 := logicalcluster.Name("workspace1")
 	workspace2 := logicalcluster.Name("workspace2")
-	
+
 	mockCollector := &MockWorkspaceAwareMetricsCollector{
 		clusters: map[logicalcluster.Name][]string{
 			workspace1: {"cluster1", "cluster2"},
@@ -323,7 +325,7 @@ func TestAggregateMetrics_ErrorConditions(t *testing.T) {
 		aggregator := NewMetricsAggregator(mockCollector)
 
 		result, err := aggregator.AggregateMetrics(ctx, workspace, "cpu.usage", AggregationSum, timeRange)
-		
+
 		assert.Error(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "failed to list clusters")
@@ -338,7 +340,7 @@ func TestAggregateMetrics_ErrorConditions(t *testing.T) {
 		aggregator := NewMetricsAggregator(mockCollector)
 
 		result, err := aggregator.AggregateMetrics(ctx, workspace, "cpu.usage", AggregationSum, timeRange)
-		
+
 		assert.Error(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "no clusters found in workspace")
@@ -359,7 +361,7 @@ func TestAggregateMetrics_ErrorConditions(t *testing.T) {
 		aggregator := NewMetricsAggregator(mockCollector)
 
 		result, err := aggregator.AggregateMetrics(ctx, workspace, "cpu.usage", AggregationSum, timeRange)
-		
+
 		assert.Error(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "no metric values found for cpu.usage")
@@ -382,7 +384,7 @@ func TestAggregateMetrics_ErrorConditions(t *testing.T) {
 		// Test with invalid strategy by calling the internal method directly
 		impl := aggregator.(*MetricsAggregatorImpl)
 		_, err := impl.applyAggregationStrategy(AggregationStrategy("invalid"), []float64{10.0})
-		
+
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported aggregation strategy")
 	})
@@ -420,7 +422,7 @@ func TestAggregateMetrics_EdgeCases(t *testing.T) {
 		for _, strategy := range strategies {
 			t.Run(string(strategy), func(t *testing.T) {
 				result, err := aggregator.AggregateMetrics(ctx, workspace, "cpu.usage", strategy, timeRange)
-				
+
 				require.NoError(t, err)
 				assert.Equal(t, 42.0, result.Value) // All strategies should return same value for single cluster
 				assert.Equal(t, 1, result.ClusterCount)
@@ -449,7 +451,7 @@ func TestAggregateMetrics_EdgeCases(t *testing.T) {
 		aggregator := NewMetricsAggregator(mockCollector)
 
 		result, err := aggregator.AggregateMetrics(ctx, workspace, "cpu.usage", AggregationSum, timeRange)
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, 0.0, result.Value)
 		assert.Equal(t, 2, result.ClusterCount)
@@ -474,7 +476,7 @@ func TestAggregateMetrics_EdgeCases(t *testing.T) {
 		aggregator := NewMetricsAggregator(mockCollector)
 
 		result, err := aggregator.AggregateMetrics(ctx, workspace, "cpu.usage", AggregationSum, timeRange)
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, -5.0, result.Value) // -10 + 5
 		assert.Equal(t, 2, result.ClusterCount)
@@ -534,7 +536,7 @@ func TestAggregateTimeSeries(t *testing.T) {
 
 	workspace := logicalcluster.Name("test-workspace")
 	baseTime := time.Now().Truncate(time.Minute)
-	
+
 	mockCollector := &MockWorkspaceAwareMetricsCollector{
 		clusters: map[logicalcluster.Name][]string{
 			workspace: {"cluster1", "cluster2"},
@@ -562,7 +564,7 @@ func TestAggregateTimeSeries(t *testing.T) {
 	}
 
 	result, err := aggregator.AggregateTimeSeries(ctx, workspace, "cpu.usage", AggregationSum, timeRange)
-	
+
 	require.NoError(t, err)
 	require.NotNil(t, result)
 	assert.Equal(t, "cpu.usage", result.MetricName)
@@ -580,7 +582,7 @@ func TestAggregateTimeSeries_FeatureFlagDisabled(t *testing.T) {
 
 	mockCollector := &MockWorkspaceAwareMetricsCollector{}
 	aggregator := NewMetricsAggregator(mockCollector)
-	
+
 	ctx := context.Background()
 	workspace := logicalcluster.Name("test-workspace")
 	timeRange := TimeRange{
@@ -589,7 +591,7 @@ func TestAggregateTimeSeries_FeatureFlagDisabled(t *testing.T) {
 	}
 
 	result, err := aggregator.AggregateTimeSeries(ctx, workspace, "cpu.usage", AggregationSum, timeRange)
-	
+
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Contains(t, err.Error(), "TMC time series consolidation is disabled")
@@ -598,13 +600,13 @@ func TestAggregateTimeSeries_FeatureFlagDisabled(t *testing.T) {
 func TestConsolidateTimeSeries(t *testing.T) {
 	mockCollector := &MockWorkspaceAwareMetricsCollector{}
 	aggregator := NewMetricsAggregator(mockCollector)
-	
+
 	baseTime := time.Now().Truncate(time.Minute)
 	interval := time.Minute
 
 	t.Run("empty time series", func(t *testing.T) {
 		result, err := aggregator.ConsolidateTimeSeries([]*TimeSeries{}, interval)
-		
+
 		assert.Error(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "no time series to consolidate")
@@ -627,7 +629,7 @@ func TestConsolidateTimeSeries(t *testing.T) {
 		}
 
 		result, err := aggregator.ConsolidateTimeSeries(timeSeries, interval)
-		
+
 		assert.Error(t, err)
 		assert.Nil(t, result)
 		assert.Contains(t, err.Error(), "inconsistent metric names")
@@ -654,7 +656,7 @@ func TestConsolidateTimeSeries(t *testing.T) {
 		}
 
 		result, err := aggregator.ConsolidateTimeSeries(timeSeries, interval)
-		
+
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		assert.Equal(t, "cpu.usage", result.MetricName)
@@ -695,7 +697,7 @@ func TestConsolidateTimeSeries(t *testing.T) {
 		}
 
 		result, err := aggregator.ConsolidateTimeSeries(timeSeries, interval)
-		
+
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		assert.Len(t, result.Points, 4) // Original 2 points + 2 gap-filled points
@@ -724,7 +726,7 @@ func TestConsolidateTimeSeries(t *testing.T) {
 func TestGetTimeSeriesFromCluster(t *testing.T) {
 	workspace := logicalcluster.Name("test-workspace")
 	baseTime := time.Now()
-	
+
 	mockCollector := &MockWorkspaceAwareMetricsCollector{
 		clusterMetrics: map[string]*MockClusterMetrics{
 			"cluster1": {
@@ -737,7 +739,7 @@ func TestGetTimeSeriesFromCluster(t *testing.T) {
 
 	aggregator := NewMetricsAggregator(mockCollector)
 	impl := aggregator.(*MetricsAggregatorImpl)
-	
+
 	ctx := context.Background()
 	timeRange := TimeRange{
 		Start: baseTime.Add(-time.Hour),
@@ -746,7 +748,7 @@ func TestGetTimeSeriesFromCluster(t *testing.T) {
 
 	t.Run("successful retrieval", func(t *testing.T) {
 		result, err := impl.getTimeSeriesFromCluster(ctx, "cluster1", workspace, "cpu.usage", timeRange)
-		
+
 		require.NoError(t, err)
 		require.NotNil(t, result)
 		assert.Equal(t, "cpu.usage", result.MetricName)
@@ -760,14 +762,14 @@ func TestGetTimeSeriesFromCluster(t *testing.T) {
 
 	t.Run("metric not found", func(t *testing.T) {
 		result, err := impl.getTimeSeriesFromCluster(ctx, "cluster1", workspace, "nonexistent.metric", timeRange)
-		
+
 		require.NoError(t, err)
 		assert.Nil(t, result)
 	})
 
 	t.Run("cluster not found", func(t *testing.T) {
 		result, err := impl.getTimeSeriesFromCluster(ctx, "nonexistent-cluster", workspace, "cpu.usage", timeRange)
-		
+
 		require.NoError(t, err)
 		assert.Nil(t, result) // Should return nil for missing cluster
 	})

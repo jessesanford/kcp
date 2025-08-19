@@ -22,11 +22,11 @@ import (
 	"strings"
 
 	"github.com/spf13/pflag"
+
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	genericfeatures "k8s.io/apiserver/pkg/util/feature"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
-	"k8s.io/component-base/version"
+	logsapiv1 "k8s.io/component-base/logs/api/v1"
 )
 
 const (
@@ -58,6 +58,11 @@ const (
 	// Enables VirtualWorkspace urls on APIExport. This enables to use Deprecated APIExport VirtualWorkspace urls.
 	// This is a temporary feature to ease the migration to the new VirtualWorkspace urls.
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls featuregate.Feature = "EnableDeprecatedAPIExportVirtualWorkspacesUrls"
+
+	// owner: @mjudeikis
+	// alpha: v0.1
+	// Enables workspace mounts functionality
+	WorkspaceMounts featuregate.Feature = "WorkspaceMounts"
 
 	// TMC Feature Flags
 
@@ -105,12 +110,14 @@ const (
 var DefaultFeatureGate = utilfeature.DefaultFeatureGate
 
 func init() {
-	utilruntime.Must(utilfeature.DefaultMutableFeatureGate.AddVersioned(defaultVersionedGenericControlPlaneFeatureGates))
+	utilruntime.Must(utilfeature.DefaultMutableFeatureGate.Add(defaultGenericControlPlaneFeatureGates))
+	// Add Kubernetes logging feature gates that are expected by the logging system
+	utilruntime.Must(logsapiv1.AddFeatureGates(utilfeature.DefaultMutableFeatureGate))
 }
 
 func KnownFeatures() []string {
-	features := make([]string, 0, len(defaultVersionedGenericControlPlaneFeatureGates))
-	for k := range defaultVersionedGenericControlPlaneFeatureGates {
+	features := make([]string, 0, len(defaultGenericControlPlaneFeatureGates))
+	for k := range defaultGenericControlPlaneFeatureGates {
 		features = append(features, string(k))
 	}
 	return features
@@ -127,27 +134,12 @@ type kcpFeatureGate struct {
 	featuregate.MutableFeatureGate
 }
 
-func featureSpecAtEmulationVersion(v featuregate.VersionedSpecs, emulationVersion *version.Version) *featuregate.FeatureSpec {
-	i := len(v) - 1
-	for ; i >= 0; i-- {
-		if v[i].Version.GreaterThan(emulationVersion) {
-			continue
-		}
-		return &v[i]
-	}
-	return &featuregate.FeatureSpec{
-		Default:    false,
-		PreRelease: featuregate.PreAlpha,
-		Version:    version.MajorMinor(0, 0),
-	}
-}
+// Removed - using simple feature gates now
 
 func (f *kcpFeatureGate) String() string {
 	pairs := []string{}
-	emulatedVersion := utilfeature.DefaultMutableFeatureGate.EmulationVersion()
 
-	for featureName, versionedSpecs := range defaultVersionedGenericControlPlaneFeatureGates {
-		spec := featureSpecAtEmulationVersion(versionedSpecs, emulatedVersion)
+	for featureName, spec := range defaultGenericControlPlaneFeatureGates {
 		pairs = append(pairs, fmt.Sprintf("%s=%t", featureName, spec.Default))
 	}
 
@@ -191,67 +183,29 @@ func TMCPlacementEnabled() bool {
 // TMCAnyEnabled returns true if any TMC feature is enabled.
 // This can be used for general TMC-related initialization checks.
 func TMCAnyEnabled() bool {
-	return TMCEnabled() || 
+	return TMCEnabled() ||
 		utilfeature.DefaultFeatureGate.Enabled(TMCAPIs) ||
 		utilfeature.DefaultFeatureGate.Enabled(TMCControllers) ||
 		utilfeature.DefaultFeatureGate.Enabled(TMCPlacement)
 }
 
-// defaultVersionedGenericControlPlaneFeatureGates consists of all known kcp-specific feature keys.
+// defaultGenericControlPlaneFeatureGates consists of all known kcp-specific feature keys.
 // To add a new feature, define a key for it above and add it here. The features will be
 // available throughout kcp binaries.
-var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]featuregate.VersionedSpecs{
-	VirtualWorkspaces: {
-		{Version: version.MustParse("1.24"), Default: false, PreRelease: featuregate.Alpha},
-		{Version: version.MustParse("1.26"), Default: true, PreRelease: featuregate.Beta},
-	},
-	LocationInVirtualWorkspaces: {
-		{Version: version.MustParse("1.24"), Default: false, PreRelease: featuregate.Alpha},
-		{Version: version.MustParse("1.26"), Default: true, PreRelease: featuregate.Beta},
-	},
-	AdvancedScheduling: {
-		{Version: version.MustParse("1.24"), Default: false, PreRelease: featuregate.Alpha},
-	},
-	ShardedServer: {
-		{Version: version.MustParse("1.27"), Default: false, PreRelease: featuregate.Alpha},
-	},
-	CacheAPIs: {
-		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
-	},
-	EnableDeprecatedAPIExportVirtualWorkspacesUrls: {
-		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
-	},
+var defaultGenericControlPlaneFeatureGates = map[featuregate.Feature]featuregate.FeatureSpec{
+	VirtualWorkspaces: {Default: false, PreRelease: featuregate.Alpha},
+	LocationInVirtualWorkspaces: {Default: false, PreRelease: featuregate.Alpha},
+	AdvancedScheduling: {Default: false, PreRelease: featuregate.Alpha},
+	ShardedServer: {Default: false, PreRelease: featuregate.Alpha},
+	CacheAPIs: {Default: false, PreRelease: featuregate.Alpha},
+	EnableDeprecatedAPIExportVirtualWorkspacesUrls: {Default: false, PreRelease: featuregate.Alpha},
+	WorkspaceMounts: {Default: false, PreRelease: featuregate.Alpha},
 	// TMC Feature Flags
-	TMCFeature: {
-		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
-	},
-	TMCAPIs: {
-		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
-	},
-	TMCControllers: {
-		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
-	},
-	TMCPlacement: {
-		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
-	},
-	TMCMetricsAggregation: {
-		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
-	},
-	TMCAdvancedAggregation: {
-		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
-	},
-	TMCTimeSeriesConsolidation: {
-		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
-	},
-	// inherited features from generic apiserver, relisted here to get a conflict if it is changed
-	// unintentionally on either side:
-	genericfeatures.APIResponseCompression: {
-		{Version: version.MustParse("1.8"), Default: false, PreRelease: featuregate.Alpha},
-		{Version: version.MustParse("1.16"), Default: true, PreRelease: featuregate.Beta},
-	},
-
-	genericfeatures.OpenAPIEnums: {
-		{Version: version.MustParse("1.23"), Default: false, PreRelease: featuregate.Alpha},
-		{Version: version.MustParse("1.24"), Default: true, PreRelease: featuregate.Beta},
-	},
+	TMCFeature: {Default: false, PreRelease: featuregate.Alpha},
+	TMCAPIs: {Default: false, PreRelease: featuregate.Alpha},
+	TMCControllers: {Default: false, PreRelease: featuregate.Alpha},
+	TMCPlacement: {Default: false, PreRelease: featuregate.Alpha},
+	TMCMetricsAggregation: {Default: false, PreRelease: featuregate.Alpha},
+	TMCAdvancedAggregation: {Default: false, PreRelease: featuregate.Alpha},
+	TMCTimeSeriesConsolidation: {Default: false, PreRelease: featuregate.Alpha},
 }
