@@ -11,9 +11,7 @@
     "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
   },
   "remoteUser": "vscode",
-  "onCreateCommand": "echo 'Container created' | tee /tmp/container-created.log",
-  "postCreateCommand": "(.devcontainer/install-kind.sh || echo 'KIND install failed') && (.devcontainer/checkout-repos.sh || echo 'Checkout repos failed') && (.devcontainer/recreate-existing-worktrees.sh || echo 'Worktree recreation failed') && .devcontainer/setup-shell-environment.sh 2>&1 | tee /tmp/postCreateCommand.log",
-  "postStartCommand": ".devcontainer/setup-shell-environment.sh 2>&1 | tee /tmp/postStartCommand.log",
+  "postCreateCommand": ".devcontainer/install-kind.sh && .devcontainer/checkout-repos.sh && .devcontainer/recreate-existing-worktrees.sh && echo 'Devcontainer setup complete - Node.js will be available in shell sessions'",
   "customizations": {
     "vscode": {
       "extensions": [
