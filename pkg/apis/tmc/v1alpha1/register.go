@@ -25,8 +25,11 @@ import (
 // GroupName specifies the group name used to register the objects.
 const GroupName = "tmc.kcp.io"
 
+// Version specifies the API version.
+const Version = "v1alpha1"
+
 // GroupVersion specifies the group and the version used to register the objects.
-var GroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
+var GroupVersion = schema.GroupVersion{Group: GroupName, Version: Version}
 
 // SchemeGroupVersion is group version used to register these objects
 // Deprecated: use GroupVersion instead.
@@ -46,7 +49,7 @@ func Kind(kind string) schema.GroupKind {
 
 // Resource takes an unqualified resource and returns a Group qualified GroupResource
 func Resource(resource string) schema.GroupResource {
-	return GroupVersion.WithResource(resource).GroupResource()
+	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
 
 // addKnownTypes adds the set of types defined in this package to the supplied scheme.
