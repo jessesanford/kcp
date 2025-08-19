@@ -11,7 +11,7 @@
     "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
   },
   "remoteUser": "vscode",
-  "postCreateCommand": ".devcontainer/install-kind.sh && .devcontainer/checkout-repos.sh && .devcontainer/recreate-existing-worktrees.sh && echo 'Devcontainer setup complete - Node.js will be available in shell sessions'",
+  "postCreateCommand": ".devcontainer/install-kind.sh && .devcontainer/checkout-repos.sh && .devcontainer/recreate-existing-worktrees.sh && source /usr/local/share/nvm/nvm.sh && nvm install --lts && nvm use --lts && nvm alias default lts/* && npm install -g @anthropic-ai/claude-code && echo 'Devcontainer setup complete - Node.js/npm/claude installed'",
   "customizations": {
     "vscode": {
       "extensions": [
