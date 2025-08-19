@@ -2,7 +2,7 @@ apiVersion: apis.kcp.io/v1alpha1
 kind: APIResourceSchema
 metadata:
   creationTimestamp: null
-  name: v240903-d6797056a.shards.core.kcp.io
+  name: v250811-04c266ec.shards.core.kcp.io
 spec:
   group: core.kcp.io
   names:
@@ -151,6 +151,10 @@ spec:
                 - type
                 type: object
               type: array
+            logicalCluster:
+              description: LogicalCluster is the logical cluster this shard status
+                belongs to
+              type: string
           type: object
       type: object
     served: true

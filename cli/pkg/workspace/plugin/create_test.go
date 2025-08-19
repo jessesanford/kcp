@@ -38,6 +38,7 @@ import (
 
 	corev1alpha1 "github.com/kcp-dev/kcp/sdk/apis/core/v1alpha1"
 	tenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/tenancy/v1alpha1"
+	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 	kcpfakeclient "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/fake"
 )
 
@@ -47,6 +48,7 @@ func TestCreate(t *testing.T) {
 		config clientcmdapi.Config
 
 		existingWorkspaces []string // existing workspaces
+		skipInitialType    bool
 		markReady          bool
 
 		newWorkspaceName                 string
@@ -64,6 +66,7 @@ func TestCreate(t *testing.T) {
 				AuthInfos: map[string]*clientcmdapi.AuthInfo{"test": {Token: "test"}},
 			},
 			newWorkspaceName: "bar",
+			markReady:        true,
 		},
 		{
 			name: "create, use after creation, but not ready",
@@ -101,6 +104,18 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name: "create, already existing",
+			config: clientcmdapi.Config{CurrentContext: "test",
+				Contexts:  map[string]*clientcmdapi.Context{"test": {Cluster: "test", AuthInfo: "test"}},
+				Clusters:  map[string]*clientcmdapi.Cluster{"test": {Server: "https://test/clusters/root:foo"}},
+				AuthInfos: map[string]*clientcmdapi.AuthInfo{"test": {Token: "test"}},
+			},
+			existingWorkspaces: []string{"bar"},
+			skipInitialType:    true,
+			newWorkspaceName:   "bar",
+			ignoreExisting:     true,
+		},
+		{
+			name: "create, already existing, use after creation",
 			config: clientcmdapi.Config{CurrentContext: "test",
 				Contexts:  map[string]*clientcmdapi.Context{"test": {Cluster: "test", AuthInfo: "test"}},
 				Clusters:  map[string]*clientcmdapi.Cluster{"test": {Server: "https://test/clusters/root:foo"}},
@@ -193,6 +208,9 @@ func TestCreate(t *testing.T) {
 			for _, name := range tt.existingWorkspaces {
 				objects = append(objects, &tenancyv1alpha1.Workspace{
 					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							logicalcluster.AnnotationKey: currentClusterName.String(),
+						},
 						Name: name,
 					},
 					Spec: tenancyv1alpha1.WorkspaceSpec{
@@ -208,6 +226,24 @@ func TestCreate(t *testing.T) {
 				})
 			}
 			client := kcpfakeclient.NewSimpleClientset(objects...)
+
+			// Fill up the resources map for the discovery client
+			for _, name := range append(tt.existingWorkspaces, tt.newWorkspaceName) {
+				if client.Resources == nil {
+					client.Resources = map[logicalcluster.Path][]*metav1.APIResourceList{}
+				}
+				client.Resources[logicalcluster.NewPath(currentClusterName.String()).Join(name)] = []*metav1.APIResourceList{
+					{
+						GroupVersion: tenancyv1alpha1.SchemeGroupVersion.String(),
+						APIResources: []metav1.APIResource{
+							{
+								Name:         "workspaces",
+								SingularName: "workspace",
+							},
+						},
+					},
+				}
+			}
 
 			workspaceType := tt.newWorkspaceType
 			if tt.newWorkspaceType == nil {
@@ -234,7 +270,9 @@ func TestCreate(t *testing.T) {
 
 			opts := NewCreateWorkspaceOptions(genericclioptions.NewTestIOStreamsDiscard())
 			opts.Name = tt.newWorkspaceName
-			opts.Type = workspaceType.Path + ":" + string(workspaceType.Name)
+			if !tt.skipInitialType {
+				opts.Type = workspaceType.Path + ":" + string(workspaceType.Name)
+			}
 			opts.IgnoreExisting = tt.ignoreExisting
 			opts.EnterAfterCreate = tt.useAfterCreation
 			opts.ReadyWaitTimeout = time.Second
@@ -243,6 +281,9 @@ func TestCreate(t *testing.T) {
 				return nil
 			}
 			opts.kcpClusterClient = client
+			opts.newKCPClusterClient = func(config clientcmd.ClientConfig) (kcpclientset.ClusterInterface, error) {
+				return client, nil
+			}
 			opts.ClientConfig = clientcmd.NewDefaultClientConfig(*tt.config.DeepCopy(), nil)
 			err := opts.Run(context.Background())
 			if tt.wantErr {
