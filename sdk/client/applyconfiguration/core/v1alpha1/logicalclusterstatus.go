@@ -21,17 +21,15 @@ package v1alpha1
 import (
 	corev1alpha1 "github.com/kcp-dev/kcp/sdk/apis/core/v1alpha1"
 	conditionsv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
-	v3 "github.com/kcp-dev/logicalcluster/v3"
 )
 
 // LogicalClusterStatusApplyConfiguration represents a declarative configuration of the LogicalClusterStatus type for use
 // with apply.
 type LogicalClusterStatusApplyConfiguration struct {
-	URL            *string                                  `json:"URL,omitempty"`
-	Phase          *corev1alpha1.LogicalClusterPhaseType    `json:"phase,omitempty"`
-	Conditions     *conditionsv1alpha1.Conditions           `json:"conditions,omitempty"`
-	Initializers   []corev1alpha1.LogicalClusterInitializer `json:"initializers,omitempty"`
-	LogicalCluster *v3.Name                                 `json:"logicalCluster,omitempty"`
+	URL          *string                                  `json:"URL,omitempty"`
+	Phase        *corev1alpha1.LogicalClusterPhaseType    `json:"phase,omitempty"`
+	Conditions   *conditionsv1alpha1.Conditions           `json:"conditions,omitempty"`
+	Initializers []corev1alpha1.LogicalClusterInitializer `json:"initializers,omitempty"`
 }
 
 // LogicalClusterStatusApplyConfiguration constructs a declarative configuration of the LogicalClusterStatus type for use with
@@ -71,13 +69,5 @@ func (b *LogicalClusterStatusApplyConfiguration) WithInitializers(values ...core
 	for i := range values {
 		b.Initializers = append(b.Initializers, values[i])
 	}
-	return b
-}
-
-// WithLogicalCluster sets the LogicalCluster field in the declarative configuration to the given value
-// and returns the receiver, so that objects can be built by chaining "With" function invocations.
-// If called multiple times, the LogicalCluster field is set to the value of the last call.
-func (b *LogicalClusterStatusApplyConfiguration) WithLogicalCluster(value v3.Name) *LogicalClusterStatusApplyConfiguration {
-	b.LogicalCluster = &value
 	return b
 }

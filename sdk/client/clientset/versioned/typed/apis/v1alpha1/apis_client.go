@@ -21,9 +21,10 @@ package v1alpha1
 import (
 	http "net/http"
 
+	rest "k8s.io/client-go/rest"
+
 	apisv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/apis/v1alpha1"
 	scheme "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/scheme"
-	rest "k8s.io/client-go/rest"
 )
 
 type ApisV1alpha1Interface interface {
@@ -65,7 +66,9 @@ func (c *ApisV1alpha1Client) APIResourceSchemas() APIResourceSchemaInterface {
 // where httpClient was generated with rest.HTTPClientFor(c).
 func NewForConfig(c *rest.Config) (*ApisV1alpha1Client, error) {
 	config := *c
-	setConfigDefaults(&config)
+	if err := setConfigDefaults(&config); err != nil {
+		return nil, err
+	}
 	httpClient, err := rest.HTTPClientFor(&config)
 	if err != nil {
 		return nil, err
@@ -77,7 +80,9 @@ func NewForConfig(c *rest.Config) (*ApisV1alpha1Client, error) {
 // Note the http client provided takes precedence over the configured transport values.
 func NewForConfigAndClient(c *rest.Config, h *http.Client) (*ApisV1alpha1Client, error) {
 	config := *c
-	setConfigDefaults(&config)
+	if err := setConfigDefaults(&config); err != nil {
+		return nil, err
+	}
 	client, err := rest.RESTClientForConfigAndClient(&config, h)
 	if err != nil {
 		return nil, err
@@ -100,7 +105,7 @@ func New(c rest.Interface) *ApisV1alpha1Client {
 	return &ApisV1alpha1Client{c}
 }
 
-func setConfigDefaults(config *rest.Config) {
+func setConfigDefaults(config *rest.Config) error {
 	gv := apisv1alpha1.SchemeGroupVersion
 	config.GroupVersion = &gv
 	config.APIPath = "/apis"
@@ -109,6 +114,8 @@ func setConfigDefaults(config *rest.Config) {
 	if config.UserAgent == "" {
 		config.UserAgent = rest.DefaultKubernetesUserAgent()
 	}
+
+	return nil
 }
 
 // RESTClient returns a RESTClient that is used to communicate

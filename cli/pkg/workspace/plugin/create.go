@@ -63,8 +63,7 @@ type CreateWorkspaceOptions struct {
 	kcpClusterClient kcpclientset.ClusterInterface
 
 	// for testing - passed to UseWorkspaceOptions
-	newKCPClusterClient func(config clientcmd.ClientConfig) (kcpclientset.ClusterInterface, error)
-	modifyConfig        func(configAccess clientcmd.ConfigAccess, newConfig *clientcmdapi.Config) error
+	modifyConfig func(configAccess clientcmd.ConfigAccess, newConfig *clientcmdapi.Config) error
 }
 
 // NewCreateWorkspaceOptions returns a new CreateWorkspaceOptions.
@@ -177,7 +176,7 @@ func (o *CreateWorkspaceOptions) Run(ctx context.Context) error {
 
 	workspaceReference := fmt.Sprintf("Workspace %q (type %s)", o.Name, logicalcluster.NewPath(ws.Spec.Type.Path).Join(string(ws.Spec.Type.Name)).String())
 	if preExisting {
-		if structuredWorkspaceType != nil && (ws.Spec.Type.Name != "" && ws.Spec.Type.Name != structuredWorkspaceType.Name || ws.Spec.Type.Path != structuredWorkspaceType.Path) {
+		if ws.Spec.Type.Name != "" && ws.Spec.Type.Name != structuredWorkspaceType.Name || ws.Spec.Type.Path != structuredWorkspaceType.Path {
 			wsTypeString := logicalcluster.NewPath(ws.Spec.Type.Path).Join(string(ws.Spec.Type.Name)).String()
 			structuredWorkspaceTypeString := logicalcluster.NewPath(structuredWorkspaceType.Path).Join(string(structuredWorkspaceType.Name)).String()
 			return fmt.Errorf("workspace %q cannot be created with type %s, it already exists with different type %s", o.Name, structuredWorkspaceTypeString, wsTypeString)
@@ -234,22 +233,10 @@ func (o *CreateWorkspaceOptions) Run(ctx context.Context) error {
 	if o.EnterAfterCreate {
 		useOptions := NewUseWorkspaceOptions(o.IOStreams)
 		useOptions.Name = ws.Name
-		useOptions.ClientConfig = o.ClientConfig
-
-		startingConfig, err := o.ClientConfig.RawConfig()
-		if err != nil {
-			return fmt.Errorf("error getting rawconfig for use: %w", err)
-		}
-		useOptions.startingConfig = &startingConfig
-
 		// only for unit test needs
 		if o.modifyConfig != nil {
 			useOptions.modifyConfig = o.modifyConfig
 		}
-		if o.newKCPClusterClient != nil {
-			useOptions.newKCPClusterClient = o.newKCPClusterClient
-		}
-
 		if err := useOptions.Complete(nil); err != nil {
 			return err
 		}

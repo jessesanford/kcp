@@ -18,8 +18,8 @@ package rootapiserver
 
 import (
 	genericapiserver "k8s.io/apiserver/pkg/server"
-	"k8s.io/apiserver/pkg/util/compatibility"
 	"k8s.io/client-go/rest"
+	utilversion "k8s.io/component-base/version"
 
 	"github.com/kcp-dev/kcp/pkg/virtual/framework"
 )
@@ -75,7 +75,7 @@ func NewConfig(recommendedConfig *genericapiserver.RecommendedConfig) (*Config, 
 	recommendedConfig.Config.LoopbackClientConfig = &rest.Config{
 		Host: "loopback-config-not-wired-for-now",
 	}
-	recommendedConfig.EffectiveVersion = compatibility.DefaultBuildEffectiveVersion()
+	recommendedConfig.EffectiveVersion = utilversion.DefaultKubeEffectiveVersion()
 
 	ret := &Config{
 		Generic: recommendedConfig,

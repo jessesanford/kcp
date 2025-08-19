@@ -34,7 +34,6 @@ import (
 	"k8s.io/kubernetes/plugin/pkg/admission/limitranger"
 	"k8s.io/kubernetes/plugin/pkg/admission/network/defaultingressclass"
 	"k8s.io/kubernetes/plugin/pkg/admission/nodetaint"
-	"k8s.io/kubernetes/plugin/pkg/admission/podtopologylabels"
 	podpriority "k8s.io/kubernetes/plugin/pkg/admission/priority"
 	"k8s.io/kubernetes/plugin/pkg/admission/runtimeclass"
 	"k8s.io/kubernetes/plugin/pkg/admission/security/podsecurity"
@@ -193,7 +192,6 @@ var defaultOnKubePluginsInKube = sets.New[string](
 	certsubjectrestriction.PluginName,       // CertificateSubjectRestriction
 	defaultingressclass.PluginName,          // DefaultIngressClass
 	podsecurity.PluginName,                  // PodSecurity
-	podtopologylabels.PluginName,            // PodTopologyLabels
 	mutatingadmissionpolicy.PluginName,      // MutatingAdmissionPolicy
 )
 
