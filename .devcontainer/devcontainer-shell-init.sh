@@ -15,7 +15,7 @@ if [ ! -f "$SETUP_COMPLETE_FILE" ]; then
             echo "🔧 Installing Node.js LTS..."
             nvm install --lts >/dev/null 2>&1
             nvm use --lts >/dev/null 2>&1  
-            nvm alias default lts/* >/dev/null 2>&1
+            nvm alias default 'lts/*' >/dev/null 2>&1
         fi
         
         # Install Claude CLI if not available
