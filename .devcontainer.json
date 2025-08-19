@@ -14,6 +14,6 @@
         ]
       }
     },
-    "forwardPorts": 
+    "forwardPorts": [6789, 8080]
   }
   
