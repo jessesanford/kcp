@@ -36,7 +36,6 @@ require (
 	go.uber.org/multierr v1.11.0
 	golang.org/x/sys v0.33.0
 	gopkg.in/square/go-jose.v2 v2.6.0
-<<<<<<< HEAD
 	k8s.io/api v0.33.3
 	k8s.io/apiextensions-apiserver v0.33.3
 	k8s.io/apimachinery v0.33.3
@@ -48,20 +47,7 @@ require (
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
 	k8s.io/kubernetes v1.33.3
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397
-=======
-	k8s.io/api v0.33.0
-	k8s.io/apiextensions-apiserver v0.33.0
-	k8s.io/apimachinery v0.33.0
-	k8s.io/apiserver v0.33.0
-	k8s.io/client-go v0.33.0
-	k8s.io/code-generator v0.32.3
-	k8s.io/component-base v0.33.0
-	k8s.io/klog/v2 v2.130.1
-	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff
-	k8s.io/kubernetes v1.32.3
-	k8s.io/utils v0.0.0-20241210054802-24370beab758
 	sigs.k8s.io/controller-runtime v0.21.0
->>>>>>> origin/feature/tmc-syncer-02a1-controller-base
 	sigs.k8s.io/structured-merge-diff/v4 v4.6.0
 	sigs.k8s.io/yaml v1.4.0
 )
@@ -163,12 +149,8 @@ require (
 	golang.org/x/term v0.32.0 // indirect
 	golang.org/x/text v0.25.0 // indirect
 	golang.org/x/time v0.11.0 // indirect
-<<<<<<< HEAD
 	golang.org/x/tools v0.33.0 // indirect
-=======
-	golang.org/x/tools v0.32.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
->>>>>>> origin/feature/tmc-syncer-02a1-controller-base
 	google.golang.org/genproto v0.0.0-20240213162025-012b6fc9bca9 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241209162323-e6fa225c2576 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241209162323-e6fa225c2576 // indirect
@@ -187,7 +169,6 @@ require (
 	k8s.io/dynamic-resource-allocation v0.0.0 // indirect
 	k8s.io/endpointslice v0.0.0 // indirect
 	k8s.io/externaljwt v0.0.0 // indirect
-<<<<<<< HEAD
 	k8s.io/gengo/v2 v2.0.0-20250513215321-e3bc6f1e78b4 // indirect
 	k8s.io/kms v0.33.3 // indirect
 	k8s.io/kube-aggregator v0.0.0 // indirect
@@ -195,15 +176,6 @@ require (
 	k8s.io/kubelet v0.0.0 // indirect
 	k8s.io/mount-utils v0.0.0 // indirect
 	k8s.io/pod-security-admission v0.0.0 // indirect
-=======
-	k8s.io/gengo/v2 v2.0.0-20240911193312-2b36238f13e9 // indirect
-	k8s.io/kms v0.32.3 // indirect
-	k8s.io/kube-aggregator v0.32.3 // indirect
-	k8s.io/kube-controller-manager v0.32.3 // indirect
-	k8s.io/kubelet v0.32.3 // indirect
-	k8s.io/mount-utils v0.32.3 // indirect
-	k8s.io/pod-security-admission v0.32.3 // indirect
->>>>>>> origin/feature/tmc-syncer-02a1-controller-base
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
