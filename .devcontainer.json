@@ -1,6 +1,6 @@
 {
     "name": "Go K8s Dev",
-    "image": "mcr.microsoft.com/devcontainers/go:1-22", 
+    "image": "mcr.microsoft.com/devcontainers/go:1.22-bullseye", 
     "features": {
       "ghcr.io/devcontainers/features/docker-in-docker:2": {},
       "ghcr.io/devcontainers/features/kubectl:1": { "version": "latest" },
