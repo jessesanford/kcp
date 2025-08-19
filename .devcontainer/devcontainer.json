@@ -9,7 +9,7 @@
     "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
   },
   "remoteUser": "vscode",
-  "postCreateCommand": ".devcontainer/setup-ssh.sh && .devcontainer/install-kubectl.sh && .devcontainer/install-kind.sh && (.devcontainer/checkout-repos.sh || echo 'Warning: checkout-repos.sh failed, continuing...') && (.devcontainer/recreate-existing-worktrees.sh || echo 'Warning: recreate-existing-worktrees.sh failed, continuing...')",
+  "postCreateCommand": ".devcontainer/setup-ssh.sh && .devcontainer/install-kubectl.sh && .devcontainer/install-kind.sh && .devcontainer/install-claude-code.sh && (.devcontainer/checkout-repos.sh || echo 'Warning: checkout-repos.sh failed, continuing...') && (.devcontainer/recreate-existing-worktrees.sh || echo 'Warning: recreate-existing-worktrees.sh failed, continuing...')",
   "customizations": {
     "vscode": {
       "extensions": [
