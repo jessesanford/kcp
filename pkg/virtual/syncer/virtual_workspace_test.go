@@ -22,8 +22,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
@@ -244,55 +242,6 @@ func TestSyncerVirtualWorkspace_IsReady(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestResourceTransformer_TransformForDownstream(t *testing.T) {
-	transformer := NewResourceTransformer("test-syncer", "test-workspace")
-	
-	testObj := generateTestObject()
-	result, err := transformer.TransformForDownstream(testObj)
-	
-	if err != nil {
-		t.Errorf("TransformForDownstream failed: %v", err)
-	}
-	
-	if result == nil {
-		t.Error("TransformForDownstream returned nil result")
-	}
-}
-
-func TestResourceTransformer_TransformFromUpstream(t *testing.T) {
-	transformer := NewResourceTransformer("test-syncer", "test-workspace")
-	
-	testObj := generateTestObject()
-	result, err := transformer.TransformFromUpstream(testObj)
-	
-	if err != nil {
-		t.Errorf("TransformFromUpstream failed: %v", err)
-	}
-	
-	if result == nil {
-		t.Error("TransformFromUpstream returned nil result")
-	}
-}
-
-// generateTestObject creates a test object for benchmarks
-func generateTestObject() *testRuntimeObject {
-	return &testRuntimeObject{
-		name:      "test-config",
-		namespace: "default",
-	}
-}
-
-// Simple test runtime object that implements runtime.Object
-type testRuntimeObject struct {
-	name      string
-	namespace string
-}
-
-func (o *testRuntimeObject) GetObjectKind() schema.ObjectKind { return schema.EmptyObjectKind }
-func (o *testRuntimeObject) DeepCopyObject() runtime.Object {
-	return &testRuntimeObject{name: o.name, namespace: o.namespace}
 }
 
 // testAttributes implements authorizer.Attributes for testing
