@@ -155,7 +155,6 @@ func TestNewTMCController(t *testing.T) {
 				SyncHandler: func(ctx context.Context, key string) error {
 					return nil
 				},
-				HealthCheckInterval: 30 * time.Second,
 			},
 			wantError: false,
 		},
@@ -187,17 +186,6 @@ func TestNewTMCController(t *testing.T) {
 			wantError:   true,
 			errorString: "sync handler is required",
 		},
-		"default health check interval": {
-			opts: TMCControllerOptions{
-				Name:     "test-controller",
-				Informer: newMockInformer(),
-				SyncHandler: func(ctx context.Context, key string) error {
-					return nil
-				},
-				HealthCheckInterval: 0, // Should be set to default
-			},
-			wantError: false,
-		},
 	}
 
 	for name, tc := range tests {
@@ -212,11 +200,6 @@ func TestNewTMCController(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, controller)
 				assert.Equal(t, tc.opts.Name, controller.GetName())
-				
-				// Check default health check interval was set
-				if tc.opts.HealthCheckInterval == 0 {
-					assert.Equal(t, 30*time.Second, controller.healthCheckInterval)
-				}
 			}
 		})
 	}
@@ -332,46 +315,6 @@ func TestTMCController_SyncHandlerError(t *testing.T) {
 	mu.Lock()
 	defer mu.Unlock()
 	assert.Greater(t, callCount, 1, "Expected multiple calls due to error retry")
-}
-
-func TestTMCController_HealthChecker(t *testing.T) {
-	mockInf := newMockInformer()
-	var healthCheckCalls int
-	var mu sync.Mutex
-
-	healthChecker := func(ctx context.Context) (bool, error) {
-		mu.Lock()
-		defer mu.Unlock()
-		healthCheckCalls++
-		return true, nil
-	}
-
-	syncHandler := func(ctx context.Context, key string) error {
-		return nil
-	}
-
-	controller, err := NewTMCController(TMCControllerOptions{
-		Name:                "test-controller",
-		Informer:            mockInf,
-		SyncHandler:         syncHandler,
-		HealthChecker:       healthChecker,
-		HealthCheckInterval: 50 * time.Millisecond, // Short interval for testing
-	})
-	require.NoError(t, err)
-
-	// Start controller in background
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	go controller.Start(ctx, 1)
-
-	// Wait for multiple health check cycles
-	time.Sleep(200 * time.Millisecond)
-
-	// Check that health checker was called
-	mu.Lock()
-	defer mu.Unlock()
-	assert.Greater(t, healthCheckCalls, 0, "Expected health checker to be called")
 }
 
 func TestTMCController_QueueLength(t *testing.T) {
