@@ -1,195 +1,256 @@
-# Split Implementation: Wave2b-01 - Virtual Workspace Foundation
+# Split Implementation: Wave2b-03 - Transformation & Tests
 
 ## Overview
-**Branch:** `feature/tmc-syncer-02b-virtual-base`  
-**Target Size:** 473 lines  
-**Dependencies:** Wave1 API Types required  
-**Can Run In Parallel:** No - this is the virtual workspace foundation
+**Branch:** `feature/tmc-syncer-02b-transform`  
+**Target Size:** ~499 lines  
+**Dependencies:** Wave2b-01 (Virtual Base) must be complete  
+**Can Run In Parallel:** Yes, with Wave2b-02 after Wave2b-01
 
 ## Files to Copy
 
 These files should be copied from `/workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/`:
 
-### 1. **pkg/virtual/syncer/doc.go** (29 lines)
-Package documentation and overview of the virtual workspace implementation.
+### 1. **pkg/virtual/syncer/transformation.go** (229 lines)
+Resource transformation between virtual and physical representations:
+- Virtual to physical resource conversion
+- Physical to virtual resource conversion
+- Metadata transformation
+- Status reconciliation
 
-### 2. **pkg/virtual/syncer/context.go** (46 lines)
-Context management for virtual workspace operations.
-
-### 3. **pkg/virtual/syncer/virtual_workspace.go** (201 lines)
-Core virtual workspace implementation including:
-- VirtualWorkspace struct
-- Registration with KCP
-- Resource provider interface
-- Workspace initialization
-
-### 4. **pkg/virtual/syncer/discovery.go** (197 lines)
-Discovery mechanism for virtual resources:
-- Discovery provider implementation
-- API resource listing
-- Group/version management
-- Resource capability advertisement
+### 2. **pkg/virtual/syncer/virtual_workspace_test.go** (~270 lines)
+Comprehensive tests for the virtual workspace implementation:
+- Virtual workspace creation tests
+- Discovery mechanism tests
+- Authentication tests
+- Storage operation tests
+- Transformation tests
 
 ## Implementation Checklist
 
 ### Pre-Implementation
-- [ ] Ensure Wave1 API types are available
-- [ ] Create branch from main
-- [ ] Set up package structure
+- [ ] Ensure Wave2b-01 is available
+- [ ] Virtual workspace foundation exists
+- [ ] Review transformation requirements
 
 ### Implementation Steps
 
-1. **Create Package Structure**
+1. **Verify Prerequisites**
    ```bash
-   mkdir -p pkg/virtual/syncer
+   # Check virtual workspace foundation
+   ls -la pkg/virtual/syncer/virtual_workspace.go
+   ls -la pkg/virtual/syncer/discovery.go
    ```
 
-2. **Copy Core Files**
+2. **Copy Transformation Logic**
    ```bash
-   # Copy documentation
-   cp /workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/doc.go \
-      pkg/virtual/syncer/doc.go
-   
-   # Copy context management
-   cp /workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/context.go \
-      pkg/virtual/syncer/context.go
-   
-   # Copy virtual workspace core
-   cp /workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/virtual_workspace.go \
-      pkg/virtual/syncer/virtual_workspace.go
-   
-   # Copy discovery mechanism
-   cp /workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/discovery.go \
-      pkg/virtual/syncer/discovery.go
+   cp /workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/transformation.go \
+      pkg/virtual/syncer/transformation.go
    ```
 
-3. **Verify Package Imports**
-   Review each file to ensure imports are correct:
-   - Virtual workspace framework imports
-   - KCP client imports
-   - Discovery interface imports
-
-4. **Test Compilation**
+3. **Copy Test File**
    ```bash
-   go build ./pkg/virtual/syncer/...
+   cp /workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/virtual_workspace_test.go \
+      pkg/virtual/syncer/virtual_workspace_test.go
    ```
 
-5. **Register Virtual Workspace**
-   Add registration code to integrate with KCP's virtual workspace system:
+4. **Review Transformation Implementation**
+   Key components:
    ```go
-   // In appropriate initialization code
-   virtualWorkspace := syncer.NewVirtualWorkspace(...)
-   server.AddVirtualWorkspace(virtualWorkspace)
+   // Transformer interface
+   type Transformer interface {
+       VirtualToPhysical(virtual runtime.Object) (runtime.Object, error)
+       PhysicalToVirtual(physical runtime.Object) (runtime.Object, error)
+   }
+   
+   // SyncTarget transformer
+   type SyncTargetTransformer struct {
+       workspace logicalcluster.Path
+       mapper    meta.RESTMapper
+   }
    ```
 
-### Key Components to Verify
+5. **Key Transformation Operations**
+   - **Namespace Mapping**: Virtual namespace to physical namespace
+   - **Name Translation**: Virtual names to physical names
+   - **Label Injection**: Add workspace labels
+   - **Annotation Handling**: Preserve/transform annotations
+   - **Status Mapping**: Map physical status to virtual
 
-#### Virtual Workspace Structure
+6. **Test Coverage Areas**
+   Ensure tests cover:
+   - Virtual workspace initialization
+   - Discovery registration
+   - Authentication flows
+   - Storage CRUD operations
+   - Transformation bidirectionality
+   - Error handling
+
+### Transformation Logic Details
+
+#### Virtual to Physical
 ```go
-type VirtualWorkspace struct {
-    name string
-    provider ResourceProvider
-    discovery DiscoveryProvider
-    // ... other fields
+func (t *SyncTargetTransformer) VirtualToPhysical(virtual runtime.Object) (runtime.Object, error) {
+    // 1. Type assertion
+    vTarget, ok := virtual.(*workloadv1alpha1.SyncTarget)
+    
+    // 2. Create physical representation
+    physical := &corev1.ConfigMap{
+        ObjectMeta: metav1.ObjectMeta{
+            Name:      physicalName(vTarget.Name),
+            Namespace: physicalNamespace(t.workspace),
+        },
+    }
+    
+    // 3. Transform data
+    physical.Data = transformToConfigMapData(vTarget)
+    
+    // 4. Add workspace labels
+    physical.Labels = map[string]string{
+        "kcp.io/workspace": t.workspace.String(),
+    }
+    
+    return physical, nil
 }
 ```
 
-#### Discovery Provider Interface
+#### Physical to Virtual
 ```go
-type DiscoveryProvider interface {
-    GroupResources() ([]metav1.APIGroup, []metav1.APIResource)
-    ResourceEnabled(resource schema.GroupVersionResource) bool
+func (t *SyncTargetTransformer) PhysicalToVirtual(physical runtime.Object) (runtime.Object, error) {
+    // 1. Type assertion
+    pConfigMap, ok := physical.(*corev1.ConfigMap)
+    
+    // 2. Create virtual representation
+    virtual := &workloadv1alpha1.SyncTarget{
+        ObjectMeta: metav1.ObjectMeta{
+            Name: virtualName(pConfigMap.Name),
+        },
+    }
+    
+    // 3. Transform data back
+    virtual.Spec = transformFromConfigMapData(pConfigMap.Data)
+    
+    // 4. Map status
+    virtual.Status = deriveStatus(pConfigMap)
+    
+    return virtual, nil
 }
 ```
 
-#### Context Management
-- Workspace context propagation
-- Request context enrichment
-- Authentication context handling
+### Test Implementation Structure
+
+```go
+func TestVirtualWorkspace(t *testing.T) {
+    tests := []struct {
+        name string
+        test func(t *testing.T)
+    }{
+        {"Creation", testVirtualWorkspaceCreation},
+        {"Discovery", testDiscoveryMechanism},
+        {"Authentication", testAuthentication},
+        {"Storage", testStorageOperations},
+        {"Transformation", testTransformation},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, tt.test)
+    }
+}
+```
 
 ### Validation Steps
 
-1. **Check Line Count**
+1. **Run Tests**
    ```bash
-   /workspaces/kcp-shared-tools/tmc-pr-line-counter.sh -c feature/tmc-syncer-02b-virtual-base
-   ```
-   Should be exactly 473 lines
-
-2. **Verify Compilation**
-   ```bash
-   make build
+   go test ./pkg/virtual/syncer/... -v
    ```
 
-3. **Test Virtual Workspace Registration**
-   ```bash
-   # After building, verify virtual workspace appears
-   kubectl ws virtual
+2. **Test Transformation**
+   ```go
+   // Quick validation
+   transformer := NewSyncTargetTransformer(workspace, mapper)
+   physical, err := transformer.VirtualToPhysical(virtualObj)
+   virtual, err := transformer.PhysicalToVirtual(physical)
+   // Verify round-trip works
    ```
 
-4. **Check Discovery**
+3. **Check Line Count**
    ```bash
-   kubectl api-resources --context system:admin
-   # Should show virtual resources once registered
+   /workspaces/kcp-shared-tools/tmc-pr-line-counter.sh -c feature/tmc-syncer-02b-transform
+   ```
+   Should be ~499 lines
+
+4. **Integration Test**
+   ```bash
+   # Test end-to-end with virtual workspace
+   kubectl --context system:admin get synctargets --virtual
    ```
 
 ### Commit Strategy
 
 ```bash
-# Stage all virtual workspace foundation files
-git add pkg/virtual/syncer/doc.go
-git add pkg/virtual/syncer/context.go
-git add pkg/virtual/syncer/virtual_workspace.go
-git add pkg/virtual/syncer/discovery.go
+# Stage transformation logic
+git add pkg/virtual/syncer/transformation.go
+git commit -s -S -m "feat(virtual): add resource transformation for virtual workspace
 
-# Commit foundation
-git commit -s -S -m "feat(virtual): add virtual workspace foundation for syncer
+- Implement bidirectional transformation
+- Handle virtual to physical conversion
+- Map status between representations
+- Ensure workspace isolation in transformations"
 
-- Implement core virtual workspace structure
-- Add discovery provider for resource advertisement
-- Set up context management for workspace isolation
-- Follow KCP virtual workspace patterns"
+# Stage tests
+git add pkg/virtual/syncer/virtual_workspace_test.go
+git commit -s -S -m "test: add comprehensive tests for virtual workspace
+
+- Test virtual workspace creation
+- Validate discovery mechanism
+- Test authentication flows
+- Verify storage operations
+- Test transformation logic"
 ```
 
 ### Post-Implementation
-- [ ] Virtual workspace compiles
-- [ ] Discovery mechanism works
-- [ ] Context propagation verified
-- [ ] Line count exactly 473
-- [ ] No compilation errors
+- [ ] All tests pass
+- [ ] Transformation is bidirectional
+- [ ] No data loss in transformation
+- [ ] Line count ~499
+- [ ] Good test coverage (>80%)
 - [ ] Push branch and create PR
 
 ## Success Criteria
 
-1. ✅ Virtual workspace follows KCP patterns
-2. ✅ Discovery provider properly configured
-3. ✅ Context management in place
-4. ✅ Exactly 473 lines
-5. ✅ Compiles successfully
-6. ✅ Can be registered with KCP
+1. ✅ Transformation preserves all data
+2. ✅ Round-trip transformation works
+3. ✅ Tests achieve >80% coverage
+4. ✅ No workspace data leakage
+5. ✅ ~499 lines total
+6. ✅ All edge cases handled
 
 ## Potential Issues & Solutions
 
-1. **Virtual Workspace Registration**
-   - Must follow KCP's registration pattern
-   - Check existing virtual workspaces for examples
+1. **Transformation Data Loss**
+   - Ensure all fields are mapped
+   - Test round-trip conversions
+   - Validate against schema
 
-2. **Discovery Issues**
-   - Ensure GroupVersion is properly defined
-   - Resources must be properly advertised
+2. **Test Failures**
+   - May need mocks for some components
+   - Check test isolation
+   - Verify test data setup
 
-3. **Context Propagation**
-   - Workspace context must flow through requests
-   - Authentication must be preserved
+3. **Performance Issues**
+   - Cache transformation results if needed
+   - Optimize serialization
+   - Consider batch operations
 
 ## Dependencies
 
-- **Requires:** Wave1 API Types
-- **Required By:** Wave2b-02 and Wave2b-03
-- **Blocks:** Authentication and transformation implementations
+- **Requires:** Wave2b-01 (Virtual Base)
+- **Can Parallel With:** Wave2b-02 (Auth & Storage)
+- **Validates:** Entire virtual workspace implementation
 
 ## Notes for Parallel Agents
 
-- This is the foundation - must be completed first
-- Wave2b-02 and Wave2b-03 can proceed in parallel after this
-- Virtual workspace pattern is critical to get right
-- Discovery mechanism enables resource visibility
+- Can work simultaneously with Wave2b-02
+- Tests validate the entire virtual workspace
+- Transformation is critical for correctness
+- Must maintain data integrity
