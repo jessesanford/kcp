@@ -81,6 +81,10 @@ GIT_COMMIT := $(shell git rev-parse --short HEAD || echo 'local')
 GIT_DIRTY := $(shell git diff --quiet && echo 'clean' || echo 'dirty')
 GIT_VERSION := $(shell go mod edit -json | jq '.Require[] | select(.Path == "k8s.io/kubernetes") | .Version' --raw-output)+kcp-$(shell git describe --tags --match='v*' --abbrev=14 "$(GIT_COMMIT)^{commit}" 2>/dev/null || echo v0.0.0-$(GIT_COMMIT))
 BUILD_DATE := $(shell date -u +'%Y-%m-%dT%H:%M:%SZ')
+# Build optimization flags
+BUILD_OPTIMIZATION ?= -trimpath
+EXTRA_BUILD_FLAGS ?=
+
 LDFLAGS := \
 	-X k8s.io/client-go/pkg/version.gitCommit=${GIT_COMMIT} \
 	-X k8s.io/client-go/pkg/version.gitTreeState=${GIT_DIRTY} \
@@ -102,15 +106,21 @@ all: build
 ldflags:
 	@echo $(LDFLAGS)
 
+.PHONY: configure-build
+configure-build: ## Configure build environment and optimization settings
+	@echo "Configuring build environment..."
+	@./hack/build-config.sh
+	@echo "Build configuration complete"
+
 .PHONY: require-%
 require-%:
 	@if ! command -v $* 1> /dev/null 2>&1; then echo "$* not found in ${PATH}"; exit 1; fi
 
 build: WHAT ?= ./cmd/... ./cli/cmd/... ./sdk/cmd/...
-build: require-jq require-go require-git verify-go-versions ## Build the project
+build: require-jq require-go require-git verify-go-versions configure-build ## Build the project
 	set -x; for W in $(WHAT); do \
 		pushd . && cd $${W%..}; \
-    	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build $(BUILDFLAGS) -ldflags="$(LDFLAGS)" -o $(ROOT_DIR)/bin ./...; \
+    	GOOS=$(OS) GOARCH=$(ARCH) CGO_ENABLED=0 go build $(BUILDFLAGS) $(BUILD_OPTIMIZATION) $(EXTRA_BUILD_FLAGS) -ldflags="$(LDFLAGS)" -o $(ROOT_DIR)/bin ./...; \
 		popd; \
     done
 .PHONY: build
