@@ -11,7 +11,7 @@
     "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
   },
   "remoteUser": "vscode",
-  "postCreateCommand": ".devcontainer/install-kind.sh && .devcontainer/checkout-repos.sh && .devcontainer/recreate-existing-worktrees.sh && .devcontainer/setup-shell-environment.sh",
+  "postCreateCommand": "(.devcontainer/install-kind.sh || echo 'KIND install failed') && (.devcontainer/checkout-repos.sh || echo 'Checkout repos failed') && (.devcontainer/recreate-existing-worktrees.sh || echo 'Worktree recreation failed') && .devcontainer/setup-shell-environment.sh",
   "customizations": {
     "vscode": {
       "extensions": [
