@@ -26,6 +26,8 @@ limitations under the License.
 // The API is designed to integrate seamlessly with KCP's workspace model and APIExport
 // system for multi-tenant cluster management.
 //
+// This package includes shared types and utilities for TMC API objects.
+//
 // +k8s:deepcopy-gen=package
 // +groupName=tmc.kcp.io
 
