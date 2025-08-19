@@ -14,57 +14,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// +groupName=workload.kcp.io
 package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	workload "github.com/kcp-dev/kcp/pkg/apis/workload"
 )
 
-// GroupName is the group name for the workload API
-const GroupName = "workload.kcp.io"
+// SchemeGroupVersion is group version used to register these objects.
+var SchemeGroupVersion = schema.GroupVersion{Group: workload.GroupName, Version: "v1alpha1"}
 
-var (
-	// SchemeGroupVersion is the group version used for workload API objects
-	SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
-
-	// SchemeBuilder is used to build the scheme for workload API objects
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes, addDefaultingFuncs)
-
-	// AddToScheme adds workload API objects to a scheme
-	AddToScheme = SchemeBuilder.AddToScheme
-)
-
-// Kind takes an unqualified kind and returns back a Group qualified GroupKind
+// Kind takes an unqualified kind and returns back a Group qualified GroupKind.
 func Kind(kind string) schema.GroupKind {
 	return SchemeGroupVersion.WithKind(kind).GroupKind()
 }
 
-// Resource takes an unqualified resource and returns a Group qualified GroupResource
+// Resource takes an unqualified resource and returns a Group qualified GroupResource.
 func Resource(resource string) schema.GroupResource {
 	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
 
-// addKnownTypes adds the list of known types to the given scheme.
+var (
+	// SchemeBuilder is used to add known types to the scheme.
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	// AddToScheme adds the types in this group-version to the given scheme.
+	AddToScheme = SchemeBuilder.AddToScheme
+)
+
+// Adds the list of known types to Scheme.
 func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&SyncTarget{},
 		&SyncTargetList{},
-		&WorkloadTransform{},
-		&WorkloadTransformList{},
-		&WorkloadDistribution{},
-		&WorkloadDistributionList{},
 	)
-
-	// Add common types to the scheme
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
-
 	return nil
-}
-
-// addDefaultingFuncs adds defaulting functions to the scheme
-func addDefaultingFuncs(scheme *runtime.Scheme) error {
-	return RegisterDefaults(scheme)
 }

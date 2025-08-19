@@ -24,6 +24,8 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+
+	workloadv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/workload/v1alpha1"
 )
 
 func TestSyncerVirtualWorkspace_ResolveRootPath(t *testing.T) {
@@ -105,7 +107,7 @@ func TestSyncerVirtualWorkspace_Authorize(t *testing.T) {
 	authConfig := NewDefaultAuthConfig()
 	
 	// Register a test SyncTarget
-	syncTarget := &SyncTarget{}
+	syncTarget := &workloadv1alpha1.SyncTarget{}
 	syncTarget.Name = "test-syncer"
 	syncTarget.Namespace = "test-workspace"
 	syncTarget.Spec.SupportedResourceTypes = []string{"pods", "services"}
@@ -195,13 +197,13 @@ func TestSyncerVirtualWorkspace_IsReady(t *testing.T) {
 		"valid configuration": {
 			authConfig: &AuthConfig{
 				ValidateCertificate:    func(user.Info) error { return nil },
-				GetSyncTargetForSyncer: func(string, string) (*SyncTarget, error) { return nil, nil },
+				GetSyncTargetForSyncer: func(string, string) (*workloadv1alpha1.SyncTarget, error) { return nil, nil },
 			},
 			expectError: false,
 		},
 		"missing certificate validator": {
 			authConfig: &AuthConfig{
-				GetSyncTargetForSyncer: func(string, string) (*SyncTarget, error) { return nil, nil },
+				GetSyncTargetForSyncer: func(string, string) (*workloadv1alpha1.SyncTarget, error) { return nil, nil },
 			},
 			expectError: true,
 		},

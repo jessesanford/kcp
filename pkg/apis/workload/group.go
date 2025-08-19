@@ -14,10 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha1 contains the TMC workload API types for syncing workloads
-// to physical clusters through the SyncTarget abstraction.
-//
-// +k8s:deepcopy-gen=package,register
-// +groupName=workload.kcp.io
-// +k8s:openapi-gen=true
-package v1alpha1
+package workload
+
+const (
+	// GroupName is the group name for the workload API.
+	GroupName = "workload.kcp.io"
+)
