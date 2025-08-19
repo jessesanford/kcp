@@ -113,6 +113,45 @@ func (f *kcpFeatureGate) Type() string {
 	return "mapStringBool"
 }
 
+// Core KCP Feature Flag Utilities
+
+// WorkspaceMountsEnabled returns true if WorkspaceMounts feature flag is enabled.
+// This controls whether workspace mounts functionality is available.
+func WorkspaceMountsEnabled() bool {
+	return utilfeature.DefaultFeatureGate.Enabled(WorkspaceMounts)
+}
+
+// CacheAPIsEnabled returns true if CacheAPIs feature flag is enabled.
+// This controls whether cache APIs and controllers are available.
+func CacheAPIsEnabled() bool {
+	return utilfeature.DefaultFeatureGate.Enabled(CacheAPIs)
+}
+
+// DeprecatedAPIExportVirtualWorkspacesUrlsEnabled returns true if the deprecated VW URLs feature is enabled.
+// This controls backward compatibility for deprecated APIExport VirtualWorkspace URLs.
+func DeprecatedAPIExportVirtualWorkspacesUrlsEnabled() bool {
+	return utilfeature.DefaultFeatureGate.Enabled(EnableDeprecatedAPIExportVirtualWorkspacesUrls)
+}
+
+// GetAllEnabledFeatures returns a slice of all currently enabled feature flags.
+// This is useful for debugging and monitoring which features are active.
+func GetAllEnabledFeatures() []featuregate.Feature {
+	var enabled []featuregate.Feature
+	
+	// Check core KCP features
+	if WorkspaceMountsEnabled() {
+		enabled = append(enabled, WorkspaceMounts)
+	}
+	if CacheAPIsEnabled() {
+		enabled = append(enabled, CacheAPIs)
+	}
+	if DeprecatedAPIExportVirtualWorkspacesUrlsEnabled() {
+		enabled = append(enabled, EnableDeprecatedAPIExportVirtualWorkspacesUrls)
+	}
+	
+	return enabled
+}
+
 // defaultGenericControlPlaneFeatureGates consists of all known Kubernetes-specific feature keys
 // in the generic control plane code. To add a new feature, define a key for it above and add it
 // here. The Version field should be set to whatever is specified in
