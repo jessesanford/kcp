@@ -8,16 +8,34 @@ metadata:
 spec:
   group: workload.kcp.io
   names:
+    categories:
+    - kcp
     kind: SyncTarget
     listKind: SyncTargetList
     plural: synctargets
     singular: synctarget
-  scope: Namespaced
+  scope: Cluster
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - jsonPath: .spec.cells[0].name
+      name: Location
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.syncerIdentity
+      name: Syncer
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: SyncTarget represents a sync target in the workload API.
+        description: |-
+          SyncTarget defines a physical cluster target for workload synchronization.
+          It represents a physical cluster that can host workloads in the TMC system,
+          providing the foundation for multi-cluster workload placement and management.
         properties:
           apiVersion:
             description: |-
@@ -36,6 +54,212 @@ spec:
             type: string
           metadata:
             type: object
+          spec:
+            description: Spec defines the desired state of the SyncTarget
+            properties:
+              cells:
+                description: |-
+                  Cells defines the cells this SyncTarget supports. At least one cell is required.
+                  Cells represent failure domains or locations within the target cluster.
+                items:
+                  description: |-
+                    Cell represents a failure domain or location within a SyncTarget.
+                    Cells provide a way to organize and constrain workload placement within
+                    a physical cluster based on topology or other characteristics.
+                  properties:
+                    labels:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        Labels provide additional metadata for the cell that can be used
+                        for workload placement decisions and constraints
+                      type: object
+                    name:
+                      description: Name is the unique identifier for this cell within
+                        the SyncTarget
+                      minLength: 1
+                      type: string
+                    taints:
+                      description: |-
+                        Taints applied to this cell that affect workload placement.
+                        Workloads must tolerate these taints to be scheduled to this cell.
+                      items:
+                        description: Taint represents a taint on a cell that affects
+                          workload placement
+                        properties:
+                          effect:
+                            allOf:
+                            - enum:
+                              - NoSchedule
+                              - PreferNoSchedule
+                              - NoExecute
+                            - enum:
+                              - NoSchedule
+                              - PreferNoSchedule
+                              - NoExecute
+                            description: |-
+                              Effect indicates the taint effect to apply to workloads that do not tolerate the taint.
+                              Valid effects are NoSchedule, PreferNoSchedule and NoExecute.
+                            type: string
+                          key:
+                            description: Key is the taint key to be applied to the
+                              cell
+                            minLength: 1
+                            type: string
+                          value:
+                            description: Value is the taint value corresponding to
+                              the taint key
+                            type: string
+                        required:
+                        - effect
+                        - key
+                        type: object
+                      type: array
+                  required:
+                  - name
+                  type: object
+                minItems: 1
+                type: array
+              evictAfter:
+                description: |-
+                  EvictAfter defines when to evict workloads after target becomes unhealthy.
+                  This provides a grace period for the target to recover before workloads are moved.
+                format: duration
+                type: string
+              supportedAPIExports:
+                description: |-
+                  SupportedAPIExports defines which APIs this target can sync.
+                  This allows the target to advertise which APIs it supports for workload placement.
+                items:
+                  description: APIExportReference references an APIExport that this
+                    SyncTarget supports
+                  properties:
+                    name:
+                      description: Name is the name of the APIExport within the workspace
+                      minLength: 1
+                      type: string
+                    workspace:
+                      description: Workspace is the logical cluster workspace containing
+                        the APIExport
+                      minLength: 1
+                      type: string
+                  required:
+                  - name
+                  - workspace
+                  type: object
+                type: array
+              unschedulable:
+                description: |-
+                  Unschedulable marks this SyncTarget as unavailable for new workloads.
+                  When true, new workloads will not be scheduled to this target, but existing
+                  workloads will continue to run.
+                type: boolean
+            required:
+            - cells
+            type: object
+          status:
+            description: Status defines the observed state of the SyncTarget
+            properties:
+              allocatable:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: Allocatable resources on this target available for workload
+                  placement
+                type: object
+              capacity:
+                additionalProperties:
+                  anyOf:
+                  - type: integer
+                  - type: string
+                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                  x-kubernetes-int-or-string: true
+                description: Capacity defines the total resources available on this
+                  target
+                type: object
+              conditions:
+                description: |-
+                  Conditions represent the current status conditions of the SyncTarget.
+                  Known condition types include Ready and Heartbeat.
+                items:
+                  description: Condition defines an observation of a object operational
+                    state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed. If that is not known, then using the time when
+                        the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        A human readable message indicating details about the transition.
+                        This field may be empty.
+                      type: string
+                    reason:
+                      description: |-
+                        The reason for the condition's last transition in CamelCase.
+                        The specific API may choose whether or not this field is considered a guaranteed API.
+                        This field may not be empty.
+                      type: string
+                    severity:
+                      description: |-
+                        Severity provides an explicit classification of Reason code, so the users or machines can immediately
+                        understand the current situation and act accordingly.
+                        The Severity field MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: |-
+                        Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions
+                        can be useful (see .node.status.conditions), the ability to deconflict is important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastHeartbeatTime:
+                description: |-
+                  LastHeartbeatTime is when the syncer last sent a heartbeat for this target.
+                  This is used to determine if the target is still healthy and reachable.
+                format: date-time
+                type: string
+              syncerIdentity:
+                description: |-
+                  SyncerIdentity identifies the syncer component managing this target.
+                  This is used to track which syncer instance is responsible for synchronization.
+                type: string
+              virtualWorkspaces:
+                description: |-
+                  VirtualWorkspaces contains the virtual workspace URLs through which this target is exposed.
+                  These URLs allow clients to interact with resources on this target.
+                items:
+                  description: VirtualWorkspace represents a virtual workspace URL
+                    for accessing the SyncTarget
+                  properties:
+                    url:
+                      description: URL is the virtual workspace URL for accessing
+                        resources on this SyncTarget
+                      format: uri
+                      type: string
+                  required:
+                  - url
+                  type: object
+                type: array
+            type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}
