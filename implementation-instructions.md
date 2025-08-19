@@ -1,33 +1,43 @@
-# Implementation Instructions: SyncTarget API Types (Wave 1)
+# Implementation Instructions: Transformation Types (Wave 2)
 
 ## Branch Overview
-**Branch**: `feature/tmc-completion/p5w1-synctarget-api`  
-**Wave**: 1 (Core API Types)  
-**Focus**: SyncTarget API types for TMC workload management  
-**Estimated Lines**: 600 (excluding generated code)  
-**Dependencies**: None (first wave)  
+**Branch**: `feature/tmc-completion/p5w2-transform-types`  
+**Wave**: 2 (Extended APIs)  
+**Focus**: Workload transformation and mutation types  
+**Estimated Lines**: 450 (excluding generated code)  
+**Dependencies**: Wave 1 - SyncTarget API  
+
+## Pre-Implementation Setup
+
+### Merge Wave 1 Dependencies
+```bash
+# Navigate to your worktree
+cd /workspaces/kcp-worktrees/phase5/api-foundation/worktrees/p5w2-transform-types
+
+# Fetch and merge Wave 1 branches
+git fetch origin
+git merge origin/feature/tmc-completion/p5w1-synctarget-api --no-edit
+```
 
 ## Objectives
-Implement the foundational SyncTarget API types that define how physical clusters are represented and managed in the TMC system. These types will be the cornerstone for workload placement and synchronization.
+Implement transformation types that define how workloads are modified when synchronized to different locations. These types enable location-specific customizations while maintaining workload portability.
 
 ## Implementation Checklist
 
-### Step 1: Package Structure Setup (50 lines)
+### Step 1: Extend Workload Package (30 lines)
 ```bash
-# Create the API package structure
-mkdir -p pkg/apis/workload/v1alpha1
-mkdir -p pkg/apis/workload/install
+# The workload package already exists from Wave 1
+# Add new files for transformation types
 ```
 
 Create the following files:
-- `pkg/apis/workload/v1alpha1/doc.go` - Package documentation
-- `pkg/apis/workload/v1alpha1/register.go` - API registration  
-- `pkg/apis/workload/v1alpha1/types.go` - Main type definitions
-- `pkg/apis/workload/install/install.go` - Scheme installation
+- `pkg/apis/workload/v1alpha1/transform_types.go` - Transformation type definitions
+- `pkg/apis/workload/v1alpha1/transform_validation.go` - Transformation validation
+- `pkg/apis/workload/v1alpha1/transform_helpers.go` - Transformation helpers
 
-### Step 2: Core SyncTarget Types (250 lines)
+### Step 2: Core Transformation Types (180 lines)
 
-#### File: `pkg/apis/workload/v1alpha1/types.go`
+#### File: `pkg/apis/workload/v1alpha1/transform_types.go`
 ```go
 package v1alpha1
 
@@ -42,199 +52,288 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:resource:scope=Cluster,categories=kcp
 // +kubebuilder:subresource:status
-// +kubebuilder:printcolumn:name="Location",type="string",JSONPath=`.spec.cells[0].name`
-// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=`.status.conditions[?(@.type=="Ready")].status`
-// +kubebuilder:printcolumn:name="Syncer",type="string",JSONPath=`.status.syncerIdentity`
+// +kubebuilder:printcolumn:name="Target",type="string",JSONPath=`.spec.targetRef.kind`
+// +kubebuilder:printcolumn:name="Locations",type="integer",JSONPath=`.status.appliedLocations`
+// +kubebuilder:printcolumn:name="Active",type="string",JSONPath=`.status.conditions[?(@.type=="Active")].status`
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=`.metadata.creationTimestamp`
 
-// SyncTarget defines a physical cluster target for workload synchronization
-type SyncTarget struct {
+// WorkloadTransform defines transformations to apply to workloads
+type WorkloadTransform struct {
     metav1.TypeMeta   `json:",inline"`
     metav1.ObjectMeta `json:"metadata,omitempty"`
 
-    Spec   SyncTargetSpec   `json:"spec"`
-    Status SyncTargetStatus `json:"status,omitempty"`
+    Spec   WorkloadTransformSpec   `json:"spec"`
+    Status WorkloadTransformStatus `json:"status,omitempty"`
 }
 
-// SyncTargetSpec defines the desired state of a SyncTarget
-type SyncTargetSpec struct {
-    // Cells defines the cells this SyncTarget supports
-    // +kubebuilder:validation:MinItems=1
-    Cells []Cell `json:"cells"`
+// WorkloadTransformSpec defines transformation rules
+type WorkloadTransformSpec struct {
+    // TargetRef identifies what to transform
+    TargetRef TransformTarget `json:"targetRef"`
 
-    // SupportedAPIExports defines which APIs this target can sync
+    // LocationSelectors where to apply transforms
     // +optional
-    SupportedAPIExports []APIExportReference `json:"supportedAPIExports,omitempty"`
+    LocationSelectors []LocationSelector `json:"locationSelectors,omitempty"`
 
-    // Unschedulable marks this SyncTarget as unavailable for new workloads
-    // +optional
-    Unschedulable bool `json:"unschedulable,omitempty"`
+    // Transforms to apply
+    Transforms []Transform `json:"transforms"`
 
-    // EvictAfter defines when to evict workloads after target becomes unhealthy
+    // Priority when multiple transforms match
     // +optional
-    // +kubebuilder:validation:Type=string
-    // +kubebuilder:validation:Format=duration
-    EvictAfter *metav1.Duration `json:"evictAfter,omitempty"`
+    // +kubebuilder:validation:Minimum=0
+    // +kubebuilder:validation:Maximum=1000
+    Priority int32 `json:"priority,omitempty"`
+
+    // Paused stops applying transforms
+    // +optional
+    Paused bool `json:"paused,omitempty"`
 }
 
-// Cell represents a failure domain or location
-type Cell struct {
-    // Name is the cell identifier
-    Name string `json:"name"`
+// TransformTarget identifies what to transform
+type TransformTarget struct {
+    // APIVersion of the target
+    APIVersion string `json:"apiVersion"`
 
-    // Labels for the cell
+    // Kind of the target
+    Kind string `json:"kind"`
+
+    // Name of specific object
+    // +optional
+    Name string `json:"name,omitempty"`
+
+    // LabelSelector for multiple objects
+    // +optional
+    LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// LocationSelector selects locations for transformation
+type LocationSelector struct {
+    // Name of specific location
+    // +optional
+    Name string `json:"name,omitempty"`
+
+    // LabelSelector for locations
+    // +optional
+    LabelSelector *metav1.LabelSelector `json:"labelSelector,omitempty"`
+}
+
+// Transform defines a transformation operation
+type Transform struct {
+    // Type of transformation
+    // +kubebuilder:validation:Enum=JSONPatch;StrategicMerge;Replace;Remove;Annotate;Label
+    Type TransformType `json:"type"`
+
+    // JSONPatch operations
+    // +optional
+    JSONPatch []JSONPatchOperation `json:"jsonPatch,omitempty"`
+
+    // StrategicMerge patch
+    // +optional
+    // +kubebuilder:pruning:PreserveUnknownFields
+    StrategicMerge *runtime.RawExtension `json:"strategicMerge,omitempty"`
+
+    // Replace operation
+    // +optional
+    Replace *ReplaceOperation `json:"replace,omitempty"`
+
+    // Remove operation
+    // +optional
+    Remove *RemoveOperation `json:"remove,omitempty"`
+
+    // Annotations to add/update
+    // +optional
+    Annotations map[string]string `json:"annotations,omitempty"`
+
+    // Labels to add/update
     // +optional
     Labels map[string]string `json:"labels,omitempty"`
-
-    // Taints applied to this cell
-    // +optional
-    Taints []Taint `json:"taints,omitempty"`
 }
 
-// Taint represents a taint on a cell
-type Taint struct {
-    // Key is the taint key
-    Key string `json:"key"`
-
-    // Value is the taint value
-    // +optional
-    Value string `json:"value,omitempty"`
-
-    // Effect is the taint effect
-    // +kubebuilder:validation:Enum=NoSchedule;PreferNoSchedule;NoExecute
-    Effect TaintEffect `json:"effect"`
-}
-
-type TaintEffect string
+type TransformType string
 
 const (
-    TaintEffectNoSchedule       TaintEffect = "NoSchedule"
-    TaintEffectPreferNoSchedule TaintEffect = "PreferNoSchedule"
-    TaintEffectNoExecute        TaintEffect = "NoExecute"
+    TransformTypeJSONPatch      TransformType = "JSONPatch"
+    TransformTypeStrategicMerge TransformType = "StrategicMerge"
+    TransformTypeReplace        TransformType = "Replace"
+    TransformTypeRemove         TransformType = "Remove"
+    TransformTypeAnnotate       TransformType = "Annotate"
+    TransformTypeLabel          TransformType = "Label"
 )
 
-// APIExportReference references an APIExport
-type APIExportReference struct {
-    // Workspace is the workspace containing the APIExport
-    Workspace string `json:"workspace"`
+// JSONPatchOperation defines a JSON patch operation
+type JSONPatchOperation struct {
+    // Op is the operation type
+    // +kubebuilder:validation:Enum=add;remove;replace;copy;move;test
+    Op string `json:"op"`
 
-    // Name is the APIExport name
-    Name string `json:"name"`
+    // Path is the JSON path
+    Path string `json:"path"`
+
+    // Value for the operation
+    // +optional
+    // +kubebuilder:pruning:PreserveUnknownFields
+    Value *runtime.RawExtension `json:"value,omitempty"`
+
+    // From path for copy/move
+    // +optional
+    From string `json:"from,omitempty"`
 }
 
-// SyncTargetStatus defines the observed state
-type SyncTargetStatus struct {
-    // Allocatable resources on this target
-    // +optional
-    Allocatable ResourceList `json:"allocatable,omitempty"`
+// ReplaceOperation replaces field values
+type ReplaceOperation struct {
+    // Path to replace
+    Path string `json:"path"`
 
-    // Capacity resources on this target
-    // +optional
-    Capacity ResourceList `json:"capacity,omitempty"`
+    // Value to set
+    // +kubebuilder:pruning:PreserveUnknownFields
+    Value runtime.RawExtension `json:"value"`
+}
 
-    // SyncerIdentity identifies the syncer
-    // +optional
-    SyncerIdentity string `json:"syncerIdentity,omitempty"`
+// RemoveOperation removes fields
+type RemoveOperation struct {
+    // Paths to remove
+    Paths []string `json:"paths"`
+}
 
-    // LastHeartbeatTime is when the syncer last sent heartbeat
-    // +optional
-    LastHeartbeatTime *metav1.Time `json:"lastHeartbeatTime,omitempty"`
+// WorkloadTransformStatus defines the observed state
+type WorkloadTransformStatus struct {
+    // AppliedLocations count
+    AppliedLocations int32 `json:"appliedLocations"`
 
-    // VirtualWorkspaces this target is exposed through
+    // TransformApplications tracks where applied
     // +optional
-    VirtualWorkspaces []VirtualWorkspace `json:"virtualWorkspaces,omitempty"`
+    TransformApplications []TransformApplication `json:"transformApplications,omitempty"`
 
-    // Conditions represent the observations of the current state
+    // ObservedGeneration last reconciled
+    // +optional
+    ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+    // LastAppliedTime
+    // +optional
+    LastAppliedTime *metav1.Time `json:"lastAppliedTime,omitempty"`
+
+    // Conditions of the transform
     // +optional
     Conditions conditionsv1alpha1.Conditions `json:"conditions,omitempty"`
 }
 
-// ResourceList is a map of resource quantities
-type ResourceList map[string]resource.Quantity
+// TransformApplication tracks where transform is applied
+type TransformApplication struct {
+    // LocationName
+    LocationName string `json:"locationName"`
 
-// VirtualWorkspace represents a virtual workspace URL
-type VirtualWorkspace struct {
-    // URL is the virtual workspace URL
-    URL string `json:"url"`
+    // AppliedAt timestamp
+    AppliedAt metav1.Time `json:"appliedAt"`
+
+    // ObjectsTransformed count
+    ObjectsTransformed int32 `json:"objectsTransformed"`
+
+    // Success status
+    Success bool `json:"success"`
+
+    // Message if failed
+    // +optional
+    Message string `json:"message,omitempty"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
-// SyncTargetList contains a list of SyncTargets
-type SyncTargetList struct {
+// WorkloadTransformList contains a list of WorkloadTransforms
+type WorkloadTransformList struct {
     metav1.TypeMeta `json:",inline"`
     metav1.ListMeta `json:"metadata,omitempty"`
-    Items           []SyncTarget `json:"items"`
+    Items           []WorkloadTransform `json:"items"`
 }
 ```
 
-### Step 3: API Registration (100 lines)
+### Step 3: Transform Validation (90 lines)
 
-#### File: `pkg/apis/workload/v1alpha1/register.go`
+#### File: `pkg/apis/workload/v1alpha1/transform_validation.go`
 ```go
 package v1alpha1
 
 import (
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-    "k8s.io/apimachinery/pkg/runtime"
-    "k8s.io/apimachinery/pkg/runtime/schema"
-)
-
-const GroupName = "workload.kcp.io"
-
-var (
-    SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
-    SchemeBuilder      = runtime.NewSchemeBuilder(addKnownTypes)
-    AddToScheme        = SchemeBuilder.AddToScheme
-)
-
-// Resource returns a GroupResource for the given resource name
-func Resource(resource string) schema.GroupResource {
-    return SchemeGroupVersion.WithResource(resource).GroupResource()
-}
-
-func addKnownTypes(scheme *runtime.Scheme) error {
-    scheme.AddKnownTypes(SchemeGroupVersion,
-        &SyncTarget{},
-        &SyncTargetList{},
-    )
-    metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
-    return nil
-}
-```
-
-### Step 4: Validation and Defaults (150 lines)
-
-#### File: `pkg/apis/workload/v1alpha1/validation.go`
-```go
-package v1alpha1
-
-import (
-    "fmt"
     "k8s.io/apimachinery/pkg/util/validation/field"
 )
 
-// ValidateSyncTarget validates a SyncTarget
-func ValidateSyncTarget(target *SyncTarget) field.ErrorList {
+// ValidateWorkloadTransform validates a WorkloadTransform
+func ValidateWorkloadTransform(transform *WorkloadTransform) field.ErrorList {
     allErrs := field.ErrorList{}
     
     // Validate spec
-    allErrs = append(allErrs, validateSyncTargetSpec(&target.Spec, field.NewPath("spec"))...)
+    allErrs = append(allErrs, validateWorkloadTransformSpec(&transform.Spec, field.NewPath("spec"))...)
     
     return allErrs
 }
 
-func validateSyncTargetSpec(spec *SyncTargetSpec, fldPath *field.Path) field.ErrorList {
+func validateWorkloadTransformSpec(spec *WorkloadTransformSpec, fldPath *field.Path) field.ErrorList {
     allErrs := field.ErrorList{}
     
-    // Cells validation
-    if len(spec.Cells) == 0 {
-        allErrs = append(allErrs, field.Required(fldPath.Child("cells"), "at least one cell is required"))
+    // Validate TargetRef
+    if spec.TargetRef.APIVersion == "" {
+        allErrs = append(allErrs, field.Required(fldPath.Child("targetRef", "apiVersion"), "apiVersion is required"))
+    }
+    if spec.TargetRef.Kind == "" {
+        allErrs = append(allErrs, field.Required(fldPath.Child("targetRef", "kind"), "kind is required"))
     }
     
-    for i, cell := range spec.Cells {
-        if cell.Name == "" {
-            allErrs = append(allErrs, field.Required(fldPath.Child("cells").Index(i).Child("name"), "cell name is required"))
+    // Must specify either name or labelSelector
+    if spec.TargetRef.Name == "" && spec.TargetRef.LabelSelector == nil {
+        allErrs = append(allErrs, field.Required(fldPath.Child("targetRef"), "must specify name or labelSelector"))
+    }
+    
+    // Validate Transforms
+    if len(spec.Transforms) == 0 {
+        allErrs = append(allErrs, field.Required(fldPath.Child("transforms"), "at least one transform is required"))
+    }
+    
+    for i, transform := range spec.Transforms {
+        allErrs = append(allErrs, validateTransform(&transform, fldPath.Child("transforms").Index(i))...)
+    }
+    
+    return allErrs
+}
+
+func validateTransform(transform *Transform, fldPath *field.Path) field.ErrorList {
+    allErrs := field.ErrorList{}
+    
+    // Validate type-specific fields
+    switch transform.Type {
+    case TransformTypeJSONPatch:
+        if len(transform.JSONPatch) == 0 {
+            allErrs = append(allErrs, field.Required(fldPath.Child("jsonPatch"), "jsonPatch operations required"))
+        }
+        for j, op := range transform.JSONPatch {
+            if op.Path == "" {
+                allErrs = append(allErrs, field.Required(fldPath.Child("jsonPatch").Index(j).Child("path"), "path is required"))
+            }
+            if op.Op == "copy" || op.Op == "move" {
+                if op.From == "" {
+                    allErrs = append(allErrs, field.Required(fldPath.Child("jsonPatch").Index(j).Child("from"), "from is required for copy/move"))
+                }
+            }
+        }
+    case TransformTypeStrategicMerge:
+        if transform.StrategicMerge == nil {
+            allErrs = append(allErrs, field.Required(fldPath.Child("strategicMerge"), "strategicMerge patch required"))
+        }
+    case TransformTypeReplace:
+        if transform.Replace == nil {
+            allErrs = append(allErrs, field.Required(fldPath.Child("replace"), "replace operation required"))
+        } else if transform.Replace.Path == "" {
+            allErrs = append(allErrs, field.Required(fldPath.Child("replace", "path"), "path is required"))
+        }
+    case TransformTypeRemove:
+        if transform.Remove == nil || len(transform.Remove.Paths) == 0 {
+            allErrs = append(allErrs, field.Required(fldPath.Child("remove", "paths"), "paths required for remove"))
+        }
+    case TransformTypeAnnotate:
+        if len(transform.Annotations) == 0 {
+            allErrs = append(allErrs, field.Required(fldPath.Child("annotations"), "annotations required"))
+        }
+    case TransformTypeLabel:
+        if len(transform.Labels) == 0 {
+            allErrs = append(allErrs, field.Required(fldPath.Child("labels"), "labels required"))
         }
     }
     
@@ -242,59 +341,139 @@ func validateSyncTargetSpec(spec *SyncTargetSpec, fldPath *field.Path) field.Err
 }
 ```
 
-#### File: `pkg/apis/workload/v1alpha1/defaults.go`
+### Step 4: Transform Helpers (80 lines)
+
+#### File: `pkg/apis/workload/v1alpha1/transform_helpers.go`
 ```go
 package v1alpha1
 
 import (
-    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    "encoding/json"
+    conditionsv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/third_party/conditions/apis/conditions/v1alpha1"
+    "github.com/kcp-dev/kcp/pkg/apis/third_party/conditions/util/conditions"
+    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-// SetDefaults_SyncTarget sets defaults for SyncTarget
-func SetDefaults_SyncTarget(obj *SyncTarget) {
-    if obj.Spec.EvictAfter == nil {
-        defaultEvictAfter := metav1.Duration{Duration: 5 * time.Minute}
-        obj.Spec.EvictAfter = &defaultEvictAfter
+const (
+    // TransformConditionActive indicates transform is active
+    TransformConditionActive = "Active"
+    
+    // TransformConditionApplied indicates successful application
+    TransformConditionApplied = "Applied"
+)
+
+// IsActive returns true if transform is active
+func (t *WorkloadTransform) IsActive() bool {
+    return !t.Spec.Paused && conditions.IsTrue(t, TransformConditionActive)
+}
+
+// IsApplied returns true if transform is successfully applied
+func (t *WorkloadTransform) IsApplied() bool {
+    return conditions.IsTrue(t, TransformConditionApplied)
+}
+
+// SetCondition sets a condition on the WorkloadTransform
+func (t *WorkloadTransform) SetCondition(condition conditionsv1alpha1.Condition) {
+    conditions.Set(t, condition)
+}
+
+// GetApplicationForLocation returns application status for a location
+func (t *WorkloadTransform) GetApplicationForLocation(locationName string) *TransformApplication {
+    for i := range t.Status.TransformApplications {
+        if t.Status.TransformApplications[i].LocationName == locationName {
+            return &t.Status.TransformApplications[i]
+        }
+    }
+    return nil
+}
+
+// ApplyTransform applies the transform to an object
+func (t *WorkloadTransform) ApplyTransform(obj *unstructured.Unstructured) error {
+    for _, transform := range t.Spec.Transforms {
+        if err := applyTransformOperation(obj, transform); err != nil {
+            return err
+        }
+    }
+    return nil
+}
+
+func applyTransformOperation(obj *unstructured.Unstructured, transform Transform) error {
+    switch transform.Type {
+    case TransformTypeAnnotate:
+        annotations := obj.GetAnnotations()
+        if annotations == nil {
+            annotations = make(map[string]string)
+        }
+        for k, v := range transform.Annotations {
+            annotations[k] = v
+        }
+        obj.SetAnnotations(annotations)
+        
+    case TransformTypeLabel:
+        labels := obj.GetLabels()
+        if labels == nil {
+            labels = make(map[string]string)
+        }
+        for k, v := range transform.Labels {
+            labels[k] = v
+        }
+        obj.SetLabels(labels)
+        
+    // Other transform types would be implemented here
+    }
+    
+    return nil
+}
+
+// MatchesTarget checks if an object matches the transform target
+func (t *WorkloadTransform) MatchesTarget(obj *unstructured.Unstructured) bool {
+    if obj.GetAPIVersion() != t.Spec.TargetRef.APIVersion {
+        return false
+    }
+    if obj.GetKind() != t.Spec.TargetRef.Kind {
+        return false
+    }
+    if t.Spec.TargetRef.Name != "" && obj.GetName() != t.Spec.TargetRef.Name {
+        return false
+    }
+    // LabelSelector matching would be implemented here
+    return true
+}
+```
+
+### Step 5: Transform Defaults (40 lines)
+
+#### File: `pkg/apis/workload/v1alpha1/transform_defaults.go`
+```go
+package v1alpha1
+
+// SetDefaults_WorkloadTransform sets defaults
+func SetDefaults_WorkloadTransform(obj *WorkloadTransform) {
+    // Default priority
+    if obj.Spec.Priority == 0 {
+        obj.Spec.Priority = 100
     }
 }
 ```
 
-### Step 5: Conditions and Status Helpers (50 lines)
+### Step 6: Update Registration (30 lines)
 
-#### File: `pkg/apis/workload/v1alpha1/helpers.go`
+#### File: `pkg/apis/workload/v1alpha1/register.go` (UPDATE)
 ```go
-package v1alpha1
-
-import (
-    conditionsv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/third_party/conditions/apis/conditions/v1alpha1"
-    "github.com/kcp-dev/kcp/pkg/apis/third_party/conditions/util/conditions"
-)
-
-const (
-    // SyncTargetConditionReady indicates the SyncTarget is ready
-    SyncTargetConditionReady = "Ready"
-    
-    // SyncTargetConditionHeartbeat indicates syncer heartbeat status
-    SyncTargetConditionHeartbeat = "Heartbeat"
-)
-
-// IsReady returns true if the SyncTarget is ready
-func (s *SyncTarget) IsReady() bool {
-    return conditions.IsTrue(s, SyncTargetConditionReady)
-}
-
-// SetCondition sets a condition on the SyncTarget
-func (s *SyncTarget) SetCondition(condition conditionsv1alpha1.Condition) {
-    conditions.Set(s, condition)
-}
-
-// GetCondition gets a condition from the SyncTarget
-func (s *SyncTarget) GetCondition(conditionType string) *conditionsv1alpha1.Condition {
-    return conditions.Get(s, conditionType)
+// Add to existing addKnownTypes function:
+func addKnownTypes(scheme *runtime.Scheme) error {
+    scheme.AddKnownTypes(SchemeGroupVersion,
+        &SyncTarget{},
+        &SyncTargetList{},
+        &WorkloadTransform{},  // ADD THIS
+        &WorkloadTransformList{}, // ADD THIS
+    )
+    metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
+    return nil
 }
 ```
 
-### Step 6: Code Generation
+### Step 7: Code Generation
 
 Run code generation after implementing types:
 ```bash
@@ -308,67 +487,68 @@ make generate-crd
 ## Testing Requirements
 
 ### Unit Tests (Location: `pkg/apis/workload/v1alpha1/`)
-1. **Validation Tests** (`validation_test.go`)
-   - Valid SyncTarget configurations
-   - Invalid configurations (missing cells, invalid taints)
-   - Edge cases (empty specs, nil values)
+1. **Transform Validation Tests** (`transform_validation_test.go`)
+   - Valid transform configurations
+   - Invalid transform operations
+   - Target matching validation
 
-2. **Defaults Tests** (`defaults_test.go`)
-   - Default eviction timeout
-   - Preserving user-provided values
-
-3. **Helper Tests** (`helpers_test.go`)
+2. **Transform Helper Tests** (`transform_helpers_test.go`)
+   - Transform application logic
+   - Target matching
    - Condition management
-   - Ready state determination
+
+3. **Transform Defaults Tests** (`transform_defaults_test.go`)
+   - Priority defaults
 
 ### Integration Tests
-Create integration test in `test/e2e/synctarget/`:
+Create integration test in `test/e2e/transform/`:
 ```go
-// Test SyncTarget CRUD operations
-// Test condition updates
-// Test status updates
+// Test WorkloadTransform CRUD operations
+// Test transform application to objects
+// Test priority ordering
+// Test location-specific transforms
 ```
 
 ## KCP Patterns to Follow
 
 1. **Workspace Awareness**
-   - Types must be workspace-scoped
-   - Use logical cluster paths in references
+   - Transforms apply within workspace
+   - Respect workspace boundaries
 
-2. **Condition Management**
-   - Use KCP's condition utilities
-   - Follow standard condition types
+2. **Location-Specific**
+   - Apply per-location transforms
+   - Support location selectors
 
-3. **APIExport Integration**
-   - Reference APIExports properly
-   - Support virtual workspace URLs
+3. **Priority System**
+   - Handle multiple matching transforms
+   - Apply in priority order
 
-4. **Multi-tenancy**
-   - Ensure proper isolation
-   - Support workspace hierarchies
+4. **Declarative Mutations**
+   - Define desired mutations
+   - Controller applies them
 
 ## Integration Points
 
-1. **With Placement System**
-   - SyncTargets are referenced by placement decisions
-   - Cell information used for location constraints
+1. **With SyncTarget (Wave 1)**
+   - Apply transforms per target
+   - Location-specific customization
 
-2. **With Syncer**
-   - Syncer updates SyncTarget status
-   - Heartbeat mechanism maintains liveness
+2. **With WorkloadDistribution (Wave 2)**
+   - Transforms applied during distribution
+   - Per-location modifications
 
-3. **With Virtual Workspaces**
-   - SyncTargets exposed through virtual workspaces
-   - URLs stored in status
+3. **With Syncer Interfaces (Wave 3)**
+   - Syncer applies transforms
+   - Transform chain processing
 
 ## Validation Checklist
 
-- [ ] Package structure created correctly
+- [ ] Package extends existing workload package
 - [ ] All types have deepcopy markers
 - [ ] CRD generation markers present
 - [ ] Validation logic comprehensive
 - [ ] Defaults properly set
-- [ ] Conditions follow KCP patterns
+- [ ] Helper functions useful
 - [ ] Documentation complete
 - [ ] Unit tests written
 - [ ] Integration tests planned
@@ -376,22 +556,25 @@ Create integration test in `test/e2e/synctarget/`:
 - [ ] No compilation errors
 - [ ] Follows KCP API conventions
 - [ ] Under 800 lines (excluding generated)
+- [ ] Properly imports Wave 1 types
 
 ## Commit Structure
 
 Suggested commits for this branch:
-1. "feat(api): add SyncTarget API package structure"
-2. "feat(api): implement core SyncTarget types and spec"
-3. "feat(api): add validation and defaults for SyncTarget"
-4. "feat(api): add condition helpers and status management"
-5. "test(api): add unit tests for SyncTarget API"
-6. "chore: run code generation for SyncTarget types"
+1. "feat(api): add WorkloadTransform types to workload API"
+2. "feat(api): implement transform operations and patches"
+3. "feat(api): add validation for transform operations"
+4. "feat(api): add helper functions for transform application"
+5. "test(api): add unit tests for WorkloadTransform"
+6. "chore: run code generation for transform types"
 
 ## Success Criteria
 
-- SyncTarget API fully implements workload target representation
+- WorkloadTransform API enables flexible workload mutations
+- Supports multiple transform types (JSONPatch, Strategic Merge, etc.)
+- Location-specific transforms work
+- Priority system functions correctly
+- Transform application logic solid
 - All validation passes
-- Code generation successful
 - Tests provide >80% coverage
-- Documentation complete
-- Ready for Wave 2 dependencies
+- Ready for Wave 3 syncer integration

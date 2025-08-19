@@ -15,8 +15,8 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains the v1alpha1 API for workload management in KCP.
-// This package defines the SyncTarget type which represents physical clusters
-// that can host workloads in the TMC (Transparent Multi-Cluster) system.
+// This package defines the SyncTarget and WorkloadTransform types for TMC 
+// (Transparent Multi-Cluster) system workload management and transformation.
 //
 // +k8s:deepcopy-gen=package
 // +k8s:protobuf-gen=package

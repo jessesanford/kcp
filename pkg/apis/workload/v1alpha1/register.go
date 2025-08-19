@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// +groupName=workload.kcp.io
 package v1alpha1
 
 import (
@@ -36,7 +37,12 @@ var (
 	AddToScheme = SchemeBuilder.AddToScheme
 )
 
-// Resource takes an unqualified resource and returns a GroupResource for the given group version.
+// Kind takes an unqualified kind and returns back a Group qualified GroupKind
+func Kind(kind string) schema.GroupKind {
+	return SchemeGroupVersion.WithKind(kind).GroupKind()
+}
+
+// Resource takes an unqualified resource and returns a Group qualified GroupResource
 func Resource(resource string) schema.GroupResource {
 	return SchemeGroupVersion.WithResource(resource).GroupResource()
 }
@@ -46,6 +52,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(SchemeGroupVersion,
 		&SyncTarget{},
 		&SyncTargetList{},
+		&WorkloadTransform{},
+		&WorkloadTransformList{},
 	)
 
 	// Add common types to the scheme
