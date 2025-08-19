@@ -2,7 +2,11 @@
   "name": "Go K8s Dev",
   "image": "mcr.microsoft.com/devcontainers/go:1.22-bullseye", 
   "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode"
+    },
     "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/docker-cli:1": {},
     "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
   },
   "remoteUser": "vscode",
