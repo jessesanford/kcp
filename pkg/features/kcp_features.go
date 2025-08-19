@@ -22,29 +22,34 @@ import (
 	"strings"
 
 	"github.com/spf13/pflag"
-
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	"k8s.io/apimachinery/pkg/util/version"
-	genericfeatures "k8s.io/apiserver/pkg/features"
+	genericfeatures "k8s.io/apiserver/pkg/util/feature"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/component-base/featuregate"
-	logsapi "k8s.io/component-base/logs/api/v1"
+	"k8s.io/component-base/version"
 )
 
 const (
-	// Every feature gate should add method here following this template:
-	//
-	// // owner: @username
-	// // alpha: v1.4
-	// MyFeature() bool.
+	// owner: @sttts @ncdc
+	// alpha: v0.8
+	// Enables virtual workspaces
+	VirtualWorkspaces featuregate.Feature = "VirtualWorkspaces"
 
-	// owner: @mjudeikis
-	// alpha: v0.1
-	// Enables workspace mounts via frontProxy.
-	WorkspaceMounts featuregate.Feature = "WorkspaceMounts"
+	// owner: @sttts @ncdc
+	// alpha: v0.7
+	// Enables location in virtual workspaces
+	LocationInVirtualWorkspaces featuregate.Feature = "LocationInVirtualWorkspaces"
 
-	// owner: @mjudeikis
-	// alpha: v0.1
+	// owner: @sttts
+	// alpha: v0.8
+	// kcp enables advanced scheduling features
+	AdvancedScheduling featuregate.Feature = "AdvancedScheduling"
+
+	// owner: @sttts
+	// alpha: v0.9
+	// kcp enables support for sharded servers
+	ShardedServer featuregate.Feature = "ShardedServer"
+
 	// Enables cache apis and controllers.
 	CacheAPIs featuregate.Feature = "CacheAPIs"
 
@@ -64,6 +69,7 @@ const (
 	// owner: @jessesanford
 	// alpha: v0.1
 	// Enables TMC APIs (ClusterRegistration, WorkloadPlacement) and APIExport functionality.
+	// This feature provides advanced placement policies, cluster registration, and workload distribution capabilities.
 	TMCAPIs featuregate.Feature = "TMCAPIs"
 
 	// owner: @jessesanford
@@ -173,15 +179,23 @@ func TMCAnyEnabled() bool {
 		utilfeature.DefaultFeatureGate.Enabled(TMCPlacement)
 }
 
-// defaultGenericControlPlaneFeatureGates consists of all known Kubernetes-specific feature keys
-// in the generic control plane code. To add a new feature, define a key for it above and add it
-// here. The Version field should be set to whatever is specified in
-// https://github.com/kubernetes/kubernetes/blob/master/pkg/features/versioned_kube_features.go.
-// For features that are kcp-specific, the Version should be set to whatever go.mod k8s.io
-// dependencies version we're currently using.
+// defaultVersionedGenericControlPlaneFeatureGates consists of all known kcp-specific feature keys.
+// To add a new feature, define a key for it above and add it here. The features will be
+// available throughout kcp binaries.
 var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]featuregate.VersionedSpecs{
-	WorkspaceMounts: {
-		{Version: version.MustParse("1.28"), Default: false, PreRelease: featuregate.Alpha},
+	VirtualWorkspaces: {
+		{Version: version.MustParse("1.24"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("1.26"), Default: true, PreRelease: featuregate.Beta},
+	},
+	LocationInVirtualWorkspaces: {
+		{Version: version.MustParse("1.24"), Default: false, PreRelease: featuregate.Alpha},
+		{Version: version.MustParse("1.26"), Default: true, PreRelease: featuregate.Beta},
+	},
+	AdvancedScheduling: {
+		{Version: version.MustParse("1.24"), Default: false, PreRelease: featuregate.Alpha},
+	},
+	ShardedServer: {
+		{Version: version.MustParse("1.27"), Default: false, PreRelease: featuregate.Alpha},
 	},
 	CacheAPIs: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
@@ -189,7 +203,6 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 	EnableDeprecatedAPIExportVirtualWorkspacesUrls: {
 		{Version: version.MustParse("1.32"), Default: false, PreRelease: featuregate.Alpha},
 	},
-
 	// TMC Feature Flags
 	TMCFeature: {
 		{Version: version.MustParse("0.1"), Default: false, PreRelease: featuregate.Alpha},
@@ -213,13 +226,5 @@ var defaultVersionedGenericControlPlaneFeatureGates = map[featuregate.Feature]fe
 	genericfeatures.OpenAPIEnums: {
 		{Version: version.MustParse("1.23"), Default: false, PreRelease: featuregate.Alpha},
 		{Version: version.MustParse("1.24"), Default: true, PreRelease: featuregate.Beta},
-	},
-
-	logsapi.LoggingBetaOptions: {
-		{Version: version.MustParse("1.26"), Default: true, PreRelease: featuregate.Beta},
-	},
-
-	logsapi.ContextualLogging: {
-		{Version: version.MustParse("1.26"), Default: true, PreRelease: featuregate.Alpha},
 	},
 }
