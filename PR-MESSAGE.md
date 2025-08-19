@@ -1,6 +1,6 @@
 ## Summary
 
-This PR combines the core APIResource types and helper methods for TMC's Phase 5 API Foundation. This merges parts 1-2 of 3 splits from the oversized p5w1-apiresource-types branch (originally 1,170 lines).
+This PR combines all three parts of the APIResource foundation for TMC's Phase 5 API Foundation. This merges all 3 splits from the oversized p5w1-apiresource-types branch (originally 1,170 lines).
 
 **Core Features:**
 - Core NegotiatedAPIResource type definitions with proper KCP integration
@@ -14,6 +14,12 @@ This PR combines the core APIResource types and helper methods for TMC's Phase 5
 - Group/version/resource parsing utilities
 - Methods for checking API compatibility and overlap
 
+**Schema Features:**
+- Schema intersection algorithm for API compatibility checking
+- Comprehensive validation rules for NegotiatedAPIResource objects
+- API overlap detection and conflict resolution logic
+- Support for multi-version API schema merging
+
 ## What Type of PR Is This?
 
 /kind feature
@@ -24,19 +30,19 @@ Part of TMC Phase 5 API Foundation implementation
 
 ## Related PRs
 
-This combines splits 1-2 of 3 from the oversized p5w1-apiresource-types:
+This combines all 3 splits from the oversized p5w1-apiresource-types:
 - **Merged**: p5w1-apiresource-core (320 lines) - Core API types and registration
 - **Merged**: p5w1-apiresource-helpers (269 lines) - Helper methods and status management
-- **Next**: p5w1-apiresource-schema (568 lines) - Schema intersection and validation
+- **Merged**: p5w1-apiresource-schema (568 lines) - Schema intersection and validation
 
 Together these 3 PRs replace the oversized p5w1-apiresource-types branch.
 
 ## Dependencies
 
-Core and helpers merged together - no external dependencies
+All three parts merged together - complete APIResource foundation
 
 ## Release Notes
 
 ```release-note
-Added NegotiatedAPIResource types and helper methods for TMC cross-workspace API discovery and negotiation
+Added complete NegotiatedAPIResource foundation with types, helpers, and schema validation for TMC cross-workspace API discovery and negotiation
 ```
