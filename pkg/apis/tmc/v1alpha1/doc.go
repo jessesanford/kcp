@@ -1,5 +1,5 @@
 /*
-Copyright 2025 The KCP Authors.
+Copyright The KCP Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,15 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package wave4
-
-// Api-026Placeholder is a placeholder for TMC api-026 functionality
-// This will be implemented in a future iteration of the TMC system.
-type Api-026Placeholder struct {
-	// TODO: Implement api-026 functionality
-}
-
-// NewApi-026Placeholder creates a new placeholder for api-026
-func NewApi-026Placeholder() *Api-026Placeholder {
-	return &Api-026Placeholder{}
-}
+// Package v1alpha1 contains the TMC v1alpha1 API types.
+// This package includes shared types and utilities for TMC API objects.
+//
+// +k8s:deepcopy-gen=package
+// +groupName=tmc.kcp.io
+package v1alpha1
