@@ -31,7 +31,7 @@ var (
 	SchemeGroupVersion = schema.GroupVersion{Group: GroupName, Version: "v1alpha1"}
 
 	// SchemeBuilder is used to build the scheme for workload API objects
-	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes)
+	SchemeBuilder = runtime.NewSchemeBuilder(addKnownTypes, addDefaultingFuncs)
 
 	// AddToScheme adds workload API objects to a scheme
 	AddToScheme = SchemeBuilder.AddToScheme
@@ -54,10 +54,17 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&SyncTargetList{},
 		&WorkloadTransform{},
 		&WorkloadTransformList{},
+		&WorkloadDistribution{},
+		&WorkloadDistributionList{},
 	)
 
 	// Add common types to the scheme
 	metav1.AddToGroupVersion(scheme, SchemeGroupVersion)
 
 	return nil
+}
+
+// addDefaultingFuncs adds defaulting functions to the scheme
+func addDefaultingFuncs(scheme *runtime.Scheme) error {
+	return RegisterDefaults(scheme)
 }

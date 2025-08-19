@@ -15,10 +15,12 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains the v1alpha1 API for workload management in KCP.
-// This package defines the SyncTarget and WorkloadTransform types for TMC 
-// (Transparent Multi-Cluster) system workload management and transformation.
+// This package defines the SyncTarget, WorkloadTransform, and WorkloadDistribution
+// types for TMC (Transparent Multi-Cluster) system workload management, transformation,
+// and distribution across multiple locations.
 //
 // +k8s:deepcopy-gen=package
+// +k8s:defaulter-gen=TypeMeta
 // +k8s:protobuf-gen=package
 // +k8s:openapi-gen=true
 // +groupName=workload.kcp.io
