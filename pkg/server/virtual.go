@@ -17,6 +17,7 @@ limitations under the License.
 package server
 
 import (
+	"context"
 	"net/http"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +36,7 @@ import (
 	virtualrootapiserver "github.com/kcp-dev/kcp/pkg/virtual/framework/rootapiserver"
 	virtualoptions "github.com/kcp-dev/kcp/pkg/virtual/options"
 	kcpinformers "github.com/kcp-dev/kcp/sdk/client/informers/externalversions"
+	"github.com/kcp-dev/kcp/pkg/features"
 )
 
 type mux interface {
@@ -85,16 +87,33 @@ func newVirtualConfig(
 		return nil, err
 	}
 
-	c.Extra.VirtualWorkspaces, err = o.Virtual.VirtualWorkspaces.NewVirtualWorkspaces(
-		config,
-		virtualcommandoptions.DefaultRootPathPrefix,
-		shardExternalURL,
-		kubeSharedInformerFactory,
-		kcpSharedInformerFactory,
-		cacheKcpSharedInformerFactory,
-	)
-	if err != nil {
-		return nil, err
+	// TMC: Enable virtual workspaces for TMC if feature gate is enabled
+	if features.DefaultMutableFeatureGate.Enabled(features.TMCEnabled) {
+		// Configure TMC-specific virtual workspace settings
+		c.Extra.VirtualWorkspaces, err = o.Virtual.VirtualWorkspaces.NewVirtualWorkspaces(
+			config,
+			virtualcommandoptions.DefaultRootPathPrefix,
+			shardExternalURL,
+			kubeSharedInformerFactory,
+			kcpSharedInformerFactory,
+			cacheKcpSharedInformerFactory,
+		)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Standard virtual workspaces without TMC enhancements
+		c.Extra.VirtualWorkspaces, err = o.Virtual.VirtualWorkspaces.NewVirtualWorkspaces(
+			config,
+			virtualcommandoptions.DefaultRootPathPrefix,
+			shardExternalURL,
+			kubeSharedInformerFactory,
+			kcpSharedInformerFactory,
+			cacheKcpSharedInformerFactory,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return (*VirtualConfig)(c), nil
