@@ -27,8 +27,15 @@ for repo_url in "${REPOS[@]}"; do
         git pull origin main 2>/dev/null || git pull origin master 2>/dev/null || echo "⚠️  Could not pull latest changes for $repo_name"
     else
         echo "📥 Cloning $repo_name to $target_dir..."
-        git clone "$repo_url" "$target_dir"
-        echo "✅ Successfully cloned $repo_name"
+        if git clone "$repo_url" "$target_dir" 2>/dev/null; then
+            echo "✅ Successfully cloned $repo_name"
+        else
+            echo "⚠️  Failed to clone $repo_name (possibly due to authentication or access issues)"
+            echo "💡 You may need to:"
+            echo "   - Set up SSH keys for GitHub access"
+            echo "   - Verify repository access permissions"
+            echo "   - Use HTTPS URLs instead of SSH"
+        fi
     fi
     echo ""
 done

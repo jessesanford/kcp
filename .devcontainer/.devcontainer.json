@@ -11,7 +11,7 @@
     "ghcr.io/devcontainers/features/node:1": { "version": "lts" }
   },
   "remoteUser": "vscode",
-  "postCreateCommand": ".devcontainer/install-kind.sh && .devcontainer/checkout-repos.sh && .devcontainer/recreate-existing-worktrees.sh && npm install -g @anthropic-ai/claude-code",
+  "postCreateCommand": ".devcontainer/setup-ssh.sh && .devcontainer/install-kind.sh && (.devcontainer/checkout-repos.sh || echo 'Warning: checkout-repos.sh failed, continuing...') && (.devcontainer/recreate-existing-worktrees.sh || echo 'Warning: recreate-existing-worktrees.sh failed, continuing...')",
   "customizations": {
     "vscode": {
       "extensions": [

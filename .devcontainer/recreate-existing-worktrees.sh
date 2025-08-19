@@ -83,9 +83,13 @@ recreate_worktrees() {
 
 # Check if this is a fresh clone that needs remote branches
 echo "🔄 Ensuring remote branches are available..."
-if ! git branch -r | grep -q "origin/feature"; then
+if ! git branch -r | grep -q "origin/" 2>/dev/null; then
     echo "📡 Fetching remote branches..."
-    git fetch --all
+    if git fetch --all 2>/dev/null; then
+        echo "✅ Remote branches fetched successfully"
+    else
+        echo "⚠️  Could not fetch remote branches (this may be expected in some setups)"
+    fi
 else
     echo "✅ Remote branches already available"
 fi
