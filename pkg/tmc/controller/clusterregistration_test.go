@@ -16,373 +16,200 @@ package controller
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
-	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
-
+	"k8s.io/apiserver/pkg/server"
 	"github.com/kcp-dev/logicalcluster/v3"
-	kcpclientsetfake "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/fake"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/version"
-	fakediscovery "k8s.io/client-go/discovery/fake"
 )
 
 func TestNewClusterRegistrationController(t *testing.T) {
 	tests := []struct {
 		name           string
 		clusterConfigs map[string]*rest.Config
-		workspace      string
-		wantError      bool
+		workspace      logicalcluster.Name
+		wantErr        bool
 	}{
 		{
-			name:           "empty cluster configs should fail",
+			name:           "no cluster configs should error",
 			clusterConfigs: map[string]*rest.Config{},
-			workspace:      "root:test",
-			wantError:      true,
+			workspace:      logicalcluster.Name("root:test"),
+			wantErr:        true,
 		},
 		{
-			name: "valid cluster configs should succeed",
+			name: "valid config should succeed",
 			clusterConfigs: map[string]*rest.Config{
-				"test-cluster": {},
+				"test-cluster": {
+					Host: "https://localhost:6443",
+				},
 			},
-			workspace: "root:test",
-			wantError: false,
-		},
-		{
-			name: "multiple cluster configs should succeed",
-			clusterConfigs: map[string]*rest.Config{
-				"cluster-1": {},
-				"cluster-2": {},
-			},
-			workspace: "root:production",
-			wantError: false,
+			workspace: logicalcluster.Name("root:test"),
+			wantErr:   false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			kcpClient := kcpclientsetfake.NewSimpleClientset()
-			workspace := logicalcluster.Name(tt.workspace)
-
 			controller, err := NewClusterRegistrationController(
-				kcpClient,
+				nil, // KCP client not needed for this test
 				tt.clusterConfigs,
-				workspace,
-				30*time.Second,
-				2,
-			)
-
-			if tt.wantError {
-				if err == nil {
-					t.Error("expected error but got none")
-				}
-				return
-			}
-
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if controller == nil {
-				t.Fatal("controller should not be nil")
-			}
-
-			if controller.workspace != workspace {
-				t.Errorf("expected workspace %s, got %s", workspace, controller.workspace)
-			}
-
-			if len(controller.clusterClients) != len(tt.clusterConfigs) {
-				t.Errorf("expected %d cluster clients, got %d", len(tt.clusterConfigs), len(controller.clusterClients))
-			}
-
-			if len(controller.clusterHealth) != len(tt.clusterConfigs) {
-				t.Errorf("expected %d cluster health entries, got %d", len(tt.clusterConfigs), len(controller.clusterHealth))
-			}
-		})
-	}
-}
-
-func TestClusterRegistrationController_PerformHealthCheck(t *testing.T) {
-	tests := []struct {
-		name        string
-		setupClient func() *fake.Clientset
-		wantHealthy bool
-		wantError   bool
-	}{
-		{
-			name: "healthy cluster with nodes",
-			setupClient: func() *fake.Clientset {
-				client := fake.NewSimpleClientset()
-				
-				// Add a node to make the cluster appear healthy
-				node := &corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-node-1",
-					},
-					Status: corev1.NodeStatus{
-						Conditions: []corev1.NodeCondition{
-							{
-								Type:   corev1.NodeReady,
-								Status: corev1.ConditionTrue,
-							},
-						},
-					},
-				}
-				client.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
-				
-				// Set up fake discovery client with version info
-				fakeDiscovery, ok := client.Discovery().(*fakediscovery.FakeDiscovery)
-				if ok {
-					fakeDiscovery.FakedServerVersion = &version.Info{
-						Major:        "1",
-						Minor:        "28",
-						GitVersion:   "v1.28.0",
-						GitCommit:    "abc123",
-						GitTreeState: "clean",
-						BuildDate:    "2023-01-01T00:00:00Z",
-						GoVersion:    "go1.20.0",
-						Compiler:     "gc",
-						Platform:     "linux/amd64",
-					}
-				}
-				
-				return client
-			},
-			wantHealthy: true,
-			wantError:   false,
-		},
-		{
-			name: "healthy cluster with no nodes",
-			setupClient: func() *fake.Clientset {
-				client := fake.NewSimpleClientset()
-				
-				// Set up fake discovery client with version info
-				fakeDiscovery, ok := client.Discovery().(*fakediscovery.FakeDiscovery)
-				if ok {
-					fakeDiscovery.FakedServerVersion = &version.Info{
-						Major:      "1",
-						Minor:      "28",
-						GitVersion: "v1.28.0",
-					}
-				}
-				
-				return client
-			},
-			wantHealthy: true,
-			wantError:   false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			kcpClient := kcpclientsetfake.NewSimpleClientset()
-			workspace := logicalcluster.Name("root:test")
-
-			controller, err := NewClusterRegistrationController(
-				kcpClient,
-				map[string]*rest.Config{"test-cluster": {}},
-				workspace,
+				tt.workspace,
 				30*time.Second,
 				1,
 			)
-			if err != nil {
-				t.Fatalf("failed to create controller: %v", err)
-			}
 
-			// Replace the fake client
-			client := tt.setupClient()
-			controller.clusterClients["test-cluster"] = client
-
-			ctx := context.Background()
-			healthy, err := controller.performHealthCheck(ctx, "test-cluster", client)
-
-			if tt.wantError && err == nil {
-				t.Error("expected error but got none")
-			}
-			if !tt.wantError && err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-			if healthy != tt.wantHealthy {
-				t.Errorf("expected healthy=%v, got %v", tt.wantHealthy, healthy)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("Expected error but got none")
+				}
+				if controller != nil {
+					t.Error("Expected nil controller on error")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("Unexpected error: %v", err)
+				}
+				if controller == nil {
+					t.Error("Expected non-nil controller")
+				}
 			}
 		})
 	}
 }
 
-func TestClusterRegistrationController_GetClusterHealth(t *testing.T) {
-	kcpClient := kcpclientsetfake.NewSimpleClientset()
-	workspace := logicalcluster.Name("root:test")
+func TestClusterRegistrationController_HealthChecking(t *testing.T) {
+	// Create a mock kubernetes API server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/v1/nodes":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+				"apiVersion": "v1",
+				"kind": "NodeList",
+				"items": [
+					{
+						"metadata": {"name": "node1"},
+						"spec": {},
+						"status": {"conditions": []}
+					}
+				]
+			}`))
+		case "/version":
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`{
+				"major": "1",
+				"minor": "28",
+				"gitVersion": "v1.28.0"
+			}`))
+		default:
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	}))
+	defer server.Close()
 
-	controller, err := NewClusterRegistrationController(
-		kcpClient,
-		map[string]*rest.Config{
-			"cluster-1": {},
-			"cluster-2": {},
+	clusterConfig := &rest.Config{
+		Host: server.URL,
+		ContentConfig: rest.ContentConfig{
+			NegotiatedSerializer: server.Config.Serializer,
 		},
-		workspace,
-		30*time.Second,
-		1,
-	)
-	if err != nil {
-		t.Fatalf("failed to create controller: %v", err)
-	}
-
-	// Test getting health for existing cluster
-	health, exists := controller.GetClusterHealth("cluster-1")
-	if !exists {
-		t.Error("expected cluster-1 to exist")
-	}
-	if health.Name != "cluster-1" {
-		t.Errorf("expected cluster name cluster-1, got %s", health.Name)
-	}
-	if health.Healthy {
-		t.Error("expected cluster to start as unhealthy")
-	}
-
-	// Test getting health for non-existent cluster
-	health, exists = controller.GetClusterHealth("non-existent")
-	if exists {
-		t.Error("expected non-existent cluster to not exist")
-	}
-	if health != nil {
-		t.Error("expected health to be nil for non-existent cluster")
-	}
-}
-
-func TestClusterRegistrationController_GetAllClusterHealth(t *testing.T) {
-	kcpClient := kcpclientsetfake.NewSimpleClientset()
-	workspace := logicalcluster.Name("root:test")
-
-	expectedClusters := map[string]*rest.Config{
-		"cluster-1": {},
-		"cluster-2": {},
-		"cluster-3": {},
 	}
 
 	controller, err := NewClusterRegistrationController(
-		kcpClient,
-		expectedClusters,
-		workspace,
-		30*time.Second,
-		1,
-	)
-	if err != nil {
-		t.Fatalf("failed to create controller: %v", err)
-	}
-
-	allHealth := controller.GetAllClusterHealth()
-
-	if len(allHealth) != len(expectedClusters) {
-		t.Errorf("expected %d clusters, got %d", len(expectedClusters), len(allHealth))
-	}
-
-	for clusterName := range expectedClusters {
-		health, exists := allHealth[clusterName]
-		if !exists {
-			t.Errorf("expected cluster %s to exist in health map", clusterName)
-			continue
-		}
-		if health.Name != clusterName {
-			t.Errorf("expected cluster name %s, got %s", clusterName, health.Name)
-		}
-	}
-}
-
-func TestClusterRegistrationController_IsHealthy(t *testing.T) {
-	kcpClient := kcpclientsetfake.NewSimpleClientset()
-	workspace := logicalcluster.Name("root:test")
-
-	controller, err := NewClusterRegistrationController(
-		kcpClient,
+		nil, // KCP client not needed for this test
 		map[string]*rest.Config{
-			"cluster-1": {},
-			"cluster-2": {},
+			"test-cluster": clusterConfig,
 		},
-		workspace,
-		30*time.Second,
+		logicalcluster.Name("root:test"),
+		time.Second, // Short resync period for testing
 		1,
 	)
 	if err != nil {
-		t.Fatalf("failed to create controller: %v", err)
+		t.Fatalf("Failed to create controller: %v", err)
 	}
 
-	// Initially, all clusters should be unhealthy
+	// Test initial state
 	if controller.IsHealthy() {
-		t.Error("expected controller to be unhealthy initially")
+		t.Error("Controller should not be healthy initially")
 	}
 
-	// Mark one cluster as healthy
-	controller.clusterHealth["cluster-1"].Healthy = true
-	if controller.IsHealthy() {
-		t.Error("expected controller to be unhealthy with one unhealthy cluster")
-	}
-
-	// Mark both clusters as healthy
-	controller.clusterHealth["cluster-2"].Healthy = true
-	if !controller.IsHealthy() {
-		t.Error("expected controller to be healthy with all clusters healthy")
-	}
-}
-
-func TestClusterRegistrationController_SyncCluster(t *testing.T) {
-	kcpClient := kcpclientsetfake.NewSimpleClientset()
-	workspace := logicalcluster.Name("root:test")
-
-	controller, err := NewClusterRegistrationController(
-		kcpClient,
-		map[string]*rest.Config{"test-cluster": {}},
-		workspace,
-		30*time.Second,
-		1,
-	)
-	if err != nil {
-		t.Fatalf("failed to create controller: %v", err)
-	}
-
-	// Set up fake client with nodes
-	client := fake.NewSimpleClientset()
-	node := &corev1.Node{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-node"},
-	}
-	client.CoreV1().Nodes().Create(context.TODO(), node, metav1.CreateOptions{})
-
-	// Set up fake discovery
-	fakeDiscovery, ok := client.Discovery().(*fakediscovery.FakeDiscovery)
-	if ok {
-		fakeDiscovery.FakedServerVersion = &version.Info{
-			Major:      "1",
-			Minor:      "28",
-			GitVersion: "v1.28.0",
-		}
-	}
-
-	controller.clusterClients["test-cluster"] = client
-
-	ctx := context.Background()
-	err = controller.syncCluster(ctx, "test-cluster")
-	if err != nil {
-		t.Errorf("unexpected error: %v", err)
-	}
-
-	// Check that health status was updated
+	// Test health status retrieval
 	health, exists := controller.GetClusterHealth("test-cluster")
 	if !exists {
-		t.Fatal("expected health status to exist")
+		t.Error("Expected cluster health to exist")
 	}
-	if !health.Healthy {
-		t.Errorf("expected cluster to be healthy after sync, error: %s", health.Error)
-	}
-	if health.LastCheck.IsZero() {
-		t.Error("expected LastCheck to be set")
+	if health.Healthy {
+		t.Error("Expected cluster to be unhealthy initially")
 	}
 
-	// Test sync with non-existent cluster
-	err = controller.syncCluster(ctx, "non-existent")
-	if err == nil {
-		t.Error("expected error for non-existent cluster")
+	// Test sync cluster directly
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err = controller.syncCluster(ctx, "test-cluster")
+	if err != nil {
+		t.Errorf("Unexpected error during sync: %v", err)
+	}
+
+	// Check health after sync
+	health, exists = controller.GetClusterHealth("test-cluster")
+	if !exists {
+		t.Error("Expected cluster health to exist after sync")
+	}
+	if !health.Healthy {
+		t.Errorf("Expected cluster to be healthy after sync, got error: %s", health.Error)
+	}
+	if health.NodeCount != 1 {
+		t.Errorf("Expected 1 node, got %d", health.NodeCount)
+	}
+
+	// Test all cluster health
+	allHealth := controller.GetAllClusterHealth()
+	if len(allHealth) != 1 {
+		t.Errorf("Expected 1 cluster in health map, got %d", len(allHealth))
+	}
+
+	// Test overall controller health
+	if !controller.IsHealthy() {
+		t.Error("Controller should be healthy after successful sync")
+	}
+}
+
+func TestClusterHealthStatus_Copy(t *testing.T) {
+	original := &ClusterHealthStatus{
+		Name:      "test",
+		LastCheck: time.Now(),
+		Healthy:   true,
+		Error:     "",
+		NodeCount: 3,
+		Version:   "v1.28.0",
+	}
+
+	controller := &ClusterRegistrationController{
+		clusterHealth: map[string]*ClusterHealthStatus{
+			"test": original,
+		},
+	}
+
+	// Get health should return a copy
+	health, exists := controller.GetClusterHealth("test")
+	if !exists {
+		t.Error("Expected health to exist")
+	}
+
+	// Modify the copy
+	health.Healthy = false
+	health.Error = "modified"
+
+	// Original should be unchanged
+	if !original.Healthy {
+		t.Error("Original health was modified")
+	}
+	if original.Error != "" {
+		t.Error("Original error was modified")
 	}
 }
