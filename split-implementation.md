@@ -1,256 +1,236 @@
-# Split Implementation: Wave2b-03 - Transformation & Tests
+# Split Implementation: Wave1-03 - API Helpers, Conversion & Tests
 
 ## Overview
-**Branch:** `feature/tmc-syncer-02b-transform`  
-**Target Size:** ~499 lines  
-**Dependencies:** Wave2b-01 (Virtual Base) must be complete  
-**Can Run In Parallel:** Yes, with Wave2b-02 after Wave2b-01
+**Branch:** `feature/tmc-syncer-01c-api-helpers`  
+**Target Size:** 590 lines  
+**Dependencies:** Wave1-01 (API Types) must be merged first  
+**Can Run In Parallel:** Yes, with Wave1-02 after Wave1-01 merges
 
-## Files to Copy
+## Files to Copy/Create
 
-These files should be copied from `/workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/`:
+### Required Files from Wave1-01
+This split depends on having the API types from Wave1-01:
+```bash
+# Ensure Wave1-01 changes are available
+git fetch origin
+git merge origin/main  # After Wave1-01 is merged
+```
 
-### 1. **pkg/virtual/syncer/transformation.go** (229 lines)
-Resource transformation between virtual and physical representations:
-- Virtual to physical resource conversion
-- Physical to virtual resource conversion
-- Metadata transformation
-- Status reconciliation
+### Files to Add
 
-### 2. **pkg/virtual/syncer/virtual_workspace_test.go** (~270 lines)
-Comprehensive tests for the virtual workspace implementation:
-- Virtual workspace creation tests
-- Discovery mechanism tests
-- Authentication tests
-- Storage operation tests
-- Transformation tests
+1. **pkg/apis/workload/v1alpha1/synctarget_helpers.go** (309 lines)
+   - Helper functions for SyncTarget manipulation
+   - Condition management helpers
+   - Status update utilities
+   - Label and annotation helpers
+   - Capacity calculation functions
+
+2. **pkg/apis/workload/v1alpha1/synctarget_conversion.go** (48 lines)
+   - Conversion functions between versions
+   - Hub version markers
+   - Conversion webhook setup
+
+3. **pkg/apis/workload/v1alpha1/synctarget_types_test.go** (233 lines)
+   - Comprehensive API tests
+   - Helper function tests
+   - Validation tests
+   - Default value tests
 
 ## Implementation Checklist
 
 ### Pre-Implementation
-- [ ] Ensure Wave2b-01 is available
-- [ ] Virtual workspace foundation exists
-- [ ] Review transformation requirements
+- [ ] Verify Wave1-01 is merged to main
+- [ ] Pull latest main branch
+- [ ] Create feature branch: `feature/tmc-syncer-01c-api-helpers`
+- [ ] Verify API types exist from Wave1-01
 
 ### Implementation Steps
 
 1. **Verify Prerequisites**
    ```bash
-   # Check virtual workspace foundation
-   ls -la pkg/virtual/syncer/virtual_workspace.go
-   ls -la pkg/virtual/syncer/discovery.go
-   ```
-
-2. **Copy Transformation Logic**
-   ```bash
-   cp /workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/transformation.go \
-      pkg/virtual/syncer/transformation.go
-   ```
-
-3. **Copy Test File**
-   ```bash
-   cp /workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/virtual_workspace_test.go \
-      pkg/virtual/syncer/virtual_workspace_test.go
-   ```
-
-4. **Review Transformation Implementation**
-   Key components:
-   ```go
-   // Transformer interface
-   type Transformer interface {
-       VirtualToPhysical(virtual runtime.Object) (runtime.Object, error)
-       PhysicalToVirtual(physical runtime.Object) (runtime.Object, error)
-   }
+   # Check API types exist
+   ls -la pkg/apis/workload/v1alpha1/synctarget_types.go
    
-   // SyncTarget transformer
-   type SyncTargetTransformer struct {
-       workspace logicalcluster.Path
-       mapper    meta.RESTMapper
-   }
+   # Check if validation/defaults exist (from Wave1-02, optional)
+   ls -la pkg/apis/workload/v1alpha1/synctarget_validation.go 2>/dev/null || echo "Validation not yet added"
    ```
 
-5. **Key Transformation Operations**
-   - **Namespace Mapping**: Virtual namespace to physical namespace
-   - **Name Translation**: Virtual names to physical names
-   - **Label Injection**: Add workspace labels
-   - **Annotation Handling**: Preserve/transform annotations
-   - **Status Mapping**: Map physical status to virtual
+2. **Copy Helper Functions**
+   ```bash
+   cp /workspaces/kcp-worktrees/phase2/wave1-api-foundation-to-be-split/pkg/apis/workload/v1alpha1/synctarget_helpers.go \
+      pkg/apis/workload/v1alpha1/synctarget_helpers.go
+   ```
 
-6. **Test Coverage Areas**
-   Ensure tests cover:
-   - Virtual workspace initialization
-   - Discovery registration
-   - Authentication flows
-   - Storage CRUD operations
-   - Transformation bidirectionality
-   - Error handling
+3. **Copy Conversion Functions**
+   ```bash
+   cp /workspaces/kcp-worktrees/phase2/wave1-api-foundation-to-be-split/pkg/apis/workload/v1alpha1/synctarget_conversion.go \
+      pkg/apis/workload/v1alpha1/synctarget_conversion.go
+   ```
 
-### Transformation Logic Details
+4. **Copy Test File**
+   ```bash
+   cp /workspaces/kcp-worktrees/phase2/wave1-api-foundation-to-be-split/pkg/apis/workload/v1alpha1/synctarget_types_test.go \
+      pkg/apis/workload/v1alpha1/synctarget_types_test.go
+   ```
 
-#### Virtual to Physical
-```go
-func (t *SyncTargetTransformer) VirtualToPhysical(virtual runtime.Object) (runtime.Object, error) {
-    // 1. Type assertion
-    vTarget, ok := virtual.(*workloadv1alpha1.SyncTarget)
-    
-    // 2. Create physical representation
-    physical := &corev1.ConfigMap{
-        ObjectMeta: metav1.ObjectMeta{
-            Name:      physicalName(vTarget.Name),
-            Namespace: physicalNamespace(t.workspace),
-        },
-    }
-    
-    // 3. Transform data
-    physical.Data = transformToConfigMapData(vTarget)
-    
-    // 4. Add workspace labels
-    physical.Labels = map[string]string{
-        "kcp.io/workspace": t.workspace.String(),
-    }
-    
-    return physical, nil
-}
-```
+5. **Verify Helper Functions**
+   Review helpers for:
+   - Condition management (GetCondition, SetCondition, etc.)
+   - Status helpers (IsReady, SetReady, etc.)
+   - Capacity helpers (GetTotalCapacity, etc.)
 
-#### Physical to Virtual
-```go
-func (t *SyncTargetTransformer) PhysicalToVirtual(physical runtime.Object) (runtime.Object, error) {
-    // 1. Type assertion
-    pConfigMap, ok := physical.(*corev1.ConfigMap)
-    
-    // 2. Create virtual representation
-    virtual := &workloadv1alpha1.SyncTarget{
-        ObjectMeta: metav1.ObjectMeta{
-            Name: virtualName(pConfigMap.Name),
-        },
-    }
-    
-    // 3. Transform data back
-    virtual.Spec = transformFromConfigMapData(pConfigMap.Data)
-    
-    // 4. Map status
-    virtual.Status = deriveStatus(pConfigMap)
-    
-    return virtual, nil
-}
-```
+6. **Test Compilation**
+   ```bash
+   go build ./pkg/apis/workload/v1alpha1/...
+   ```
 
-### Test Implementation Structure
+7. **Run Tests**
+   ```bash
+   go test ./pkg/apis/workload/v1alpha1/... -v
+   ```
+
+### Key Helper Functions to Verify
 
 ```go
-func TestVirtualWorkspace(t *testing.T) {
-    tests := []struct {
-        name string
-        test func(t *testing.T)
-    }{
-        {"Creation", testVirtualWorkspaceCreation},
-        {"Discovery", testDiscoveryMechanism},
-        {"Authentication", testAuthentication},
-        {"Storage", testStorageOperations},
-        {"Transformation", testTransformation},
-    }
-    
-    for _, tt := range tests {
-        t.Run(tt.name, tt.test)
-    }
-}
+// Condition Helpers - should be present
+- GetCondition(conditions []Condition, conditionType ConditionType) *Condition
+- SetCondition(conditions []Condition, newCondition Condition) []Condition
+- RemoveCondition(conditions []Condition, conditionType ConditionType) []Condition
+
+// Status Helpers
+- (st *SyncTarget) IsReady() bool
+- (st *SyncTarget) SetReady(ready bool)
+- (st *SyncTarget) GetHeartbeatTime() *metav1.Time
+
+// Capacity Helpers  
+- (st *SyncTarget) GetTotalCapacity() resource.Quantity
+- (st *SyncTarget) GetAvailableCapacity() resource.Quantity
 ```
 
 ### Validation Steps
 
-1. **Run Tests**
+1. **Run All Tests**
    ```bash
-   go test ./pkg/virtual/syncer/... -v
+   go test ./pkg/apis/workload/v1alpha1/... -v -count=1
    ```
 
-2. **Test Transformation**
+2. **Check Test Coverage**
+   ```bash
+   go test ./pkg/apis/workload/v1alpha1/... -cover
+   ```
+
+3. **Verify Line Count**
+   ```bash
+   /workspaces/kcp-shared-tools/tmc-pr-line-counter.sh -c feature/tmc-syncer-01c-api-helpers
+   ```
+   - Should be ~590 lines
+
+4. **Check Helper Functions Work**
    ```go
-   // Quick validation
-   transformer := NewSyncTargetTransformer(workspace, mapper)
-   physical, err := transformer.VirtualToPhysical(virtualObj)
-   virtual, err := transformer.PhysicalToVirtual(physical)
-   // Verify round-trip works
-   ```
-
-3. **Check Line Count**
-   ```bash
-   /workspaces/kcp-shared-tools/tmc-pr-line-counter.sh -c feature/tmc-syncer-02b-transform
-   ```
-   Should be ~499 lines
-
-4. **Integration Test**
-   ```bash
-   # Test end-to-end with virtual workspace
-   kubectl --context system:admin get synctargets --virtual
+   // Quick test
+   st := &SyncTarget{}
+   st.SetReady(true)
+   if !st.IsReady() {
+       panic("Helper not working")
+   }
    ```
 
 ### Commit Strategy
 
 ```bash
-# Stage transformation logic
-git add pkg/virtual/syncer/transformation.go
-git commit -s -S -m "feat(virtual): add resource transformation for virtual workspace
+# Stage helper files
+git add pkg/apis/workload/v1alpha1/synctarget_helpers.go
+git commit -s -S -m "feat(api): add helper functions for SyncTarget management
 
-- Implement bidirectional transformation
-- Handle virtual to physical conversion
-- Map status between representations
-- Ensure workspace isolation in transformations"
+- Add condition management helpers
+- Add status update utilities
+- Add capacity calculation helpers
+- Add label and annotation helpers
+- Provide convenience methods for common operations"
+
+# Stage conversion
+git add pkg/apis/workload/v1alpha1/synctarget_conversion.go
+git commit -s -S -m "feat(api): add conversion support for SyncTarget
+
+- Set up hub version markers
+- Add conversion webhook framework
+- Prepare for future API versioning"
 
 # Stage tests
-git add pkg/virtual/syncer/virtual_workspace_test.go
-git commit -s -S -m "test: add comprehensive tests for virtual workspace
+git add pkg/apis/workload/v1alpha1/synctarget_types_test.go
+git commit -s -S -m "test: add comprehensive tests for SyncTarget API
 
-- Test virtual workspace creation
-- Validate discovery mechanism
-- Test authentication flows
-- Verify storage operations
-- Test transformation logic"
+- Test helper functions
+- Validate condition management
+- Test capacity calculations
+- Ensure defaults and validation work correctly"
 ```
 
 ### Post-Implementation
 - [ ] All tests pass
-- [ ] Transformation is bidirectional
-- [ ] No data loss in transformation
-- [ ] Line count ~499
-- [ ] Good test coverage (>80%)
+- [ ] Helpers are properly documented
+- [ ] Line count under 800
+- [ ] No compilation errors
+- [ ] Clean git status
 - [ ] Push branch and create PR
 
 ## Success Criteria
 
-1. ✅ Transformation preserves all data
-2. ✅ Round-trip transformation works
-3. ✅ Tests achieve >80% coverage
-4. ✅ No workspace data leakage
-5. ✅ ~499 lines total
-6. ✅ All edge cases handled
+1. ✅ All helper functions compile
+2. ✅ Tests achieve good coverage (>80%)
+3. ✅ Under 800 lines total
+4. ✅ Conversion framework in place
+5. ✅ No runtime panics in helpers
+6. ✅ Documentation for all exported functions
 
 ## Potential Issues & Solutions
 
-1. **Transformation Data Loss**
-   - Ensure all fields are mapped
-   - Test round-trip conversions
-   - Validate against schema
+1. **Test Failures**
+   - May need Wave1-02 (validation/defaults) for some tests
+   - Can mock or skip those tests temporarily
 
-2. **Test Failures**
-   - May need mocks for some components
-   - Check test isolation
-   - Verify test data setup
+2. **Missing Dependencies**
+   - Ensure Wave1-01 types are available
+   - May need to adjust imports
 
-3. **Performance Issues**
-   - Cache transformation results if needed
-   - Optimize serialization
-   - Consider batch operations
+3. **Conversion Setup**
+   - Conversion may need webhook configuration
+   - Can be added in later PR if needed
 
-## Dependencies
+## Dependencies on Other Splits
 
-- **Requires:** Wave2b-01 (Virtual Base)
-- **Can Parallel With:** Wave2b-02 (Auth & Storage)
-- **Validates:** Entire virtual workspace implementation
+- **Requires:** Wave1-01 (API Types)
+- **Optional:** Wave1-02 (Validation) - some tests may use it
+- **Required By:** Controllers will use these helpers
+- **Can Parallel With:** Wave1-02
 
 ## Notes for Parallel Agents
 
-- Can work simultaneously with Wave2b-02
-- Tests validate the entire virtual workspace
-- Transformation is critical for correctness
-- Must maintain data integrity
+- Can work simultaneously with Wave1-02
+- Share no files with Wave1-02
+- Both depend on Wave1-01 types
+- Helpers will be used by future controller implementations
+- Branch: `feature/tmc-syncer-01c-api-helpers`
+
+## Testing Focus Areas
+
+1. **Condition Management**
+   - Setting conditions
+   - Updating existing conditions
+   - Removing conditions
+   - Finding specific conditions
+
+2. **Status Helpers**
+   - Ready state management
+   - Heartbeat tracking
+   - Phase transitions
+
+3. **Capacity Calculations**
+   - Total capacity
+   - Available capacity
+   - Resource arithmetic
+
+4. **Edge Cases**
+   - Nil pointer handling
+   - Empty slices
+   - Invalid inputs
