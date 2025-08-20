@@ -1,74 +1,62 @@
-# Split Master Plan: Wave 2B - Virtual Workspace Implementation
+# Split Master Plan: Wave 1 - API Foundation
 
 ## Current State
-- **Total Lines:** 2,268 lines (excluding generated code)
-- **Test Lines:** 504 lines
-- **Files:** 8 virtual workspace files + API types from Wave 1
-- **Status:** NEEDS SPLIT - Exceeds 800 line limit by 1,468 lines
-
-## File Breakdown
-```
-pkg/virtual/syncer/transformation.go  - 229 lines
-pkg/virtual/syncer/doc.go            - 29 lines
-pkg/virtual/syncer/virtual_workspace.go - 201 lines
-pkg/virtual/syncer/auth.go           - 185 lines
-pkg/virtual/syncer/rest_storage.go   - 190 lines
-pkg/virtual/syncer/discovery.go      - 197 lines
-pkg/virtual/syncer/context.go        - 46 lines
-pkg/virtual/syncer/virtual_workspace_test.go - ~270 lines
-Plus API types from Wave 1         - 1,184 lines
-```
+- **Total Lines:** 1,184 lines (excluding generated code)
+- **Test Lines:** 234 lines
+- **Files:** 10 files (including generated)
+- **Status:** NEEDS SPLIT - Exceeds 800 line limit by 384 lines
 
 ## Split Strategy
 
-### Split 1: Virtual Workspace Foundation (wave2b-01)
-**Target Size:** ~475 lines  
-**Branch:** `feature/tmc-syncer-02b-virtual-base`
-**Worktree:** `/workspaces/kcp-worktrees/phase2/wave2b-01-split-from-virtual`
+### Split 1: Core API Types & Registration (wave1-01)
+**Target Size:** ~450 lines  
+**Branch:** `feature/tmc-syncer-01a-api-types`
+**Worktree:** `/workspaces/kcp-worktrees/phase2/wave1-01-split-from-api-foundation`
 
 **Files to Include:**
-- `pkg/virtual/syncer/doc.go` (29 lines)
-- `pkg/virtual/syncer/context.go` (46 lines)
-- `pkg/virtual/syncer/virtual_workspace.go` (201 lines)
-- `pkg/virtual/syncer/discovery.go` (197 lines)
+- `pkg/apis/workload/group.go` (~15 lines)
+- `pkg/apis/workload/v1alpha1/doc.go` (22 lines)
+- `pkg/apis/workload/v1alpha1/register.go` (54 lines)
+- `pkg/apis/workload/v1alpha1/synctarget_types.go` (333 lines)
+- `pkg/apis/workload/v1alpha1/zz_generated.deepcopy.go` (generated - not counted)
 
-**Total:** 473 lines
+**Total:** ~424 lines + generated deepcopy
 
-**Rationale:** Core virtual workspace structure and discovery mechanism form the foundation. These components establish the virtual workspace pattern and API discovery.
+**Rationale:** Core API types must be established first as they form the foundation for all other functionality.
 
-### Split 2: Authentication & Storage (wave2b-02)
-**Target Size:** ~375 lines  
-**Branch:** `feature/tmc-syncer-02b-auth-storage`
-**Worktree:** `/workspaces/kcp-worktrees/phase2/wave2b-02-split-from-virtual`
-
-**Files to Include:**
-- `pkg/virtual/syncer/auth.go` (185 lines)
-- `pkg/virtual/syncer/rest_storage.go` (190 lines)
-
-**Total:** 375 lines
-
-**Rationale:** Authentication and REST storage are closely related - auth validates access while storage handles the REST API implementation.
-
-### Split 3: Transformation & Tests (wave2b-03)
-**Target Size:** ~499 lines  
-**Branch:** `feature/tmc-syncer-02b-transform`
-**Worktree:** `/workspaces/kcp-worktrees/phase2/wave2b-03-split-from-virtual`
+### Split 2: API Validation & Defaults (wave1-02)
+**Target Size:** ~389 lines  
+**Branch:** `feature/tmc-syncer-01b-api-validation`
+**Worktree:** `/workspaces/kcp-worktrees/phase2/wave1-02-split-from-api-foundation`
 
 **Files to Include:**
-- `pkg/virtual/syncer/transformation.go` (229 lines)
-- `pkg/virtual/syncer/virtual_workspace_test.go` (~270 lines)
+- `pkg/apis/workload/v1alpha1/synctarget_validation.go` (276 lines)
+- `pkg/apis/workload/v1alpha1/synctarget_defaults.go` (113 lines)
 
-**Total:** ~499 lines
+**Total:** 389 lines
 
-**Rationale:** Transformation logic handles resource conversion between virtual and physical representations. Tests validate the entire virtual workspace implementation.
+**Rationale:** Validation and defaulting logic can be added after types are defined. These are cohesive units that work together.
 
-### Note on API Types
-The API types from Wave 1 (1,184 lines) should already be in a separate PR. If they're included in this branch, they should be removed as they belong to Wave 1.
+### Split 3: API Helpers, Conversion & Tests (wave1-03)
+**Target Size:** ~590 lines  
+**Branch:** `feature/tmc-syncer-01c-api-helpers`
+**Worktree:** `/workspaces/kcp-worktrees/phase2/wave1-03-split-from-api-foundation`
+
+**Files to Include:**
+- `pkg/apis/workload/v1alpha1/synctarget_helpers.go` (309 lines)
+- `pkg/apis/workload/v1alpha1/synctarget_conversion.go` (48 lines)
+- `pkg/apis/workload/v1alpha1/synctarget_types_test.go` (233 lines)
+
+**Total:** 590 lines
+
+**Rationale:** Helpers and conversion are utility functions that depend on types but are independent of validation. Tests validate the entire API surface.
+>>>>>>> feature/tmc-syncer-01-api-foundation
 
 ## Dependencies
 
 ```mermaid
 graph TD
+<<<<<<< HEAD
     W1[Wave 1: API Types] --> VW1[Split 1: Virtual Base]
     VW1 --> VW2[Split 2: Auth & Storage]
     VW1 --> VW3[Split 3: Transformation]
@@ -79,10 +67,22 @@ graph TD
 - **Wave 1 API Types** must be available (separate PR)
 - **Split 1** establishes virtual workspace foundation
 - **Split 2** and **Split 3** can proceed in parallel after Split 1
+=======
+    A[Split 1: API Types] --> B[Split 2: Validation]
+    A --> C[Split 3: Helpers]
+    B --> D[Tests Pass]
+    C --> D
+```
+
+- **Split 1** must be merged first (establishes types)
+- **Split 2** and **Split 3** can be done in parallel after Split 1
+- All splits must maintain compilation and test success
+>>>>>>> feature/tmc-syncer-01-api-foundation
 
 ## Execution Order
 
 ### Sequential Requirements:
+<<<<<<< HEAD
 1. **Split 1** (Virtual Base) - MUST be first, establishes foundation
 2. **Split 2** and **Split 3** can proceed in parallel
 
@@ -102,10 +102,20 @@ graph TD
 - Resource transformation hooks
 - Virtual resource definitions
 - Type conversion interfaces
+=======
+1. **Split 1** (API Types) - MUST be first
+2. **Split 2** and **Split 3** can proceed in parallel after Split 1
+
+### Parallel Opportunities:
+- After Split 1 is complete:
+  - Agent A can work on Split 2 (Validation)
+  - Agent B can work on Split 3 (Helpers)
+>>>>>>> feature/tmc-syncer-01-api-foundation
 
 ## Success Criteria
 
 Each split must:
+<<<<<<< HEAD
 1. ✅ Stay under 800 lines (strictly enforced)
 2. ✅ Be independently compilable
 3. ✅ Maintain virtual workspace isolation
@@ -185,3 +195,45 @@ make test-e2e-shared-minimal
 - The transformation logic is critical for resource compatibility
 - Discovery mechanism must be efficient to avoid performance issues
 - Test coverage is essential given the complexity
+=======
+1. ✅ Stay under 800 lines (excluding generated code)
+2. ✅ Be atomic and compilable
+3. ✅ Pass all tests
+4. ✅ Include proper documentation
+5. ✅ Follow KCP coding standards
+6. ✅ Be independently reviewable
+
+## Risk Mitigation
+
+1. **Compilation Issues**: Each split includes minimal dependencies to ensure compilation
+2. **Test Coverage**: Tests are included in Split 3 to validate all API functionality
+3. **Generated Code**: Deepcopy generation must run after Split 1
+4. **Import Cycles**: Careful package structure to avoid circular dependencies
+
+## Verification Steps
+
+Before creating PR for each split:
+```bash
+# 1. Verify compilation
+make build
+
+# 2. Run code generation
+make codegen
+
+# 3. Run tests
+make test
+
+# 4. Check line count
+/workspaces/kcp-shared-tools/tmc-pr-line-counter.sh -c <branch-name>
+
+# 5. Verify no uncommitted files
+git status
+```
+
+## Notes
+
+- Each split maintains the full package structure
+- Generated code (deepcopy) is included but not counted in line limits
+- CRD generation may be needed after API types are added
+- All splits target merging to `main` independently
+>>>>>>> feature/tmc-syncer-01-api-foundation
