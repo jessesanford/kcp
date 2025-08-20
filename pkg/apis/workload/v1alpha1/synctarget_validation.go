@@ -18,275 +18,260 @@ package v1alpha1
 
 import (
 	"fmt"
+	"regexp"
+	"strings"
 	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
-// ValidateCreate validates a SyncTarget on creation.
-// It ensures all required fields are present and valid.
-func (st *SyncTarget) ValidateCreate() error {
+var (
+	validSyncModes = map[string]bool{
+		"push":          true,
+		"pull":          true,
+		"bidirectional": true,
+	}
+
+	// resourceTypePattern validates Kubernetes resource type names
+	resourceTypePattern = regexp.MustCompile(`^[a-z][a-z0-9]*(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?\.[a-z]{2,})?$`)
+)
+
+// ValidateSyncTarget validates a SyncTarget object.
+//
+// +kubebuilder:webhook:path=/validate-workload-kcp-io-v1alpha1-synctarget,mutating=false,failurePolicy=fail,sideEffects=None,groups=workload.kcp.io,resources=synctargets,verbs=create;update,versions=v1alpha1,name=vsynctarget.kb.io,admissionReviewVersions=v1
+func ValidateSyncTarget(syncTarget *SyncTarget) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// Validate spec
-	if errs := st.validateSyncTargetSpec(); len(errs) > 0 {
-		allErrs = append(allErrs, errs...)
-	}
+	allErrs = append(allErrs, validateSyncTargetSpec(&syncTarget.Spec, field.NewPath("spec"))...)
 
-	if len(allErrs) > 0 {
-		return allErrs.ToAggregate()
-	}
-	return nil
+	return allErrs
 }
 
-// ValidateUpdate validates a SyncTarget on update.
-// It ensures that immutable fields are not changed and validates updated fields.
-func (st *SyncTarget) ValidateUpdate(old runtime.Object) error {
-	allErrs := field.ErrorList{}
-	oldSyncTarget, ok := old.(*SyncTarget)
-	if !ok {
-		return fmt.Errorf("expected SyncTarget, got %T", old)
-	}
+// ValidateSyncTargetUpdate validates an update to a SyncTarget object.
+func ValidateSyncTargetUpdate(syncTarget, oldSyncTarget *SyncTarget) field.ErrorList {
+	allErrs := ValidateSyncTarget(syncTarget)
 
 	// Validate that immutable fields haven't changed
-	if errs := st.validateImmutableFields(oldSyncTarget); len(errs) > 0 {
-		allErrs = append(allErrs, errs...)
-	}
-
-	// Validate the current spec
-	if errs := st.validateSyncTargetSpec(); len(errs) > 0 {
-		allErrs = append(allErrs, errs...)
-	}
-
-	if len(allErrs) > 0 {
-		return allErrs.ToAggregate()
-	}
-	return nil
-}
-
-// validateSyncTargetSpec validates the SyncTarget specification.
-func (st *SyncTarget) validateSyncTargetSpec() field.ErrorList {
-	allErrs := field.ErrorList{}
 	specPath := field.NewPath("spec")
-
-	// Validate cluster reference
-	if errs := st.validateClusterReference(specPath.Child("clusterRef")); len(errs) > 0 {
-		allErrs = append(allErrs, errs...)
+	if syncTarget.Spec.ClusterRef.Name != oldSyncTarget.Spec.ClusterRef.Name {
+		allErrs = append(allErrs, field.Invalid(specPath.Child("clusterRef", "name"), syncTarget.Spec.ClusterRef.Name, "clusterRef.name is immutable"))
 	}
 
-	// Validate syncer config if present
-	if st.Spec.SyncerConfig != nil {
-		if errs := st.validateSyncerConfig(specPath.Child("syncerConfig")); len(errs) > 0 {
-			allErrs = append(allErrs, errs...)
-		}
+	if syncTarget.Spec.ClusterRef.Workspace != oldSyncTarget.Spec.ClusterRef.Workspace {
+		allErrs = append(allErrs, field.Invalid(specPath.Child("clusterRef", "workspace"), syncTarget.Spec.ClusterRef.Workspace, "clusterRef.workspace is immutable"))
 	}
 
-	// Validate resource quotas if present
-	if st.Spec.ResourceQuotas != nil {
-		if errs := st.validateResourceQuotas(specPath.Child("resourceQuotas")); len(errs) > 0 {
-			allErrs = append(allErrs, errs...)
-		}
+	return allErrs
+}
+
+// validateSyncTargetSpec validates the spec of a SyncTarget.
+func validateSyncTargetSpec(spec *SyncTargetSpec, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Validate ClusterRef
+	allErrs = append(allErrs, validateClusterReference(&spec.ClusterRef, fldPath.Child("clusterRef"))...)
+
+	// Validate SyncerConfig
+	if spec.SyncerConfig != nil {
+		allErrs = append(allErrs, validateSyncerConfig(spec.SyncerConfig, fldPath.Child("syncerConfig"))...)
 	}
 
-	// Validate workload selector if present
-	if st.Spec.Selector != nil {
-		if errs := st.validateWorkloadSelector(specPath.Child("selector")); len(errs) > 0 {
-			allErrs = append(allErrs, errs...)
+	// Validate ResourceQuotas
+	if spec.ResourceQuotas != nil {
+		allErrs = append(allErrs, validateResourceQuotas(spec.ResourceQuotas, fldPath.Child("resourceQuotas"))...)
+	}
+
+	// Validate Selector
+	if spec.Selector != nil {
+		allErrs = append(allErrs, validateWorkloadSelector(spec.Selector, fldPath.Child("selector"))...)
+	}
+
+	// Validate SupportedResourceTypes
+	allErrs = append(allErrs, validateSupportedResourceTypes(spec.SupportedResourceTypes, fldPath.Child("supportedResourceTypes"))...)
+
+	return allErrs
+}
+
+// validateClusterReference validates a ClusterReference.
+func validateClusterReference(clusterRef *ClusterReference, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if clusterRef.Name == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "name is required"))
+	}
+
+	// Validate name follows Kubernetes naming conventions
+	if len(clusterRef.Name) > 253 {
+		allErrs = append(allErrs, field.TooLong(fldPath.Child("name"), clusterRef.Name, 253))
+	}
+
+	// Workspace name validation (if specified)
+	if clusterRef.Workspace != "" {
+		if len(clusterRef.Workspace) > 253 {
+			allErrs = append(allErrs, field.TooLong(fldPath.Child("workspace"), clusterRef.Workspace, 253))
 		}
 	}
 
 	return allErrs
 }
 
-// validateClusterReference validates the cluster reference.
-func (st *SyncTarget) validateClusterReference(fldPath *field.Path) field.ErrorList {
+// validateSyncerConfig validates SyncerConfig fields.
+func validateSyncerConfig(config *SyncerConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	if st.Spec.ClusterRef.Name == "" {
-		allErrs = append(allErrs, field.Required(
-			fldPath.Child("name"),
-			"cluster reference name is required"))
+	// Validate SyncMode
+	if config.SyncMode != "" && !validSyncModes[config.SyncMode] {
+		allErrs = append(allErrs, field.NotSupported(fldPath.Child("syncMode"), config.SyncMode, []string{"push", "pull", "bidirectional"}))
 	}
 
-	return allErrs
-}
-
-// validateSyncerConfig validates the syncer configuration.
-func (st *SyncTarget) validateSyncerConfig(fldPath *field.Path) field.ErrorList {
-	allErrs := field.ErrorList{}
-	config := st.Spec.SyncerConfig
-
-	// Validate sync mode
-	if config.SyncMode != "" {
-		validModes := map[string]bool{"push": true, "pull": true, "bidirectional": true}
-		if !validModes[config.SyncMode] {
-			allErrs = append(allErrs, field.Invalid(
-				fldPath.Child("syncMode"),
-				config.SyncMode,
-				"must be one of: push, pull, bidirectional"))
-		}
-	}
-
-	// Validate sync interval
+	// Validate SyncInterval
 	if config.SyncInterval != "" {
 		if _, err := time.ParseDuration(config.SyncInterval); err != nil {
-			allErrs = append(allErrs, field.Invalid(
-				fldPath.Child("syncInterval"),
-				config.SyncInterval,
-				"must be a valid duration string"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("syncInterval"), config.SyncInterval, fmt.Sprintf("invalid duration: %v", err)))
 		}
 	}
 
-	// Validate retry backoff if present
+	// Validate RetryBackoff
 	if config.RetryBackoff != nil {
-		if errs := st.validateRetryBackoff(fldPath.Child("retryBackoff")); len(errs) > 0 {
-			allErrs = append(allErrs, errs...)
-		}
+		allErrs = append(allErrs, validateRetryBackoffConfig(config.RetryBackoff, fldPath.Child("retryBackoff"))...)
 	}
 
 	return allErrs
 }
 
-// validateRetryBackoff validates retry backoff configuration.
-func (st *SyncTarget) validateRetryBackoff(fldPath *field.Path) field.ErrorList {
+// validateRetryBackoffConfig validates RetryBackoffConfig fields.
+func validateRetryBackoffConfig(backoff *RetryBackoffConfig, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	backoff := st.Spec.SyncerConfig.RetryBackoff
 
-	// Validate initial interval
 	if backoff.InitialInterval != "" {
 		if _, err := time.ParseDuration(backoff.InitialInterval); err != nil {
-			allErrs = append(allErrs, field.Invalid(
-				fldPath.Child("initialInterval"),
-				backoff.InitialInterval,
-				"must be a valid duration string"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("initialInterval"), backoff.InitialInterval, fmt.Sprintf("invalid duration: %v", err)))
 		}
 	}
 
-	// Validate max interval
 	if backoff.MaxInterval != "" {
 		if _, err := time.ParseDuration(backoff.MaxInterval); err != nil {
-			allErrs = append(allErrs, field.Invalid(
-				fldPath.Child("maxInterval"),
-				backoff.MaxInterval,
-				"must be a valid duration string"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("maxInterval"), backoff.MaxInterval, fmt.Sprintf("invalid duration: %v", err)))
 		}
 	}
 
-	// Validate multiplier
-	if backoff.Multiplier != 0 && backoff.Multiplier < 1.0 {
-		allErrs = append(allErrs, field.Invalid(
-			fldPath.Child("multiplier"),
-			backoff.Multiplier,
-			"must be >= 1.0"))
+	if backoff.Multiplier != 0 && backoff.Multiplier <= 1.0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("multiplier"), backoff.Multiplier, "multiplier must be greater than 1.0"))
 	}
 
 	return allErrs
 }
 
-// validateResourceQuotas validates resource quota specifications.
-func (st *SyncTarget) validateResourceQuotas(fldPath *field.Path) field.ErrorList {
+// validateResourceQuotas validates ResourceQuotas fields.
+func validateResourceQuotas(quotas *ResourceQuotas, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	quotas := st.Spec.ResourceQuotas
 
-	// Validate CPU quota if present
+	// Validate CPU quota
 	if quotas.CPU != nil {
 		if quotas.CPU.Sign() < 0 {
-			allErrs = append(allErrs, field.Invalid(
-				fldPath.Child("cpu"),
-				quotas.CPU,
-				"must be non-negative"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("cpu"), quotas.CPU.String(), "CPU quota must be positive"))
 		}
 	}
 
-	// Validate memory quota if present
+	// Validate Memory quota
 	if quotas.Memory != nil {
 		if quotas.Memory.Sign() < 0 {
-			allErrs = append(allErrs, field.Invalid(
-				fldPath.Child("memory"),
-				quotas.Memory,
-				"must be non-negative"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("memory"), quotas.Memory.String(), "memory quota must be positive"))
 		}
 	}
 
-	// Validate storage quota if present
+	// Validate Storage quota
 	if quotas.Storage != nil {
 		if quotas.Storage.Sign() < 0 {
-			allErrs = append(allErrs, field.Invalid(
-				fldPath.Child("storage"),
-				quotas.Storage,
-				"must be non-negative"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("storage"), quotas.Storage.String(), "storage quota must be positive"))
 		}
 	}
 
-	// Validate pods quota if present
+	// Validate Pods quota
 	if quotas.Pods != nil {
 		if quotas.Pods.Sign() < 0 {
-			allErrs = append(allErrs, field.Invalid(
-				fldPath.Child("pods"),
-				quotas.Pods,
-				"must be non-negative"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("pods"), quotas.Pods.String(), "pods quota must be positive"))
 		}
 	}
 
-	// Validate custom quotas
-	for key, value := range quotas.Custom {
-		if value.Sign() < 0 {
-			allErrs = append(allErrs, field.Invalid(
-				fldPath.Child("custom").Key(key),
-				value,
-				"must be non-negative"))
+	// Validate Custom quotas
+	for name, quota := range quotas.Custom {
+		if quota.Sign() < 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("custom", name), quota.String(), "custom quota must be positive"))
+		}
+		// Validate resource name format
+		if _, err := resource.ParseQuantity(quota.String()); err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("custom", name), quota.String(), fmt.Sprintf("invalid resource quantity: %v", err)))
 		}
 	}
 
 	return allErrs
 }
 
-// validateWorkloadSelector validates workload selector configuration.
-func (st *SyncTarget) validateWorkloadSelector(fldPath *field.Path) field.ErrorList {
+// validateWorkloadSelector validates WorkloadSelector fields.
+func validateWorkloadSelector(selector *WorkloadSelector, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	selector := st.Spec.Selector
 
-	// Validate that at least one selection criteria is specified
-	if len(selector.MatchLabels) == 0 &&
-		len(selector.MatchExpressions) == 0 &&
-		selector.NamespaceSelector == nil &&
-		len(selector.Locations) == 0 {
-		allErrs = append(allErrs, field.Invalid(
-			fldPath,
-			selector,
-			"at least one selection criteria must be specified"))
+	// Validate MatchLabels
+	for key, value := range selector.MatchLabels {
+		if len(key) == 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("matchLabels"), key, "label key cannot be empty"))
+		}
+		if len(key) > 63 {
+			allErrs = append(allErrs, field.TooLong(fldPath.Child("matchLabels"), key, 63))
+		}
+		if len(value) > 63 {
+			allErrs = append(allErrs, field.TooLong(fldPath.Child("matchLabels"), value, 63))
+		}
 	}
 
-	// Validate locations
+	// Validate Locations
 	for i, location := range selector.Locations {
 		if location == "" {
-			allErrs = append(allErrs, field.Invalid(
-				fldPath.Child("locations").Index(i),
-				location,
-				"location name cannot be empty"))
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("locations").Index(i), location, "location cannot be empty"))
+		}
+		if len(location) > 253 {
+			allErrs = append(allErrs, field.TooLong(fldPath.Child("locations").Index(i), location, 253))
 		}
 	}
 
 	return allErrs
 }
 
-// validateImmutableFields ensures that immutable fields haven't changed.
-func (st *SyncTarget) validateImmutableFields(old *SyncTarget) field.ErrorList {
+// validateSupportedResourceTypes validates the supportedResourceTypes field.
+func validateSupportedResourceTypes(resourceTypes []string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
 
-	// ClusterRef is immutable after creation
-	if st.Spec.ClusterRef.Name != old.Spec.ClusterRef.Name {
-		allErrs = append(allErrs, field.Forbidden(
-			field.NewPath("spec", "clusterRef", "name"),
-			"cluster reference name is immutable"))
-	}
+	seen := make(map[string]bool)
+	for i, resourceType := range resourceTypes {
+		if resourceType == "" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), resourceType, "resource type cannot be empty"))
+			continue
+		}
 
-	if st.Spec.ClusterRef.Workspace != old.Spec.ClusterRef.Workspace {
-		allErrs = append(allErrs, field.Forbidden(
-			field.NewPath("spec", "clusterRef", "workspace"),
-			"cluster reference workspace is immutable"))
+		// Check for duplicates
+		if seen[resourceType] {
+			allErrs = append(allErrs, field.Duplicate(fldPath.Index(i), resourceType))
+			continue
+		}
+		seen[resourceType] = true
+
+		// Validate resource type format
+		if !isValidResourceType(resourceType) {
+			allErrs = append(allErrs, field.Invalid(fldPath.Index(i), resourceType, "invalid resource type format"))
+		}
 	}
 
 	return allErrs
+}
+
+// isValidResourceType checks if a resource type follows valid conventions.
+func isValidResourceType(resourceType string) bool {
+	// Allow both simple names (like "pods", "services") and group-qualified names (like "deployments.apps")
+	if strings.Contains(resourceType, ".") {
+		return resourceTypePattern.MatchString(resourceType)
+	}
+	// Simple resource names should be lowercase with no special characters
+	return regexp.MustCompile(`^[a-z][a-z0-9]*$`).MatchString(resourceType)
 }
