@@ -1,0 +1,30 @@
+hack/verify-go-versions.sh
+Verifying minimum Go version: 1.24
+Verifying build Go version: 1.24.5
+Configuring build environment...
+Configuring build for environment: local
+WARNING: Go version 1.22 detected, but 1.23 or higher is recommended
+Consider upgrading Go for optimal build performance
+Build cache configured: /home/vscode/.cache/kcp
+Build configuration complete:
+  Environment: local
+  Build flags: -v
+  Test flags: -v -timeout=30m
+  Go cache: /home/vscode/.cache/kcp/go-build
+  Go mod cache: /home/vscode/.cache/kcp/go-mod
+Build configuration complete
+set -x; for W in ./cmd/... ./cli/cmd/... ./sdk/cmd/...; do \
+	pushd . && cd ${W%..}; \
+    	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build  -trimpath  -ldflags="-X k8s.io/client-go/pkg/version.gitCommit=8b16b72c9 -X k8s.io/client-go/pkg/version.gitTreeState=clean -X k8s.io/client-go/pkg/version.gitVersion=v1.33.3+kcp-v0.28.0-216-g8b16b72c978535 -X k8s.io/client-go/pkg/version.gitMajor=1 -X k8s.io/client-go/pkg/version.gitMinor=33 -X k8s.io/client-go/pkg/version.buildDate=2025-08-19T21:06:27Z -X k8s.io/component-base/version.gitCommit=8b16b72c9 -X k8s.io/component-base/version.gitTreeState=clean -X k8s.io/component-base/version.gitVersion=v1.33.3+kcp-v0.28.0-216-g8b16b72c978535 -X k8s.io/component-base/version.gitMajor=1 -X k8s.io/component-base/version.gitMinor=33 -X k8s.io/component-base/version.buildDate=2025-08-19T21:06:27Z -extldflags '-static'" -o /workspaces/tmc-pr-upstream/bin ./...; \
+	popd; \
+    done
++ for W in ./cmd/... ./cli/cmd/... ./sdk/cmd/...
++ pushd .
+/workspaces/tmc-pr-upstream /workspaces/tmc-pr-upstream
++ cd ./cmd/.
++ GOOS=linux
++ GOARCH=arm64
++ CGO_ENABLED=0
++ go build -trimpath '-ldflags=-X k8s.io/client-go/pkg/version.gitCommit=8b16b72c9 -X k8s.io/client-go/pkg/version.gitTreeState=clean -X k8s.io/client-go/pkg/version.gitVersion=v1.33.3+kcp-v0.28.0-216-g8b16b72c978535 -X k8s.io/client-go/pkg/version.gitMajor=1 -X k8s.io/client-go/pkg/version.gitMinor=33 -X k8s.io/client-go/pkg/version.buildDate=2025-08-19T21:06:27Z -X k8s.io/component-base/version.gitCommit=8b16b72c9 -X k8s.io/component-base/version.gitTreeState=clean -X k8s.io/component-base/version.gitVersion=v1.33.3+kcp-v0.28.0-216-g8b16b72c978535 -X k8s.io/component-base/version.gitMajor=1 -X k8s.io/component-base/version.gitMinor=33 -X k8s.io/component-base/version.buildDate=2025-08-19T21:06:27Z -extldflags '\''-static'\''' -o /workspaces/tmc-pr-upstream/bin ./...
+go: ../go.mod requires go >= 1.24.0 (running go 1.22.12; GOTOOLCHAIN=local)
+make: *** [Makefile:121: build] Error 1
