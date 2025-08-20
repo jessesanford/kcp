@@ -19,6 +19,7 @@ package transformation
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -26,6 +27,41 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 )
+
+// SyncTarget represents a sync target for transformation purposes.
+// This is a placeholder until Phase 5 APIs are available.
+type SyncTarget struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+	
+	// Spec contains the sync target specification
+	Spec SyncTargetSpec `json:"spec,omitempty"`
+}
+
+// SyncTargetSpec defines the desired state of a sync target
+type SyncTargetSpec struct {
+	// ClusterName is the name of the target cluster
+	ClusterName string `json:"clusterName,omitempty"`
+	
+	// Namespace is the target namespace for transformations
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// ResourceTransformer defines the interface for transforming resources
+// during synchronization between KCP and physical clusters.
+type ResourceTransformer interface {
+	// ShouldTransform returns true if this transformer should process the given object
+	ShouldTransform(obj runtime.Object) bool
+	
+	// TransformForDownstream transforms a resource when syncing from KCP to a physical cluster
+	TransformForDownstream(ctx context.Context, obj runtime.Object, target *SyncTarget) (runtime.Object, error)
+	
+	// TransformForUpstream transforms a resource when syncing from a physical cluster back to KCP
+	TransformForUpstream(ctx context.Context, obj runtime.Object, source *SyncTarget) (runtime.Object, error)
+	
+	// Name returns a human-readable name for the transformer
+	Name() string
+}
 
 // metadataTransformer handles label and annotation transformations during synchronization.
 // It adds management labels, preserves important annotations, and filters sensitive metadata.
@@ -115,7 +151,7 @@ func (t *metadataTransformer) TransformForDownstream(ctx context.Context, obj ru
 	
 	_, ok := obj.(metav1.Object)
 	if !ok {
-		return obj, nil // Not a metadata object, pass through
+		return obj.DeepCopyObject(), nil // Not a metadata object, return copy
 	}
 	
 	// Create a copy to avoid modifying the original
@@ -145,7 +181,7 @@ func (t *metadataTransformer) TransformForUpstream(ctx context.Context, obj runt
 	
 	_, ok := obj.(metav1.Object)
 	if !ok {
-		return obj, nil // Not a metadata object, pass through
+		return obj.DeepCopyObject(), nil // Not a metadata object, return copy
 	}
 	
 	// Create a copy to avoid modifying the original
@@ -293,4 +329,17 @@ func (t *metadataTransformer) shouldPreserveAnnotation(key string) bool {
 	}
 	
 	return false
+}
+
+// getObjectKind returns a string representation of the object's kind for logging.
+func getObjectKind(obj runtime.Object) string {
+	if obj == nil {
+		return "unknown"
+	}
+	
+	if gvk := obj.GetObjectKind().GroupVersionKind(); !gvk.Empty() {
+		return gvk.String()
+	}
+	
+	return reflect.TypeOf(obj).String()
 }

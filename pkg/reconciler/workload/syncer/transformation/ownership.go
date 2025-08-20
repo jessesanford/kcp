@@ -19,6 +19,7 @@ package transformation
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -91,12 +92,12 @@ func (t *ownerReferenceTransformer) TransformForDownstream(ctx context.Context, 
 	
 	metaObj, ok := obj.(metav1.Object)
 	if !ok {
-		return obj, nil // Not a metadata object, pass through
+		return obj.DeepCopyObject(), nil // Not a metadata object, return copy
 	}
 	
 	ownerRefs := metaObj.GetOwnerReferences()
 	if len(ownerRefs) == 0 {
-		return obj, nil // No owner references to transform
+		return obj.DeepCopyObject(), nil // No owner references to transform, return copy
 	}
 	
 	// Create a copy to avoid modifying the original
@@ -144,7 +145,7 @@ func (t *ownerReferenceTransformer) TransformForUpstream(ctx context.Context, ob
 	
 	_, ok := obj.(metav1.Object)
 	if !ok {
-		return obj, nil // Not a metadata object, pass through
+		return obj.DeepCopyObject(), nil // Not a metadata object, return copy
 	}
 	
 	// Create a copy to avoid modifying the original
@@ -154,24 +155,23 @@ func (t *ownerReferenceTransformer) TransformForUpstream(ctx context.Context, ob
 	// For upstream, we generally want to remove cross-cluster owner references
 	// to prevent issues with garbage collection in KCP
 	ownerRefs := metaResult.GetOwnerReferences()
-	if len(ownerRefs) == 0 {
-		return result, nil
+	
+	if len(ownerRefs) > 0 {
+		// Filter owner references for upstream
+		filteredRefs := t.filterOwnerReferencesForUpstream(ownerRefs)
+		
+		klog.V(5).InfoS("Filtering owner references for upstream",
+			"objectKind", getObjectKind(obj),
+			"namespace", metaResult.GetNamespace(),
+			"name", metaResult.GetName(),
+			"originalRefs", len(ownerRefs),
+			"filteredRefs", len(filteredRefs),
+			"sourceCluster", source.Spec.ClusterName)
+		
+		metaResult.SetOwnerReferences(filteredRefs)
 	}
 	
-	// Filter owner references for upstream
-	filteredRefs := t.filterOwnerReferencesForUpstream(ownerRefs)
-	
-	klog.V(5).InfoS("Filtering owner references for upstream",
-		"objectKind", getObjectKind(obj),
-		"namespace", metaResult.GetNamespace(),
-		"name", metaResult.GetName(),
-		"originalRefs", len(ownerRefs),
-		"filteredRefs", len(filteredRefs),
-		"sourceCluster", source.Spec.ClusterName)
-	
-	metaResult.SetOwnerReferences(filteredRefs)
-	
-	// Clean up transformation annotations
+	// Always clean up transformation annotations regardless of owner references
 	annotations := metaResult.GetAnnotations()
 	if annotations != nil {
 		delete(annotations, "syncer.kcp.io/original-owner-count")
@@ -274,4 +274,17 @@ func (t *ownerReferenceTransformer) generateCrossClusterUID(originalUID types.UI
 	// and cluster name to generate a deterministic cross-cluster UID
 	// For demonstration purposes, we'll just append the cluster name
 	return types.UID(fmt.Sprintf("%s-%s", string(originalUID), clusterName))
+}
+
+// getObjectKind returns a string representation of the object's kind for logging.
+func getObjectKind(obj runtime.Object) string {
+	if obj == nil {
+		return "unknown"
+	}
+	
+	if gvk := obj.GetObjectKind().GroupVersionKind(); !gvk.Empty() {
+		return gvk.String()
+	}
+	
+	return reflect.TypeOf(obj).String()
 }
