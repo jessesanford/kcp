@@ -79,10 +79,8 @@ func NewPipeline(workspace logicalcluster.Name) *Pipeline {
 	}
 	
 	// Register default transformers in execution order
+	// Only namespace transformer is available in this core split
 	pipeline.RegisterTransformer(NewNamespaceTransformer(workspace))
-	pipeline.RegisterTransformer(NewMetadataTransformer())
-	pipeline.RegisterTransformer(NewOwnerReferenceTransformer())
-	pipeline.RegisterTransformer(NewSecretTransformer())
 	
 	return pipeline
 }
