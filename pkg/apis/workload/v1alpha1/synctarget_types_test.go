@@ -19,216 +19,314 @@ package v1alpha1
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	conditionsv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
 )
 
-func TestSyncTarget_SetCondition(t *testing.T) {
-	tests := map[string]struct {
-		initial  *SyncTarget
-		condType string
-		status   corev1.ConditionStatus
-		reason   string
-		message  string
-		wantLen  int
-	}{
-		"new condition": {
-			initial: &SyncTarget{},
-			condType: string(SyncTargetReady),
-			status:   corev1.ConditionTrue,
-			reason:   "Ready",
-			message:  "SyncTarget is ready",
-			wantLen:  1,
-		},
-		"update existing condition": {
-			initial: &SyncTarget{
-				Status: SyncTargetStatus{
-					Conditions: conditionsv1alpha1.Conditions{
-						{Type: SyncTargetReady, Status: corev1.ConditionFalse, Reason: "NotReady"},
+func TestSyncTargetConditions(t *testing.T) {
+	t.Run("GetCondition returns nil for non-existent condition", func(t *testing.T) {
+		st := &SyncTarget{}
+		condition := st.GetCondition(SyncTargetReady)
+		assert.Nil(t, condition)
+	})
+
+	t.Run("SetCondition adds new condition", func(t *testing.T) {
+		st := &SyncTarget{}
+		condition := conditionsv1alpha1.Condition{
+			Type:    SyncTargetReady,
+			Status:  corev1.ConditionTrue,
+			Reason:  "AllComponentsReady",
+			Message: "All syncer components are ready",
+		}
+
+		st.SetCondition(condition)
+
+		assert.Len(t, st.Status.Conditions, 1)
+		retrieved := st.GetCondition(SyncTargetReady)
+		require.NotNil(t, retrieved)
+		assert.Equal(t, SyncTargetReady, retrieved.Type)
+		assert.Equal(t, corev1.ConditionTrue, retrieved.Status)
+	})
+
+	t.Run("SetCondition updates existing condition", func(t *testing.T) {
+		st := &SyncTarget{
+			Status: SyncTargetStatus{
+				Conditions: conditionsv1alpha1.Conditions{
+					{
+						Type:    SyncTargetReady,
+						Status:  corev1.ConditionFalse,
+						Reason:  "NotReady",
+						Message: "Components are not ready",
 					},
 				},
 			},
-			condType: string(SyncTargetReady),
-			status:   corev1.ConditionTrue,
-			reason:   "Ready",
-			message:  "Now ready",
-			wantLen:  1,
+		}
+
+		updatedCondition := conditionsv1alpha1.Condition{
+			Type:    SyncTargetReady,
+			Status:  corev1.ConditionTrue,
+			Reason:  "AllReady",
+			Message: "All components are ready",
+		}
+
+		st.SetCondition(updatedCondition)
+
+		assert.Len(t, st.Status.Conditions, 1)
+		retrieved := st.GetCondition(SyncTargetReady)
+		require.NotNil(t, retrieved)
+		assert.Equal(t, corev1.ConditionTrue, retrieved.Status)
+		assert.Equal(t, "AllReady", retrieved.Reason)
+	})
+
+	t.Run("SetCondition preserves other conditions", func(t *testing.T) {
+		st := &SyncTarget{
+			Status: SyncTargetStatus{
+				Conditions: conditionsv1alpha1.Conditions{
+					{
+						Type:   SyncTargetSyncerReady,
+						Status: corev1.ConditionTrue,
+					},
+					{
+						Type:   SyncTargetClusterReady,
+						Status: corev1.ConditionFalse,
+					},
+				},
+			},
+		}
+
+		newCondition := conditionsv1alpha1.Condition{
+			Type:   SyncTargetReady,
+			Status: corev1.ConditionTrue,
+		}
+
+		st.SetCondition(newCondition)
+
+		assert.Len(t, st.Status.Conditions, 3)
+		assert.NotNil(t, st.GetCondition(SyncTargetSyncerReady))
+		assert.NotNil(t, st.GetCondition(SyncTargetClusterReady))
+		assert.NotNil(t, st.GetCondition(SyncTargetReady))
+	})
+}
+
+func TestSyncTargetConditionHelpers(t *testing.T) {
+	tests := map[string]struct {
+		conditions []conditionsv1alpha1.Condition
+		testCases  map[string]func(*testing.T, *SyncTarget)
+	}{
+		"empty conditions": {
+			conditions: []conditionsv1alpha1.Condition{},
+			testCases: map[string]func(*testing.T, *SyncTarget){
+				"HasCondition returns false": func(t *testing.T, st *SyncTarget) {
+					assert.False(t, st.HasCondition(SyncTargetReady))
+				},
+				"IsConditionTrue returns false": func(t *testing.T, st *SyncTarget) {
+					assert.False(t, st.IsConditionTrue(SyncTargetReady))
+				},
+				"IsConditionFalse returns false": func(t *testing.T, st *SyncTarget) {
+					assert.False(t, st.IsConditionFalse(SyncTargetReady))
+				},
+				"IsReady returns false": func(t *testing.T, st *SyncTarget) {
+					assert.False(t, st.IsReady())
+				},
+			},
+		},
+		"condition true": {
+			conditions: []conditionsv1alpha1.Condition{
+				{
+					Type:   SyncTargetReady,
+					Status: corev1.ConditionTrue,
+				},
+			},
+			testCases: map[string]func(*testing.T, *SyncTarget){
+				"HasCondition returns true": func(t *testing.T, st *SyncTarget) {
+					assert.True(t, st.HasCondition(SyncTargetReady))
+				},
+				"IsConditionTrue returns true": func(t *testing.T, st *SyncTarget) {
+					assert.True(t, st.IsConditionTrue(SyncTargetReady))
+				},
+				"IsConditionFalse returns false": func(t *testing.T, st *SyncTarget) {
+					assert.False(t, st.IsConditionFalse(SyncTargetReady))
+				},
+				"IsReady returns true": func(t *testing.T, st *SyncTarget) {
+					assert.True(t, st.IsReady())
+				},
+			},
+		},
+		"condition false": {
+			conditions: []conditionsv1alpha1.Condition{
+				{
+					Type:   SyncTargetReady,
+					Status: corev1.ConditionFalse,
+				},
+			},
+			testCases: map[string]func(*testing.T, *SyncTarget){
+				"HasCondition returns true": func(t *testing.T, st *SyncTarget) {
+					assert.True(t, st.HasCondition(SyncTargetReady))
+				},
+				"IsConditionTrue returns false": func(t *testing.T, st *SyncTarget) {
+					assert.False(t, st.IsConditionTrue(SyncTargetReady))
+				},
+				"IsConditionFalse returns true": func(t *testing.T, st *SyncTarget) {
+					assert.True(t, st.IsConditionFalse(SyncTargetReady))
+				},
+				"IsReady returns false": func(t *testing.T, st *SyncTarget) {
+					assert.False(t, st.IsReady())
+				},
+			},
+		},
+		"multiple conditions": {
+			conditions: []conditionsv1alpha1.Condition{
+				{
+					Type:   SyncTargetReady,
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   SyncTargetSyncerReady,
+					Status: corev1.ConditionTrue,
+				},
+				{
+					Type:   SyncTargetClusterReady,
+					Status: corev1.ConditionFalse,
+				},
+			},
+			testCases: map[string]func(*testing.T, *SyncTarget){
+				"IsReady returns true": func(t *testing.T, st *SyncTarget) {
+					assert.True(t, st.IsReady())
+				},
+				"IsSyncerReady returns true": func(t *testing.T, st *SyncTarget) {
+					assert.True(t, st.IsSyncerReady())
+				},
+				"IsClusterReady returns false": func(t *testing.T, st *SyncTarget) {
+					assert.False(t, st.IsClusterReady())
+				},
+			},
 		},
 	}
 
 	for name, tc := range tests {
 		t.Run(name, func(t *testing.T) {
-			tc.initial.SetCondition(conditionsv1alpha1.ConditionType(tc.condType), tc.status, tc.reason, tc.message)
-			
-			if len(tc.initial.Status.Conditions) != tc.wantLen {
-				t.Errorf("expected %d conditions, got %d", tc.wantLen, len(tc.initial.Status.Conditions))
+			st := &SyncTarget{
+				Status: SyncTargetStatus{
+					Conditions: tc.conditions,
+				},
 			}
-			
-			cond := tc.initial.GetCondition(conditionsv1alpha1.ConditionType(tc.condType))
-			if cond == nil {
-				t.Fatal("expected condition to exist")
-			}
-			if cond.Status != tc.status {
-				t.Errorf("expected status %v, got %v", tc.status, cond.Status)
+
+			for testName, testFunc := range tc.testCases {
+				t.Run(testName, func(t *testing.T) {
+					testFunc(t, st)
+				})
 			}
 		})
 	}
 }
 
-func TestSyncTarget_IsReady(t *testing.T) {
-	tests := map[string]struct {
-		target *SyncTarget
-		want   bool
-	}{
-		"no conditions": {
-			target: &SyncTarget{},
-			want:   false,
-		},
-		"ready condition true": {
-			target: &SyncTarget{
-				Status: SyncTargetStatus{
-					Conditions: conditionsv1alpha1.Conditions{
-						{Type: SyncTargetReady, Status: corev1.ConditionTrue},
-					},
-				},
-			},
-			want: true,
-		},
-		"ready condition false": {
-			target: &SyncTarget{
-				Status: SyncTargetStatus{
-					Conditions: conditionsv1alpha1.Conditions{
-						{Type: SyncTargetReady, Status: corev1.ConditionFalse},
-					},
-				},
-			},
-			want: false,
-		},
-	}
+func TestGetSetConditions(t *testing.T) {
+	t.Run("GetConditions returns empty slice for new SyncTarget", func(t *testing.T) {
+		st := &SyncTarget{}
+		conditions := st.GetConditions()
+		assert.Empty(t, conditions)
+	})
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			if got := tc.target.IsReady(); got != tc.want {
-				t.Errorf("IsReady() = %v, want %v", got, tc.want)
-			}
-		})
-	}
+	t.Run("GetConditions returns existing conditions", func(t *testing.T) {
+		expectedConditions := conditionsv1alpha1.Conditions{
+			{
+				Type:   SyncTargetReady,
+				Status: corev1.ConditionTrue,
+			},
+			{
+				Type:   SyncTargetSyncerReady,
+				Status: corev1.ConditionFalse,
+			},
+		}
+
+		st := &SyncTarget{
+			Status: SyncTargetStatus{
+				Conditions: expectedConditions,
+			},
+		}
+
+		conditions := st.GetConditions()
+		assert.Equal(t, expectedConditions, conditions)
+	})
+
+	t.Run("SetConditions replaces all conditions", func(t *testing.T) {
+		st := &SyncTarget{
+			Status: SyncTargetStatus{
+				Conditions: conditionsv1alpha1.Conditions{
+					{
+						Type:   SyncTargetReady,
+						Status: corev1.ConditionFalse,
+					},
+				},
+			},
+		}
+
+		newConditions := conditionsv1alpha1.Conditions{
+			{
+				Type:   SyncTargetSyncerReady,
+				Status: corev1.ConditionTrue,
+			},
+			{
+				Type:   SyncTargetClusterReady,
+				Status: corev1.ConditionTrue,
+			},
+		}
+
+		st.SetConditions(newConditions)
+
+		assert.Equal(t, newConditions, st.Status.Conditions)
+		assert.Len(t, st.Status.Conditions, 2)
+	})
 }
 
-func TestSyncTarget_HasSufficientCapacity(t *testing.T) {
-	tests := map[string]struct {
-		target    *SyncTarget
-		requested *ResourceCapacity
-		want      bool
-	}{
-		"nil requested capacity": {
-			target:    &SyncTarget{},
-			requested: nil,
-			want:      true,
+func TestSyncTargetValidation(t *testing.T) {
+	validSyncTarget := &SyncTarget{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "test-synctarget",
 		},
-		"no allocatable capacity": {
-			target:    &SyncTarget{},
-			requested: &ResourceCapacity{CPU: resource.NewQuantity(1, resource.DecimalSI)},
-			want:      true, // unlimited capacity assumed
-		},
-		"sufficient capacity": {
-			target: &SyncTarget{
-				Status: SyncTargetStatus{
-					Allocatable: ResourceCapacity{
-						CPU: resource.NewQuantity(10, resource.DecimalSI),
-					},
-					Allocated: ResourceCapacity{
-						CPU: resource.NewQuantity(2, resource.DecimalSI),
-					},
-				},
+		Spec: SyncTargetSpec{
+			ClusterRef: ClusterReference{
+				Name: "test-cluster",
 			},
-			requested: &ResourceCapacity{CPU: resource.NewQuantity(5, resource.DecimalSI)},
-			want:      true,
-		},
-		"insufficient capacity": {
-			target: &SyncTarget{
-				Status: SyncTargetStatus{
-					Allocatable: ResourceCapacity{
-						CPU: resource.NewQuantity(10, resource.DecimalSI),
-					},
-					Allocated: ResourceCapacity{
-						CPU: resource.NewQuantity(8, resource.DecimalSI),
-					},
-				},
-			},
-			requested: &ResourceCapacity{CPU: resource.NewQuantity(5, resource.DecimalSI)},
-			want:      false,
+			Location: "us-west-2",
 		},
 	}
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			if got := tc.target.HasSufficientCapacity(tc.requested); got != tc.want {
-				t.Errorf("HasSufficientCapacity() = %v, want %v", got, tc.want)
-			}
-		})
-	}
-}
+	t.Run("ValidateCreate succeeds for valid SyncTarget", func(t *testing.T) {
+		err := validSyncTarget.ValidateCreate()
+		assert.NoError(t, err)
+	})
 
-func TestValidateSyncTarget(t *testing.T) {
-	tests := map[string]struct {
-		target    *SyncTarget
-		wantErrs  int
-	}{
-		"valid target": {
-			target: &SyncTarget{
-				Spec: SyncTargetSpec{
-					ClusterRef: ClusterReference{Name: "test-cluster"},
-				},
-			},
-			wantErrs: 0,
-		},
-		"missing cluster ref name": {
-			target: &SyncTarget{
-				Spec: SyncTargetSpec{
-					ClusterRef: ClusterReference{},
-				},
-			},
-			wantErrs: 1,
-		},
-		"invalid sync mode": {
-			target: &SyncTarget{
-				Spec: SyncTargetSpec{
-					ClusterRef: ClusterReference{Name: "test-cluster"},
-					SyncerConfig: &SyncerConfig{
-						SyncMode: "invalid",
-					},
-				},
-			},
-			wantErrs: 1,
-		},
-	}
+	t.Run("ValidateCreate fails for missing cluster ref", func(t *testing.T) {
+		invalidSyncTarget := validSyncTarget.DeepCopy()
+		invalidSyncTarget.Spec.ClusterRef.Name = ""
 
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			errs := ValidateSyncTarget(tc.target)
-			if len(errs) != tc.wantErrs {
-				t.Errorf("expected %d validation errors, got %d: %v", tc.wantErrs, len(errs), errs)
-			}
-		})
-	}
-}
+		err := invalidSyncTarget.ValidateCreate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cluster reference name is required")
+	})
 
-func TestSetDefaults_SyncTarget(t *testing.T) {
-	target := &SyncTarget{}
-	SetDefaults_SyncTarget(target)
+	t.Run("ValidateUpdate succeeds for valid update", func(t *testing.T) {
+		oldSyncTarget := validSyncTarget.DeepCopy()
+		newSyncTarget := validSyncTarget.DeepCopy()
+		newSyncTarget.Spec.Location = "us-east-1"
 
-	if target.Spec.SyncerConfig == nil {
-		t.Error("expected SyncerConfig to be initialized")
-	}
-	
-	if target.Spec.SyncerConfig.SyncMode != "push" {
-		t.Errorf("expected default syncMode 'push', got %s", target.Spec.SyncerConfig.SyncMode)
-	}
-	
-	if target.Spec.SyncerConfig.SyncInterval != "30s" {
-		t.Errorf("expected default syncInterval '30s', got %s", target.Spec.SyncerConfig.SyncInterval)
-	}
+		err := newSyncTarget.ValidateUpdate(oldSyncTarget)
+		assert.NoError(t, err)
+	})
+
+	t.Run("ValidateUpdate fails for immutable field change", func(t *testing.T) {
+		oldSyncTarget := validSyncTarget.DeepCopy()
+		newSyncTarget := validSyncTarget.DeepCopy()
+		newSyncTarget.Spec.ClusterRef.Name = "different-cluster"
+
+		err := newSyncTarget.ValidateUpdate(oldSyncTarget)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "cluster reference name is immutable")
+	})
 }

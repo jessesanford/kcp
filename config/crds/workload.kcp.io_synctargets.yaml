@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.17.3
+    controller-gen.kubebuilder.io/version: v0.18.0
   name: synctargets.workload.kcp.io
 spec:
   group: workload.kcp.io
@@ -17,13 +17,13 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.cells[0].name
+    - jsonPath: .spec.location
       name: Location
       type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
       type: string
-    - jsonPath: .status.syncerIdentity
+    - jsonPath: .status.conditions[?(@.type=="SyncerReady")].status
       name: Syncer
       type: string
     - jsonPath: .metadata.creationTimestamp
@@ -33,9 +33,9 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          SyncTarget defines a physical cluster target for workload synchronization.
-          It represents a physical cluster that can host workloads in the TMC system,
-          providing the foundation for multi-cluster workload placement and management.
+          SyncTarget represents a physical cluster that can receive workloads through
+          the TMC syncer infrastructure. It defines the target cluster configuration,
+          capacity limits, and workload selection criteria.
         properties:
           apiVersion:
             description: |-
@@ -55,135 +55,357 @@ spec:
           metadata:
             type: object
           spec:
-            description: Spec defines the desired state of the SyncTarget
+            description: Spec holds the desired state of the SyncTarget.
             properties:
-              cells:
+              clusterRef:
                 description: |-
-                  Cells defines the cells this SyncTarget supports. At least one cell is required.
-                  Cells represent failure domains or locations within the target cluster.
-                items:
-                  description: |-
-                    Cell represents a failure domain or location within a SyncTarget.
-                    Cells provide a way to organize and constrain workload placement within
-                    a physical cluster based on topology or other characteristics.
-                  properties:
-                    labels:
-                      additionalProperties:
-                        type: string
-                      description: |-
-                        Labels provide additional metadata for the cell that can be used
-                        for workload placement decisions and constraints
-                      type: object
-                    name:
-                      description: Name is the unique identifier for this cell within
-                        the SyncTarget
-                      minLength: 1
-                      type: string
-                    taints:
-                      description: |-
-                        Taints applied to this cell that affect workload placement.
-                        Workloads must tolerate these taints to be scheduled to this cell.
-                      items:
-                        description: Taint represents a taint on a cell that affects
-                          workload placement
-                        properties:
-                          effect:
-                            allOf:
-                            - enum:
-                              - NoSchedule
-                              - PreferNoSchedule
-                              - NoExecute
-                            - enum:
-                              - NoSchedule
-                              - PreferNoSchedule
-                              - NoExecute
-                            description: |-
-                              Effect indicates the taint effect to apply to workloads that do not tolerate the taint.
-                              Valid effects are NoSchedule, PreferNoSchedule and NoExecute.
-                            type: string
-                          key:
-                            description: Key is the taint key to be applied to the
-                              cell
-                            minLength: 1
-                            type: string
-                          value:
-                            description: Value is the taint value corresponding to
-                              the taint key
-                            type: string
-                        required:
-                        - effect
-                        - key
-                        type: object
-                      type: array
-                  required:
-                  - name
-                  type: object
-                minItems: 1
-                type: array
-              evictAfter:
+                  clusterRef references the ClusterRegistration that this SyncTarget
+                  is associated with. This establishes the connection to the physical cluster.
+                properties:
+                  name:
+                    description: name is the name of the ClusterRegistration resource.
+                    type: string
+                  workspace:
+                    description: |-
+                      workspace is the logical cluster workspace where the ClusterRegistration exists.
+                      If empty, defaults to the same workspace as the SyncTarget.
+                    type: string
+                required:
+                - name
+                type: object
+              location:
                 description: |-
-                  EvictAfter defines when to evict workloads after target becomes unhealthy.
-                  This provides a grace period for the target to recover before workloads are moved.
-                format: duration
+                  location is a human-readable description of where this cluster is located
+                  (e.g., "us-west-2", "datacenter-1", "edge-site-a").
                 type: string
-              supportedAPIExports:
+              resourceQuotas:
                 description: |-
-                  SupportedAPIExports defines which APIs this target can sync.
-                  This allows the target to advertise which APIs it supports for workload placement.
+                  resourceQuotas define capacity limits for this sync target.
+                  If not specified, the target has unlimited capacity.
+                properties:
+                  cpu:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: cpu is the maximum CPU capacity that can be allocated
+                      to workloads.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  custom:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: custom allows for arbitrary resource quota definitions.
+                    type: object
+                  memory:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: memory is the maximum memory capacity that can be
+                      allocated to workloads.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  pods:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: pods is the maximum number of pods that can be scheduled
+                      on this target.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  storage:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: storage is the maximum storage capacity that can
+                      be allocated to workloads.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                type: object
+              selector:
+                description: |-
+                  selector defines criteria for selecting workloads to sync to this target.
+                  If not specified, all workloads are eligible for this target.
+                properties:
+                  locations:
+                    description: |-
+                      locations is a list of location names that workloads must match.
+                      If specified, only workloads with matching location annotations will be selected.
+                    items:
+                      type: string
+                    type: array
+                    x-kubernetes-list-type: set
+                  matchExpressions:
+                    description: matchExpressions is a list of label selector requirements.
+                    items:
+                      description: |-
+                        A label selector requirement is a selector that contains values, a key, and an operator that
+                        relates the key and values.
+                      properties:
+                        key:
+                          description: key is the label key that the selector applies
+                            to.
+                          type: string
+                        operator:
+                          description: |-
+                            operator represents a key's relationship to a set of values.
+                            Valid operators are In, NotIn, Exists and DoesNotExist.
+                          type: string
+                        values:
+                          description: |-
+                            values is an array of string values. If the operator is In or NotIn,
+                            the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                            the values array must be empty. This array is replaced during a strategic
+                            merge patch.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      matchLabels is a map of {key,value} pairs. A single {key,value} in the
+                      matchLabels map is equivalent to an element of matchExpressions with
+                      operator "In", values containing only value.
+                    type: object
+                  namespaceSelector:
+                    description: namespaceSelector selects workloads based on their
+                      namespace labels.
+                    properties:
+                      matchExpressions:
+                        description: matchExpressions is a list of label selector
+                          requirements. The requirements are ANDed.
+                        items:
+                          description: |-
+                            A label selector requirement is a selector that contains values, a key, and an operator that
+                            relates the key and values.
+                          properties:
+                            key:
+                              description: key is the label key that the selector
+                                applies to.
+                              type: string
+                            operator:
+                              description: |-
+                                operator represents a key's relationship to a set of values.
+                                Valid operators are In, NotIn, Exists and DoesNotExist.
+                              type: string
+                            values:
+                              description: |-
+                                values is an array of string values. If the operator is In or NotIn,
+                                the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                the values array must be empty. This array is replaced during a strategic
+                                merge patch.
+                              items:
+                                type: string
+                              type: array
+                              x-kubernetes-list-type: atomic
+                          required:
+                          - key
+                          - operator
+                          type: object
+                        type: array
+                        x-kubernetes-list-type: atomic
+                      matchLabels:
+                        additionalProperties:
+                          type: string
+                        description: |-
+                          matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                          map is equivalent to an element of matchExpressions, whose key field is "key", the
+                          operator is "In", and the values array contains only "value". The requirements are ANDed.
+                        type: object
+                    type: object
+                    x-kubernetes-map-type: atomic
+                type: object
+              supportedResourceTypes:
+                description: |-
+                  supportedResourceTypes lists the Kubernetes resource types that this
+                  sync target can handle. If empty, all resource types are supported.
                 items:
-                  description: APIExportReference references an APIExport that this
-                    SyncTarget supports
-                  properties:
-                    name:
-                      description: Name is the name of the APIExport within the workspace
-                      minLength: 1
-                      type: string
-                    workspace:
-                      description: Workspace is the logical cluster workspace containing
-                        the APIExport
-                      minLength: 1
-                      type: string
-                  required:
-                  - name
-                  - workspace
-                  type: object
+                  type: string
                 type: array
-              unschedulable:
-                description: |-
-                  Unschedulable marks this SyncTarget as unavailable for new workloads.
-                  When true, new workloads will not be scheduled to this target, but existing
-                  workloads will continue to run.
-                type: boolean
+                x-kubernetes-list-type: set
+              syncerConfig:
+                description: syncerConfig contains configuration for the syncer component.
+                properties:
+                  retryBackoff:
+                    description: retryBackoff defines retry behavior for failed sync
+                      operations.
+                    properties:
+                      initialInterval:
+                        default: 1s
+                        description: initialInterval is the initial retry interval.
+                        type: string
+                      maxInterval:
+                        default: 5m
+                        description: maxInterval is the maximum retry interval.
+                        type: string
+                      multiplier:
+                        default: 2
+                        description: multiplier is the backoff multiplier.
+                        type: number
+                    type: object
+                  syncInterval:
+                    default: 30s
+                    description: |-
+                      syncInterval specifies how often the syncer should reconcile state.
+                      Defaults to "30s".
+                    type: string
+                  syncMode:
+                    default: push
+                    description: |-
+                      syncMode defines how the syncer should operate.
+                      Valid values are "push" (default), "pull", or "bidirectional".
+                    enum:
+                    - push
+                    - pull
+                    - bidirectional
+                    type: string
+                type: object
             required:
-            - cells
+            - clusterRef
             type: object
           status:
-            description: Status defines the observed state of the SyncTarget
+            description: Status communicates the observed state of the SyncTarget.
             properties:
               allocatable:
-                additionalProperties:
-                  anyOf:
-                  - type: integer
-                  - type: string
-                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                  x-kubernetes-int-or-string: true
-                description: Allocatable resources on this target available for workload
-                  placement
+                description: |-
+                  allocatable reports the resources that are available for workload allocation
+                  after accounting for system overhead.
+                properties:
+                  cpu:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: cpu is the CPU capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  custom:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: custom contains arbitrary resource capacity information.
+                    type: object
+                  memory:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: memory is the memory capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  pods:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: pods is the pod capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  storage:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: storage is the storage capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                type: object
+              allocated:
+                description: allocated reports the resources currently allocated to
+                  workloads.
+                properties:
+                  cpu:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: cpu is the CPU capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  custom:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: custom contains arbitrary resource capacity information.
+                    type: object
+                  memory:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: memory is the memory capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  pods:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: pods is the pod capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  storage:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: storage is the storage capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                 type: object
               capacity:
-                additionalProperties:
-                  anyOf:
-                  - type: integer
-                  - type: string
-                  pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
-                  x-kubernetes-int-or-string: true
-                description: Capacity defines the total resources available on this
-                  target
+                description: capacity reports the current resource capacity available
+                  on this sync target.
+                properties:
+                  cpu:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: cpu is the CPU capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  custom:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: custom contains arbitrary resource capacity information.
+                    type: object
+                  memory:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: memory is the memory capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  pods:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: pods is the pod capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  storage:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: storage is the storage capacity.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                 type: object
               conditions:
-                description: |-
-                  Conditions represent the current status conditions of the SyncTarget.
-                  Known condition types include Ready and Heartbeat.
+                description: conditions is a list of conditions that apply to the
+                  SyncTarget.
                 items:
                   description: Condition defines an observation of a object operational
                     state.
@@ -227,37 +449,51 @@ spec:
                   - type
                   type: object
                 type: array
-              lastHeartbeatTime:
+              lastSyncTime:
                 description: |-
-                  LastHeartbeatTime is when the syncer last sent a heartbeat for this target.
-                  This is used to determine if the target is still healthy and reachable.
+                  lastSyncTime is the last time the syncer successfully synced state
+                  with the target cluster.
                 format: date-time
                 type: string
-              syncerIdentity:
+              supportedResourceVersions:
+                additionalProperties:
+                  items:
+                    type: string
+                  type: array
                 description: |-
-                  SyncerIdentity identifies the syncer component managing this target.
-                  This is used to track which syncer instance is responsible for synchronization.
+                  supportedResourceVersions maps resource types to their supported API versions
+                  on the target cluster.
+                type: object
+              syncerVersion:
+                description: |-
+                  syncerVersion is the version of the syncer component currently running
+                  for this target.
                 type: string
               virtualWorkspaces:
-                description: |-
-                  VirtualWorkspaces contains the virtual workspace URLs through which this target is exposed.
-                  These URLs allow clients to interact with resources on this target.
+                description: virtualWorkspaces contains URLs to virtual workspaces
+                  for this sync target.
                 items:
-                  description: VirtualWorkspace represents a virtual workspace URL
-                    for accessing the SyncTarget
+                  description: VirtualWorkspace represents a virtual workspace endpoint
+                    for the sync target.
                   properties:
+                    ready:
+                      description: ready indicates whether the virtual workspace is
+                        ready to serve requests.
+                      type: boolean
                     url:
-                      description: URL is the virtual workspace URL for accessing
-                        resources on this SyncTarget
-                      format: uri
+                      description: url is the virtual workspace URL.
+                      minLength: 1
                       type: string
                   required:
                   - url
                   type: object
                 type: array
+              workloadCount:
+                description: workloadCount is the number of workloads currently assigned
+                  to this target.
+                format: int32
+                type: integer
             type: object
-        required:
-        - spec
         type: object
     served: true
     storage: true
