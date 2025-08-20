@@ -33,6 +33,7 @@ import (
 
 	kcpversioned "github.com/kcp-dev/kcp/sdk/client/clientset/versioned"
 	kcpcluster "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
+	kcpapiresource "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/apiresource"
 	kcpapis "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/apis"
 	kcpexternalversionscache "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/cache"
 	kcpcore "github.com/kcp-dev/kcp/sdk/client/informers/externalversions/core"
@@ -280,11 +281,16 @@ type SharedInformerFactory interface {
 	// client.
 	InformerFor(obj runtime.Object, newFunc kcpinternalinterfaces.NewInformerFunc) kcpcache.ScopeableSharedIndexInformer
 
+	Apiresource() kcpapiresource.ClusterInterface
 	Apis() kcpapis.ClusterInterface
 	Cache() kcpexternalversionscache.ClusterInterface
 	Core() kcpcore.ClusterInterface
 	Tenancy() kcptenancy.ClusterInterface
 	Topology() kcptopology.ClusterInterface
+}
+
+func (f *sharedInformerFactory) Apiresource() kcpapiresource.ClusterInterface {
+	return kcpapiresource.New(f, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Apis() kcpapis.ClusterInterface {
@@ -451,11 +457,16 @@ type SharedScopedInformerFactory interface {
 	ForResource(resource schema.GroupVersionResource) (GenericInformer, error)
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
+	Apiresource() kcpapiresource.Interface
 	Apis() kcpapis.Interface
 	Cache() kcpexternalversionscache.Interface
 	Core() kcpcore.Interface
 	Tenancy() kcptenancy.Interface
 	Topology() kcptopology.Interface
+}
+
+func (f *sharedScopedInformerFactory) Apiresource() kcpapiresource.Interface {
+	return kcpapiresource.NewScoped(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedScopedInformerFactory) Apis() kcpapis.Interface {

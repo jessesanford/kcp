@@ -30,6 +30,8 @@ import (
 	clientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned"
 	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 	kcpclientscheme "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/scheme"
+	kcpapiresourcev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/apiresource/v1alpha1"
+	kcpfakeapiresourcev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/apiresource/v1alpha1/fake"
 	kcpapisv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/apis/v1alpha1"
 	kcpfakeapisv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/apis/v1alpha1/fake"
 	kcpapisv1alpha2 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/apis/v1alpha2"
@@ -42,6 +44,7 @@ import (
 	kcpfaketenancyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/tenancy/v1alpha1/fake"
 	kcptopologyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/topology/v1alpha1"
 	kcpfaketopologyv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster/typed/topology/v1alpha1/fake"
+	apiresourcev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/apiresource/v1alpha1"
 	apisv1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/apis/v1alpha1"
 	apisv1alpha2 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/apis/v1alpha2"
 	cachev1alpha1 "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/typed/cache/v1alpha1"
@@ -99,6 +102,11 @@ func (c *ClusterClientset) Cluster(clusterPath logicalcluster.Path) clientset.In
 		tracker:     c.tracker.Cluster(clusterPath),
 		clusterPath: clusterPath,
 	}
+}
+
+// ApiresourceV1alpha1 retrieves the ApiresourceV1alpha1ClusterClient
+func (c *ClusterClientset) ApiresourceV1alpha1() kcpapiresourcev1alpha1.ApiresourceV1alpha1ClusterInterface {
+	return &kcpfakeapiresourcev1alpha1.ApiresourceV1alpha1ClusterClient{Fake: &c.Fake}
 }
 
 // ApisV1alpha1 retrieves the ApisV1alpha1ClusterClient
@@ -172,6 +180,11 @@ func NewClientset(objects ...runtime.Object) *ClusterClientset {
 	cs.AddWatchReactor("*", kcptesting.WatchReaction(o))
 
 	return cs
+}
+
+// ApiresourceV1alpha1 retrieves the ApiresourceV1alpha1Client
+func (c *Clientset) ApiresourceV1alpha1() apiresourcev1alpha1.ApiresourceV1alpha1Interface {
+	return &kcpfakeapiresourcev1alpha1.ApiresourceV1alpha1Client{Fake: c.Fake, ClusterPath: c.clusterPath}
 }
 
 // ApisV1alpha1 retrieves the ApisV1alpha1Client
