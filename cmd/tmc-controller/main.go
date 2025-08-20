@@ -70,8 +70,8 @@ func run(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 
 	// Check if TMC feature flag is enabled
-	if !utilfeature.DefaultFeatureGate.Enabled(features.TMC) {
-		return fmt.Errorf("TMC feature flag is not enabled. Use --feature-gates=TMC=true to enable")
+	if !utilfeature.DefaultFeatureGate.Enabled(features.TMCAPIs) {
+		return fmt.Errorf("TMC feature flag is not enabled. Use --feature-gates=TMCAPIs=true to enable")
 	}
 
 	logger.Info("Starting TMC controller", "version", "v0.1.0", "build", "dev")
