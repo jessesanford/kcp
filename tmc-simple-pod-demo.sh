@@ -231,7 +231,7 @@ install_pod_crd() {
     echo "Installing ONLY the Pod CRD in workspace '$workspace'..."
     
     # Install just the Pod CRD for minimal demo
-    echo "Installing Pod CRD (pods.core)..."
+    echo "Installing Pod CRD (pods)..."
     if [ -f "contrib/crds/core/_pods.yaml" ]; then
         kubectl apply -f "contrib/crds/core/_pods.yaml" || {
             echo -e "${RED}Error: Failed to apply Pod CRD${NC}"
@@ -243,7 +243,7 @@ install_pod_crd() {
     fi
     
     # Also install namespaces since we need them
-    echo "Installing Namespace CRD (namespaces.core)..."
+    echo "Installing Namespace CRD (namespaces)..."
     if [ -f "contrib/crds/core/_namespaces.yaml" ]; then
         kubectl apply -f "contrib/crds/core/_namespaces.yaml" || {
             echo -e "${RED}Error: Failed to apply Namespace CRD${NC}"
