@@ -514,17 +514,9 @@ echo -e "${CYAN}Now deploying a simple Pod TO the KCP virtual cluster...${NC}"
 echo -e "${CYAN}Pod syncers will automatically propagate it to a physical cluster!${NC}"
 echo ""
 
-# Create namespace with placement label in virtual cluster
-echo "Creating managed namespace in virtual cluster..."
-cat <<EOF | kubectl apply -f -
-apiVersion: core.kcp.io/v1
-kind: Namespace
-metadata:
-  name: simple-demo
-  labels:
-    pod.kcp.io/managed: "true"
-    demo: simple-pod
-EOF
+# Skip explicit namespace creation - KCP handles this differently
+echo "Using default namespace for Pod deployment..."
+# Note: In KCP, namespaces might be implicit or handled differently than regular K8s
 
 # Deploy a simple Pod TO the virtual cluster
 echo "Deploying simple nginx Pod TO virtual cluster (will be synced to physical cluster)..."
@@ -533,7 +525,6 @@ apiVersion: core.kcp.io/v1
 kind: Pod
 metadata:
   name: simple-nginx
-  namespace: simple-demo
   labels:
     app: simple-nginx
     pod.kcp.io/managed: "true"
@@ -562,7 +553,7 @@ EOF
 
 echo "Checking Pod status in virtual cluster..."
 sleep 3
-kubectl get pods -n simple-demo -o wide
+kubectl get pods -o wide
 
 echo -e "${GREEN}✓ Simple Pod deployed to KCP virtual cluster${NC}"
 
@@ -577,19 +568,9 @@ echo ""
 echo "Simulating Pod syncer propagating Pod to west cluster (preferred location)..."
 cat <<EOF | kubectl --context kind-kcp-west apply -f -
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: simple-demo
-  labels:
-    pod.kcp.io/managed: "true"
-    pod.kcp.io/synced-from: "simple-pods"
-    demo: simple-pod
----
-apiVersion: v1
 kind: Pod
 metadata:
   name: simple-nginx
-  namespace: simple-demo
   labels:
     app: simple-nginx
     pod.kcp.io/managed: "true"
@@ -633,16 +614,16 @@ export KUBECONFIG="$KUBECONFIG_KCP"
 
 echo -e "${CYAN}Virtual Cluster (KCP) Pod:${NC}"
 echo "Source Pod in simple-pods virtual cluster:"
-kubectl get pods -n simple-demo -o wide
+kubectl get pods -o wide
 echo ""
 
 echo -e "${CYAN}Physical Cluster Sync Results:${NC}"
 echo "West cluster (preferred location) - synced Pod:"
-kubectl --context kind-kcp-west get pods -n simple-demo -o wide
+kubectl --context kind-kcp-west get pods -o wide
 echo ""
 
 echo "East cluster (no Pod - not selected by placement policy):"
-kubectl --context kind-kcp-east get pods -n simple-demo 2>/dev/null || echo "No pods found (expected - placement policy chose west)"
+kubectl --context kind-kcp-east get pods 2>/dev/null || echo "No pods found (expected - placement policy chose west)"
 echo ""
 
 echo -e "${CYAN}SyncTarget Status in Virtual Cluster:${NC}"
@@ -677,25 +658,15 @@ echo "Moving Pod from west cluster to east cluster (new preferred location)..."
 
 # Remove Pod from west cluster
 echo "Removing Pod from west cluster (no longer preferred)..."
-kubectl --context kind-kcp-west delete pod simple-nginx -n simple-demo --ignore-not-found=true
+kubectl --context kind-kcp-west delete pod simple-nginx --ignore-not-found=true
 
 # Add Pod to east cluster
 echo "Creating Pod on east cluster (now preferred)..."
 cat <<EOF | kubectl --context kind-kcp-east apply -f -
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: simple-demo
-  labels:
-    pod.kcp.io/managed: "true"
-    pod.kcp.io/synced-from: "simple-pods"
-    demo: simple-pod
----
-apiVersion: v1
 kind: Pod
 metadata:
   name: simple-nginx
-  namespace: simple-demo
   labels:
     app: simple-nginx
     pod.kcp.io/managed: "true"
@@ -737,7 +708,7 @@ sleep 8
 echo ""
 echo -e "${CYAN}Updated Pod Distribution After Placement Change:${NC}"
 echo "West cluster (Pod removed, no longer preferred):"
-kubectl --context kind-kcp-west get pods -n simple-demo 2>/dev/null || echo "No pods found (expected - moved to east)"
+kubectl --context kind-kcp-west get pods 2>/dev/null || echo "No pods found (expected - moved to east)"
 echo ""
 
 echo "East cluster (Pod now running, new preferred location):"
@@ -757,16 +728,16 @@ echo "KCP Workspaces (Virtual Clusters):"
 echo ""
 
 echo "Virtual Cluster Resources (Source of Truth):"
-kubectl get pods,synctargets,clusterworkloadplacements -n simple-demo -o wide
+kubectl get pods.core.kcp.io,synctargets,clusterworkloadplacements -o wide
 echo ""
 
 echo "Physical Cluster Sync Status:"
 echo "West cluster resources:"  
-kubectl --context kind-kcp-west get pods -n simple-demo --show-labels 2>/dev/null || echo "  No pods (moved to east)"
+kubectl --context kind-kcp-west get pods --show-labels 2>/dev/null || echo "  No pods (moved to east)"
 echo ""
 
 echo "East cluster resources:"
-kubectl --context kind-kcp-east get pods -n simple-demo --show-labels
+kubectl --context kind-kcp-east get pods --show-labels
 echo ""
 
 echo "Active Pod Syncer Processes:"
@@ -798,10 +769,10 @@ echo "  🔗 Seamless virtual-to-physical cluster abstraction"
 echo ""
 echo -e "${CYAN}Exploration Commands:${NC}"
 echo "  Virtual cluster: export KUBECONFIG=$KUBECONFIG_KCP"
-echo "  List virtual Pod: kubectl get pods -n simple-demo"
+echo "  List virtual Pod: kubectl get pods"
 echo "  Check sync targets: kubectl get synctargets -o yaml"
-echo "  West cluster: kubectl --context kind-kcp-west get pods -n simple-demo"
-echo "  East cluster: kubectl --context kind-kcp-east get pods -n simple-demo"
+echo "  West cluster: kubectl --context kind-kcp-west get pods"
+echo "  East cluster: kubectl --context kind-kcp-east get pods"
 echo ""
 echo -e "${CYAN}Pod Syncer Logs:${NC}"
 echo "  West syncer: tail -f $SYNCER_DIR/kcp-west-syncer.log"
