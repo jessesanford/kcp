@@ -1,293 +1,336 @@
-# Implementation Instructions: Transformation Pipeline
+# Implementation Instructions: Resource Applier
 
-## Branch: `feature/phase7-syncer-impl/p7w1-transform`
+## Branch: `feature/phase7-syncer-impl/p7w2-applier`
 
 ## Overview
-This branch implements the transformation pipeline that modifies resources as they move between KCP and physical clusters. It handles namespace mapping, label/annotation management, secret sanitization, and other critical transformations required for multi-cluster synchronization.
+This branch implements the resource applier that executes the actual API calls to create, update, and delete resources in the downstream cluster. It handles retry logic, optimistic concurrency control, and provides detailed operation results.
 
-**Target Size**: ~650 lines  
+**Target Size**: ~600 lines  
 **Complexity**: Medium  
-**Priority**: Critical (required by Wave 2 downstream sync)
+**Priority**: High (executes actual sync operations)
 
 ## Dependencies
-- **Phase 5 APIs**: Uses transformation interfaces from `pkg/apis/syncer/v1alpha1`
-- **Phase 6 Infrastructure**: Leverages workspace context
-- **Wave 1 Sync Engine**: Will be registered with the engine
+- **Phase 5 APIs**: Uses applier interfaces
+- **Phase 6 Infrastructure**: Controller utilities
+- **Wave 2 Downstream Core**: Called by downstream syncer
+- **Wave 2 Conflict Resolution**: Uses conflict resolver
 
 ## Files to Create
 
-### 1. Pipeline Core (~150 lines)
-**File**: `pkg/reconciler/workload/syncer/transformation/pipeline.go`
-- Pipeline struct and initialization
-- Transform execution chain
-- Transformer registration
-- Error handling and recovery
+### 1. Resource Applier Core (~250 lines)
+**File**: `pkg/reconciler/workload/syncer/applier/applier.go`
+- Main applier struct
+- Apply method with retry logic
+- Delete method with propagation
+- Patch method for partial updates
 
-### 2. Namespace Transformer (~100 lines)
-**File**: `pkg/reconciler/workload/syncer/transformation/namespace.go`
-- Namespace prefix/suffix handling
-- Workspace-based namespace mapping
-- Reverse transformation for upstream
+### 2. Retry Strategy (~100 lines)
+**File**: `pkg/reconciler/workload/syncer/applier/retry.go`
+- Exponential backoff implementation
+- Retry condition evaluation
+- Jitter for distributed systems
+- Circuit breaker pattern
 
-### 3. Label & Annotation Transformer (~100 lines)
-**File**: `pkg/reconciler/workload/syncer/transformation/metadata.go`
-- Label injection/removal
-- Annotation management
-- Metadata preservation rules
+### 3. Apply Strategy (~100 lines)
+**File**: `pkg/reconciler/workload/syncer/applier/strategy.go`
+- Server-side apply implementation
+- Strategic merge patch
+- JSON merge patch
+- Replace strategy
 
-### 4. Secret Transformer (~100 lines)
-**File**: `pkg/reconciler/workload/syncer/transformation/secret.go`
-- Secret type filtering
-- Service account token handling
-- Docker config validation
-- Sensitive data sanitization
+### 4. Result Aggregation (~50 lines)
+**File**: `pkg/reconciler/workload/syncer/applier/results.go`
+- Operation result types
+- Result aggregation
+- Error classification
+- Success metrics
 
-### 5. Owner Reference Transformer (~80 lines)
-**File**: `pkg/reconciler/workload/syncer/transformation/ownership.go`
-- Owner reference adjustment
-- Cross-cluster reference handling
-- Garbage collection coordination
-
-### 6. Transformation Tests (~120 lines)
-**File**: `pkg/reconciler/workload/syncer/transformation/pipeline_test.go`
-- Unit tests for each transformer
-- Pipeline integration tests
-- Edge case coverage
+### 5. Applier Tests (~100 lines)
+**File**: `pkg/reconciler/workload/syncer/applier/applier_test.go`
+- Unit tests for apply operations
+- Retry logic tests
+- Strategy tests
 
 ## Step-by-Step Implementation Guide
 
 ### Step 1: Create Package Structure
 ```bash
-mkdir -p pkg/reconciler/workload/syncer/transformation
+mkdir -p pkg/reconciler/workload/syncer/applier
 ```
 
-### Step 2: Define Pipeline Core
-Create `pipeline.go` with:
+### Step 2: Define Core Applier
+Create `applier.go` with:
 
 ```go
-package transformation
+package applier
 
 import (
+    "context"
     "fmt"
     
-    workloadv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/workload/v1alpha1"
-    "github.com/kcp-dev/kcp/pkg/syncer/interfaces"
-    
-    "k8s.io/apimachinery/pkg/runtime"
-    "github.com/kcp-dev/logicalcluster/v3"
+    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+    "k8s.io/apimachinery/pkg/runtime/schema"
+    "k8s.io/client-go/dynamic"
+    "k8s.io/klog/v2"
 )
 
-// Pipeline coordinates resource transformations
-type Pipeline struct {
-    transformers []interfaces.ResourceTransformer
-    workspace    logicalcluster.Name
+// Applier handles resource application to clusters
+type Applier struct {
+    client          dynamic.Interface
+    retryStrategy   *RetryStrategy
+    applyStrategy   ApplyStrategy
+    fieldManager    string
+    forceConflicts  bool
 }
 
-// NewPipeline creates a transformation pipeline with default transformers
-func NewPipeline(workspace logicalcluster.Name) *Pipeline {
-    return &Pipeline{
-        workspace: workspace,
-        transformers: []interfaces.ResourceTransformer{
-            NewNamespaceTransformer(workspace),
-            NewMetadataTransformer(),
-            NewOwnerReferenceTransformer(),
-            NewSecretTransformer(),
-        },
+// NewApplier creates a new resource applier
+func NewApplier(client dynamic.Interface, fieldManager string) *Applier {
+    return &Applier{
+        client:        client,
+        retryStrategy: NewDefaultRetryStrategy(),
+        applyStrategy: ServerSideApply,
+        fieldManager:  fieldManager,
     }
 }
 
-// TransformForDownstream applies all transformations for downstream sync
-func (p *Pipeline) TransformForDownstream(obj runtime.Object, target *workloadv1alpha1.SyncTarget) (runtime.Object, error) {
-    result := obj.DeepCopyObject()
+// Apply creates or updates a resource with retry logic
+func (a *Applier) Apply(ctx context.Context, obj *unstructured.Unstructured) (*ApplyResult, error) {
+    logger := klog.FromContext(ctx)
+    gvr := a.getGVR(obj)
     
-    for _, transformer := range p.transformers {
-        if !transformer.ShouldTransform(result) {
-            continue
+    result := &ApplyResult{
+        GVR:       gvr,
+        Namespace: obj.GetNamespace(),
+        Name:      obj.GetName(),
+    }
+    
+    err := a.retryStrategy.Execute(ctx, func() error {
+        switch a.applyStrategy {
+        case ServerSideApply:
+            return a.serverSideApply(ctx, gvr, obj, result)
+        case StrategicMerge:
+            return a.strategicMerge(ctx, gvr, obj, result)
+        case Replace:
+            return a.replace(ctx, gvr, obj, result)
+        default:
+            return fmt.Errorf("unknown apply strategy: %v", a.applyStrategy)
+        }
+    })
+    
+    if err != nil {
+        result.Success = false
+        result.Error = err
+        logger.Error(err, "Failed to apply resource", "gvr", gvr, "name", obj.GetName())
+    } else {
+        result.Success = true
+        logger.V(4).Info("Successfully applied resource", "gvr", gvr, "name", obj.GetName())
+    }
+    
+    return result, err
+}
+
+// Delete removes a resource with configurable propagation
+func (a *Applier) Delete(ctx context.Context, gvr schema.GroupVersionResource, namespace, name string, options metav1.DeleteOptions) error {
+    logger := klog.FromContext(ctx)
+    
+    return a.retryStrategy.Execute(ctx, func() error {
+        err := a.client.Resource(gvr).Namespace(namespace).Delete(ctx, name, options)
+        if err != nil {
+            if errors.IsNotFound(err) {
+                logger.V(4).Info("Resource already deleted", "gvr", gvr, "name", name)
+                return nil
+            }
+            return err
         }
         
-        var err error
-        result, err = transformer.TransformForDownstream(result, target)
-        if err != nil {
-            return nil, fmt.Errorf("transformer %T failed: %w", transformer, err)
-        }
-    }
-    
-    return result, nil
-}
-
-// TransformForUpstream reverses transformations for upstream sync
-func (p *Pipeline) TransformForUpstream(obj runtime.Object, source *workloadv1alpha1.SyncTarget) (runtime.Object, error) {
-    result := obj.DeepCopyObject()
-    
-    // Apply transformers in reverse order
-    for i := len(p.transformers) - 1; i >= 0; i-- {
-        transformer := p.transformers[i]
-        if !transformer.ShouldTransform(result) {
-            continue
-        }
-        
-        var err error
-        result, err = transformer.TransformForUpstream(result, source)
-        if err != nil {
-            return nil, fmt.Errorf("transformer %T failed: %w", transformer, err)
-        }
-    }
-    
-    return result, nil
-}
-
-// RegisterTransformer adds a custom transformer
-func (p *Pipeline) RegisterTransformer(t interfaces.ResourceTransformer) {
-    p.transformers = append(p.transformers, t)
+        logger.V(4).Info("Deleted resource", "gvr", gvr, "name", name)
+        return nil
+    })
 }
 ```
 
-### Step 3: Implement Namespace Transformer
-Create `namespace.go` with:
+### Step 3: Implement Retry Strategy
+Create `retry.go` with:
 
-1. **Namespace mapping logic**:
-   - Add workspace prefix to namespaces
-   - Handle special namespaces (kube-system, etc.)
-   - Maintain mapping for reverse transformation
+1. **RetryStrategy struct**:
+```go
+type RetryStrategy struct {
+    MaxRetries     int
+    InitialDelay   time.Duration
+    MaxDelay       time.Duration
+    Factor         float64
+    Jitter         float64
+    RetryCondition func(error) bool
+}
+```
 
-2. **Transform methods**:
-   - TransformForDownstream: Add prefix
-   - TransformForUpstream: Remove prefix
-   - ShouldTransform: Check if namespaced
+2. **Execute method with backoff**:
+   - Exponential backoff calculation
+   - Jitter addition
+   - Retry condition checking
+   - Context cancellation handling
 
-3. **Configuration**:
-   - Configurable prefix pattern
-   - Exclusion list for system namespaces
-   - Collision detection
+3. **Default retry conditions**:
+   - Retry on conflicts
+   - Retry on temporary errors
+   - Don't retry on validation errors
+   - Circuit breaker for repeated failures
 
-### Step 4: Implement Metadata Transformer
-Create `metadata.go` with:
+### Step 4: Implement Apply Strategies
+Create `strategy.go` with:
 
-1. **Label management**:
-   - Add TMC management labels
-   - Add workspace identifier
-   - Add sync target reference
-   - Preserve user labels
+1. **Server-side apply**:
+```go
+func (a *Applier) serverSideApply(ctx context.Context, gvr schema.GroupVersionResource, obj *unstructured.Unstructured, result *ApplyResult) error {
+    data, err := json.Marshal(obj)
+    if err != nil {
+        return err
+    }
+    
+    applied, err := a.client.Resource(gvr).
+        Namespace(obj.GetNamespace()).
+        Patch(ctx, obj.GetName(), types.ApplyPatchType, data, metav1.PatchOptions{
+            FieldManager: a.fieldManager,
+            Force:        &a.forceConflicts,
+        })
+    
+    if err != nil {
+        return err
+    }
+    
+    result.Applied = applied
+    result.Operation = "apply"
+    return nil
+}
+```
 
-2. **Annotation handling**:
-   - Add sync timestamp
-   - Add generation tracking
-   - Remove KCP-internal annotations
-   - Preserve important annotations
+2. **Strategic merge patch**:
+   - Calculate patch from current state
+   - Apply strategic merge
+   - Handle conflicts
 
-3. **Filtering logic**:
-   - System label preservation
-   - Annotation allowlist/blocklist
-   - Size limit enforcement
+3. **Replace strategy**:
+   - Get current resource
+   - Update with new spec
+   - Replace entire resource
 
-### Step 5: Implement Secret Transformer
-Create `secret.go` with:
+### Step 5: Implement Result Aggregation
+Create `results.go` with:
 
-1. **Secret type handling**:
-   - Filter service account tokens
-   - Validate docker configs
-   - Handle TLS certificates
-   - Process opaque secrets
+1. **ApplyResult struct**:
+```go
+type ApplyResult struct {
+    GVR         schema.GroupVersionResource
+    Namespace   string
+    Name        string
+    Operation   string // create, update, apply, noop
+    Success     bool
+    Error       error
+    Applied     *unstructured.Unstructured
+    Attempts    int
+    Duration    time.Duration
+}
+```
 
-2. **Sanitization**:
-   - Remove sensitive annotations
-   - Validate secret data
-   - Check size limits
-   - Ensure proper encoding
+2. **BatchResult for multiple operations**:
+   - Aggregate multiple results
+   - Calculate success rate
+   - Categorize errors
+   - Generate summary
 
-3. **Security checks**:
-   - Prevent token leakage
-   - Validate certificate chains
-   - Check for embedded credentials
+### Step 6: Add Optimizations
 
-### Step 6: Implement Owner Reference Transformer
-Create `ownership.go` with:
+1. **Batch operations**:
+   - Group similar operations
+   - Parallel execution with limits
+   - Result aggregation
 
-1. **Reference adjustment**:
-   - Update UIDs for cross-cluster
-   - Handle missing owners
-   - Prevent orphaning
+2. **Caching**:
+   - Cache discovery information
+   - Cache field managers
+   - Reuse clients
 
-2. **Garbage collection**:
-   - Maintain proper chains
-   - Handle cascade deletion
-   - Coordinate with finalizers
+3. **Performance**:
+   - Connection pooling
+   - Request coalescing
+   - Minimal API calls
 
 ### Step 7: Add Comprehensive Tests
-Create `pipeline_test.go` and related test files:
+Create test files covering:
 
-1. **Pipeline tests**:
-   - Test transformation order
-   - Test error propagation
-   - Test custom transformer registration
+1. **Apply operations**:
+   - Create new resources
+   - Update existing resources
+   - Server-side apply
+   - Conflict handling
 
-2. **Individual transformer tests**:
-   - Namespace mapping accuracy
-   - Label/annotation preservation
-   - Secret sanitization
-   - Owner reference integrity
+2. **Delete operations**:
+   - Simple deletion
+   - Cascade deletion
+   - Orphan deletion
 
-3. **Integration tests**:
-   - Full pipeline execution
-   - Bi-directional transformation
-   - Edge cases and errors
+3. **Retry logic**:
+   - Exponential backoff
+   - Retry conditions
+   - Maximum retries
 
 ## Testing Requirements
 
 ### Unit Tests:
-- Each transformer's transform methods
-- ShouldTransform logic
-- Error handling
-- Edge cases (nil objects, missing fields)
-- Bi-directional transformation consistency
+- Apply with different strategies
+- Delete with different propagation policies
+- Retry logic with various errors
+- Result aggregation
+- Error classification
 
 ### Integration Tests:
-- Full pipeline with all transformers
-- Complex resource types
-- Large objects
-- Performance under load
+- Real resource application
+- Conflict scenarios
+- Large batch operations
+- Network failure handling
 
 ## Validation Checklist
 
-- [ ] All transformers implement the interface correctly
-- [ ] Bi-directional transformations are symmetric
-- [ ] No data loss during transformation
-- [ ] Proper error handling and reporting
-- [ ] Performance is acceptable (<10ms per transform)
-- [ ] Security considerations addressed
+- [ ] All apply strategies implemented correctly
+- [ ] Retry logic works with backoff
+- [ ] Proper error classification
+- [ ] Results accurately reported
+- [ ] Performance optimizations in place
 - [ ] Comprehensive logging
-- [ ] Tests achieve >80% coverage
+- [ ] Metrics for monitoring
+- [ ] Tests achieve >75% coverage
 - [ ] Code follows KCP patterns
 - [ ] Feature flags integrated
-- [ ] Under 650 lines (excluding tests)
+- [ ] Under 600 lines (excluding tests)
 
 ## Common Pitfalls to Avoid
 
-1. **Don't modify the original object** - always deep copy first
-2. **Preserve round-trip integrity** - transformations should be reversible
-3. **Handle nil/empty cases** - don't assume fields exist
-4. **Watch for size limits** - transformed objects might exceed limits
-5. **Maintain security** - never expose sensitive data
+1. **Don't retry validation errors** - they won't succeed
+2. **Add jitter to retries** - avoid thundering herd
+3. **Handle partial failures** - in batch operations
+4. **Clean up on failures** - don't leave orphans
+5. **Log with context** - include GVR and names
 
 ## Integration Notes
 
-This pipeline will be:
-- Registered with the sync engine from Wave 1
-- Used by downstream syncer in Wave 2
-- Applied to upstream status in Wave 3
+This component:
+- Is called by Wave 2 downstream core
+- Uses Wave 2 conflict resolver
+- Reports results for monitoring
+- Provides operation metrics
 
-The pipeline should:
-- Be stateless and thread-safe
-- Support dynamic transformer registration
-- Provide transformation metrics
-- Log all transformations at debug level
+Should expose:
+- Multiple apply strategies
+- Configurable retry logic
+- Batch operation support
+- Detailed result information
 
 ## Success Criteria
 
 The implementation is complete when:
-1. All default transformers are implemented
-2. Pipeline can execute transformations in order
-3. Bi-directional transformations work correctly
-4. No data loss or corruption occurs
+1. Resources can be applied with multiple strategies
+2. Retry logic handles transient failures
+3. Deletions work with proper propagation
+4. Batch operations are efficient
 5. All tests pass
-6. Performance meets requirements (<10ms per object)
+6. Can handle 100+ operations per second
