@@ -246,7 +246,7 @@ install_core_crds() {
     
     # Wait for essential CRDs to be established
     echo -n "Waiting for essential CRDs to be established"
-    local essential_crds=("pods" "services" "namespaces" "deployments.apps")
+    local essential_crds=("pods." "services." "namespaces." "deployments.apps")
     
     for i in {1..60}; do
         local all_ready=true
@@ -295,7 +295,7 @@ troubleshoot_crd_issues() {
     echo ""
     
     echo "Currently installed CRDs matching common patterns:"
-    kubectl get crd | grep -E "(^pods$|^services$|^namespaces$|\.apps|\.workload\.kcp\.io)" || echo "  No matching CRDs found"
+    kubectl get crd | grep -E "(^pods\.$|^services\.$|^namespaces\.$|\.apps|\.workload\.kcp\.io)" || echo "  No matching CRDs found"
     echo ""
     
     echo "KCP API server status:"
@@ -324,7 +324,7 @@ verify_crds_functional() {
     echo "Verifying CRDs are functional in workspace '$workspace'..."
     
     # Test that we can describe the CRDs - this checks they're not just present but established
-    local test_crds=("pods" "services" "namespaces" "deployments.apps")
+    local test_crds=("pods." "services." "namespaces." "deployments.apps")
     for crd_name in "${test_crds[@]}"; do
         echo -n "  Testing $crd_name..."
         if kubectl describe crd "$crd_name" >/dev/null 2>&1; then
@@ -355,7 +355,7 @@ verify_crds_functional() {
 
 list_installed_crds() {
     echo "Successfully installed CRDs:"
-    kubectl get crd | grep -E "(^pods$|^services$|^namespaces$|\.apps|\.workload\.kcp\.io)" | while read -r line; do
+    kubectl get crd | grep -E "(^pods\.$|^services\.$|^namespaces\.$|\.apps|\.workload\.kcp\.io)" | while read -r line; do
         echo "  ✓ $line"
     done
 }

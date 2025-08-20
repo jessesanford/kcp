@@ -257,8 +257,8 @@ install_pod_crd() {
     # Wait for Pod CRD to be established
     echo -n "Waiting for Pod CRD to be established"
     for i in {1..60}; do
-        if kubectl wait --for condition=established --timeout=5s crd/pods >/dev/null 2>&1 && \
-           kubectl wait --for condition=established --timeout=5s crd/namespaces >/dev/null 2>&1; then
+        if kubectl wait --for condition=established --timeout=5s crd/pods. >/dev/null 2>&1 && \
+           kubectl wait --for condition=established --timeout=5s crd/namespaces. >/dev/null 2>&1; then
             echo -e " ${GREEN}Ready!${NC}"
             break
         fi
@@ -268,8 +268,8 @@ install_pod_crd() {
         if [ $i -eq 60 ]; then
             echo -e " ${RED}Timeout waiting for CRDs${NC}"
             echo "Checking CRD status:"
-            kubectl get crd pods -o wide || echo "  Pod CRD not found"
-            kubectl get crd namespaces -o wide || echo "  Namespace CRD not found"
+            kubectl get crd pods. -o wide || echo "  Pod CRD not found"
+            kubectl get crd namespaces. -o wide || echo "  Namespace CRD not found"
             return 1
         fi
     done
@@ -413,7 +413,7 @@ if ! verify_pod_crd_functional "simple-pods"; then
 fi
 
 echo -e "${CYAN}Successfully installed CRDs:${NC}"
-kubectl get crd | grep -E "(^pods|^namespaces|workload\.kcp\.io)" | while read -r line; do
+kubectl get crd | grep -E "(^pods\.|^namespaces\.|workload\.kcp\.io)" | while read -r line; do
     echo "  ✓ $line"
 done
 
