@@ -14,19 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha1 contains the v1alpha1 version of TMC (Topology Management Controller) API types.
+// Package v1alpha1 contains API Schema definitions for the TMC (Transparent Multi-Cluster) v1alpha1 API group.
 //
-// TMC provides APIs for managing workload placement across multiple Kubernetes clusters
-// within a KCP workspace hierarchy. It enables:
-//   - Cluster registration and management
-//   - Workload placement policies
-//   - Cross-cluster workload synchronization
-//   - Load balancing and traffic distribution
+// The TMC API provides primitives for managing workload placement and cluster registration
+// in a transparent multi-cluster environment. It follows KCP patterns for workspace-aware
+// resource management and API export integration.
 //
-// The API is designed to integrate seamlessly with KCP's workspace model and APIExport
-// system for multi-tenant cluster management.
+// Core Resources:
+//   - ClusterRegistration: Represents cluster membership and health in the TMC system
+//   - WorkloadPlacement: Defines policies for placing workloads across clusters
 //
 // +k8s:deepcopy-gen=package
 // +groupName=tmc.kcp.io
-
 package v1alpha1
