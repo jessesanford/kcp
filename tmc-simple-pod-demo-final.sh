@@ -232,58 +232,22 @@ install_pod_crd() {
     
     # Install just the Pod CRD for minimal demo
     echo "Installing Pod CRD (pods.core.kcp.io)..."
-    # Create the CRD with proper core.kcp.io group
-    cat <<EOF | kubectl apply -f -
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: pods.core.kcp.io
-spec:
-  group: core.kcp.io
-  names:
-    kind: Pod
-    plural: pods
-    singular: pod
-  scope: Namespaced
-  versions:
-  - name: v1
-    served: true
-    storage: true
-    schema:
-      openAPIV3Schema:
-        type: object
-EOF || {
+    # Use the properly formatted CRD from core-fixed directory
+    if [ -f "contrib/crds/core-fixed/pods.core.kcp.io.yaml" ]; then
+        kubectl apply -f "contrib/crds/core-fixed/pods.core.kcp.io.yaml" || {
             echo -e "${RED}Error: Failed to apply Pod CRD${NC}"
             return 1
         }
     else
-        echo -e "${RED}Error: Pod CRD file not found at contrib/crds/core/_pods.yaml${NC}"
+        echo -e "${RED}Error: Pod CRD file not found at contrib/crds/core-fixed/pods.core.kcp.io.yaml${NC}"
         return 1
     fi
     
     # Also install namespaces since we need them
     echo "Installing Namespace CRD (namespaces.core.kcp.io)..."
-    # Create the CRD with proper core.kcp.io group
-    cat <<EOF | kubectl apply -f -
-apiVersion: apiextensions.k8s.io/v1
-kind: CustomResourceDefinition
-metadata:
-  name: namespaces.core.kcp.io
-spec:
-  group: core.kcp.io
-  names:
-    kind: Namespace
-    plural: namespaces
-    singular: namespace
-  scope: Cluster
-  versions:
-  - name: v1
-    served: true
-    storage: true
-    schema:
-      openAPIV3Schema:
-        type: object
-EOF || {
+    # Use the properly formatted CRD from core-fixed directory
+    if [ -f "contrib/crds/core-fixed/namespaces.core.kcp.io.yaml" ]; then
+        kubectl apply -f "contrib/crds/core-fixed/namespaces.core.kcp.io.yaml" || {
             echo -e "${RED}Error: Failed to apply Namespace CRD${NC}"
             return 1
         }
