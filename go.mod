@@ -7,7 +7,9 @@ module github.com/kcp-dev/kcp
 // references across the codebase are consistent with the versions
 // maintained here.
 // go-build-version 1.24.5
-go 1.22.12
+go 1.24.0
+
+toolchain go1.24.5
 
 require (
 	github.com/abiosoft/lineprefix v0.1.4

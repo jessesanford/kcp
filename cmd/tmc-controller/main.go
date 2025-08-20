@@ -23,20 +23,33 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2"
 
 	"github.com/kcp-dev/kcp/pkg/features"
+	"github.com/kcp-dev/kcp/pkg/tmc/controller"
+	"github.com/kcp-dev/logicalcluster/v3"
+	kcpclientset "github.com/kcp-dev/kcp/sdk/client/clientset/versioned/cluster"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
+)
+
+var (
+	kubeconfig = ""
+	workers    = 2
 )
 
 func main() {
 	// Add feature gates
 	fs := pflag.NewFlagSet("", pflag.ExitOnError)
 	fs.Var(features.NewFlagValue(), "feature-gates", "A set of key=value pairs that describe feature gates for alpha/experimental features.")
+	fs.StringVar(&kubeconfig, "kubeconfig", kubeconfig, "Path to kubeconfig file for KCP connection")
+	fs.IntVar(&workers, "workers", workers, "Number of worker goroutines for controllers")
 
 	cmd := &cobra.Command{
 		Use:   "tmc-controller",
@@ -70,8 +83,8 @@ func run(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 
 	// Check if TMC feature flag is enabled
-	if !utilfeature.DefaultFeatureGate.Enabled(features.TMC) {
-		return fmt.Errorf("TMC feature flag is not enabled. Use --feature-gates=TMC=true to enable")
+	if !utilfeature.DefaultFeatureGate.Enabled(features.TMCFeature) {
+		return fmt.Errorf("TMC feature flag is not enabled. Use --feature-gates=TMCFeature=true to enable")
 	}
 
 	logger.Info("Starting TMC controller", "version", "v0.1.0", "build", "dev")
@@ -99,17 +112,106 @@ func run(ctx context.Context) error {
 func startControllers(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 	
-	// For this foundation PR, we create a placeholder informer
-	// In future PRs, this will be replaced with actual TMC API informers
-	logger.Info("TMC controller foundation ready - actual controllers will be added in future PRs")
+	// Create configuration for KCP connection
+	config, err := createKCPConfig()
+	if err != nil {
+		return fmt.Errorf("failed to create KCP config: %w", err)
+	}
 	
-	// TODO: In future PRs, initialize actual TMC controllers:
-	// 1. Create KCP clients
-	// 2. Set up informer factories
-	// 3. Create specific controllers (cluster registration, workload placement, etc.)
-	// 4. Start controller managers
+	// Create KCP cluster client
+	kcpClusterClient, err := kcpclientset.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("failed to create KCP cluster client: %w", err)
+	}
+	
+	logger.Info("Created KCP cluster client successfully")
+	
+	// Create example cluster configs for demonstration
+	// In a real deployment, these would come from configuration files or environment variables
+	clusterConfigs := createExampleClusterConfigs(config)
+	
+	// Create the cluster registration controller
+	clusterController, err := controller.NewClusterRegistrationController(
+		kcpClusterClient,
+		clusterConfigs,
+		logicalcluster.Name("root:tmc"), // Example workspace
+		30*time.Second,                  // Resync period
+		workers,                         // Worker count
+	)
+	if err != nil {
+		return fmt.Errorf("failed to create cluster registration controller: %w", err)
+	}
+	
+	logger.Info("Created ClusterRegistration controller successfully")
+	
+	// Start the cluster registration controller
+	go func() {
+		logger.Info("Starting ClusterRegistration controller")
+		if err := clusterController.Start(ctx); err != nil {
+			logger.Error(err, "ClusterRegistration controller failed")
+		}
+	}()
+	
+	logger.Info("TMC controllers started successfully")
 	
 	return nil
+}
+
+// createKCPConfig creates a Kubernetes client configuration for KCP connection
+func createKCPConfig() (*rest.Config, error) {
+	var config *rest.Config
+	var err error
+	
+	if kubeconfig != "" {
+		// Use provided kubeconfig file
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build config from kubeconfig %s: %w", kubeconfig, err)
+		}
+	} else {
+		// Try in-cluster config first
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			// Fall back to default kubeconfig location
+			config, err = clientcmd.BuildConfigFromFlags("", "")
+			if err != nil {
+				return nil, fmt.Errorf("failed to get config (tried in-cluster and default kubeconfig): %w", err)
+			}
+		}
+	}
+	
+	// Set reasonable defaults for KCP connection
+	config.QPS = 50
+	config.Burst = 100
+	
+	return config, nil
+}
+
+// createExampleClusterConfigs creates example cluster configurations for demonstration
+// In a real deployment, these would be loaded from configuration files or environment variables
+func createExampleClusterConfigs(kcpConfig *rest.Config) map[string]*rest.Config {
+	configs := make(map[string]*rest.Config)
+	
+	// For demonstration, we'll use the same config as a "cluster"
+	// In real usage, these would be configs for different physical Kubernetes clusters
+	configs["example-cluster"] = &rest.Config{
+		Host:        kcpConfig.Host,
+		BearerToken: kcpConfig.BearerToken,
+		TLSClientConfig: rest.TLSClientConfig{
+			Insecure:   kcpConfig.TLSClientConfig.Insecure,
+			CAFile:     kcpConfig.TLSClientConfig.CAFile,
+			CertFile:   kcpConfig.TLSClientConfig.CertFile,
+			KeyFile:    kcpConfig.TLSClientConfig.KeyFile,
+			CAData:     kcpConfig.TLSClientConfig.CAData,
+			CertData:   kcpConfig.TLSClientConfig.CertData,
+			KeyData:    kcpConfig.TLSClientConfig.KeyData,
+			ServerName: kcpConfig.TLSClientConfig.ServerName,
+		},
+		QPS:   20,
+		Burst: 40,
+	}
+	
+	return configs
 }
 
 // setupSignalHandler registers signal handlers and returns a context that is cancelled on signal

@@ -17,9 +17,9 @@ limitations under the License.
 package server
 
 import (
-	"context"
 	"net/http"
 
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -88,7 +88,7 @@ func newVirtualConfig(
 	}
 
 	// TMC: Enable virtual workspaces for TMC if feature gate is enabled
-	if features.DefaultMutableFeatureGate.Enabled(features.TMCEnabled) {
+	if utilfeature.DefaultMutableFeatureGate.Enabled(features.TMCFeature) {
 		// Configure TMC-specific virtual workspace settings
 		c.Extra.VirtualWorkspaces, err = o.Virtual.VirtualWorkspaces.NewVirtualWorkspaces(
 			config,
