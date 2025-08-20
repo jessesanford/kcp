@@ -1,381 +1,533 @@
-# Implementation Instructions: Conflict Resolution
+# Implementation Instructions: Heartbeat & Health Monitoring
 
-## Branch: `feature/phase7-syncer-impl/p7w2-conflict`
+## Branch: `feature/phase7-syncer-impl/p7w4-heartbeat`
 
 ## Overview
-This branch implements the conflict resolution system that handles conflicts when syncing resources between KCP and physical clusters. It provides multiple resolution strategies and maintains consistency across clusters.
+This branch implements heartbeat and health monitoring for the syncer, ensuring KCP knows the syncer is alive and healthy. It provides liveness/readiness probes, metrics collection, and health status reporting.
 
-**Target Size**: ~500 lines  
-**Complexity**: Medium-High  
-**Priority**: High (ensures sync reliability)
+**Target Size**: ~450 lines  
+**Complexity**: Medium  
+**Priority**: High (ensures reliability)
 
 ## Dependencies
-- **Phase 5 APIs**: Implements conflict resolver interface
-- **Phase 6 Infrastructure**: Uses controller patterns
-- **Wave 2 Downstream Core**: Used by downstream syncer
-- **Wave 2 Applier**: Coordinates with applier
+- **Phase 5 APIs**: Health check interfaces
+- **Phase 6 Infrastructure**: SyncTarget status updates
+- **Wave 4 WebSocket**: Uses connection for heartbeat
+- **All Waves**: Monitors all sync components
 
 ## Files to Create
 
-### 1. Conflict Resolver Core (~200 lines)
-**File**: `pkg/reconciler/workload/syncer/conflict/resolver.go`
-- Main resolver struct
-- Conflict detection logic
-- Resolution strategy selection
-- Conflict resolution execution
+### 1. Health Monitor Core (~200 lines)
+**File**: `pkg/reconciler/workload/syncer/health/monitor.go`
+- Main health monitor struct
+- Component health tracking
+- Aggregated health status
+- Health reporting
 
-### 2. Resolution Strategies (~150 lines)
-**File**: `pkg/reconciler/workload/syncer/conflict/strategies.go`
-- KCP wins strategy
-- Downstream wins strategy
-- Merge strategy
-- Manual resolution marker
+### 2. Heartbeat Manager (~100 lines)
+**File**: `pkg/reconciler/workload/syncer/health/heartbeat.go`
+- Heartbeat sender
+- Heartbeat interval management
+- Missed heartbeat detection
+- Lease renewal
 
-### 3. Conflict Detection (~80 lines)
-**File**: `pkg/reconciler/workload/syncer/conflict/detection.go`
-- Version conflict detection
-- Semantic conflict detection
-- Field-level conflict identification
-- Conflict severity assessment
+### 3. Health Checks (~80 lines)
+**File**: `pkg/reconciler/workload/syncer/health/checks.go`
+- Component health checks
+- Resource availability checks
+- Connection health checks
+- Performance checks
 
-### 4. Conflict Types (~30 lines)
-**File**: `pkg/reconciler/workload/syncer/conflict/types.go`
-- Conflict struct definitions
-- Resolution result types
-- Strategy configuration
+### 4. Metrics Collection (~40 lines)
+**File**: `pkg/reconciler/workload/syncer/health/metrics.go`
+- Prometheus metrics
+- Health metrics
+- Performance metrics
+- Error metrics
 
-### 5. Conflict Tests (~40 lines)
-**File**: `pkg/reconciler/workload/syncer/conflict/resolver_test.go`
-- Unit tests for resolution strategies
-- Conflict detection tests
-- Integration scenarios
+### 5. Health Tests (~30 lines)
+**File**: `pkg/reconciler/workload/syncer/health/monitor_test.go`
+- Unit tests for health monitoring
+- Heartbeat tests
+- Check aggregation tests
 
 ## Step-by-Step Implementation Guide
 
 ### Step 1: Create Package Structure
 ```bash
-mkdir -p pkg/reconciler/workload/syncer/conflict
+mkdir -p pkg/reconciler/workload/syncer/health
 ```
 
-### Step 2: Define Types
+### Step 2: Define Health Types
 Create `types.go` with:
 
 ```go
-package conflict
+package health
 
 import (
-    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-    "k8s.io/apimachinery/pkg/runtime/schema"
+    "time"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// Conflict represents a synchronization conflict
-type Conflict struct {
-    GVR              schema.GroupVersionResource
-    Namespace        string
-    Name             string
-    Type             ConflictType
-    Severity         ConflictSeverity
-    KCPVersion       string
-    DownstreamVersion string
-    Fields           []FieldConflict
-    DetectedAt       metav1.Time
+// HealthStatus represents overall health
+type HealthStatus string
+
+const (
+    HealthStatusHealthy   HealthStatus = "Healthy"
+    HealthStatusDegraded  HealthStatus = "Degraded"
+    HealthStatusUnhealthy HealthStatus = "Unhealthy"
+    HealthStatusUnknown   HealthStatus = "Unknown"
+)
+
+// ComponentHealth represents a component's health
+type ComponentHealth struct {
+    Name         string
+    Status       HealthStatus
+    LastCheck    time.Time
+    Message      string
+    Error        error
+    Metrics      map[string]float64
 }
 
-// ConflictType categorizes conflicts
-type ConflictType string
-
-const (
-    VersionConflict   ConflictType = "version"
-    SemanticConflict  ConflictType = "semantic"
-    DeletedConflict   ConflictType = "deleted"
-    OwnershipConflict ConflictType = "ownership"
-)
-
-// ConflictSeverity indicates conflict importance
-type ConflictSeverity string
-
-const (
-    LowSeverity    ConflictSeverity = "low"
-    MediumSeverity ConflictSeverity = "medium"
-    HighSeverity   ConflictSeverity = "high"
-    CriticalSeverity ConflictSeverity = "critical"
-)
-
-// ResolutionStrategy defines how to resolve conflicts
-type ResolutionStrategy string
-
-const (
-    KCPWins       ResolutionStrategy = "kcp-wins"
-    DownstreamWins ResolutionStrategy = "downstream-wins"
-    Merge         ResolutionStrategy = "merge"
-    Manual        ResolutionStrategy = "manual"
-)
-
-// ResolutionResult contains the outcome of conflict resolution
-type ResolutionResult struct {
-    Resolved  bool
-    Strategy  ResolutionStrategy
-    Merged    *unstructured.Unstructured
-    Error     error
-    Conflicts []FieldConflict
+// HealthReport contains complete health information
+type HealthReport struct {
+    Status         HealthStatus
+    Components     map[string]*ComponentHealth
+    LastHeartbeat  *metav1.Time
+    Uptime         time.Duration
+    Version        string
+    
+    // Performance metrics
+    SyncRate       float64
+    ErrorRate      float64
+    QueueDepth     int
+    Latency        time.Duration
+    
+    // Resource metrics
+    MemoryUsage    int64
+    CPUUsage       float64
+    GoroutineCount int
 }
 
-// FieldConflict represents a field-level conflict
-type FieldConflict struct {
-    Path          string
-    KCPValue      interface{}
-    DownstreamValue interface{}
-    Resolution    string
+// HeartbeatConfig configures heartbeat behavior
+type HeartbeatConfig struct {
+    Interval         time.Duration
+    Timeout          time.Duration
+    FailureThreshold int
+    LeaseNamespace   string
+    LeaseName        string
 }
 ```
 
-### Step 3: Implement Conflict Resolver
-Create `resolver.go` with:
+### Step 3: Implement Health Monitor
+Create `monitor.go` with:
 
 ```go
-package conflict
+package health
 
 import (
     "context"
     "fmt"
+    "runtime"
+    "sync"
+    "time"
     
-    "github.com/kcp-dev/kcp/pkg/syncer/interfaces"
-    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+    workloadv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/workload/v1alpha1"
+    "k8s.io/client-go/kubernetes"
     "k8s.io/klog/v2"
+    "github.com/kcp-dev/logicalcluster/v3"
 )
 
-// Resolver handles conflict resolution
-type Resolver struct {
-    defaultStrategy ResolutionStrategy
-    strategies      map[ResolutionStrategy]interfaces.ResolutionStrategy
-    detector        *ConflictDetector
+// Monitor tracks health of all syncer components
+type Monitor struct {
+    kcpClient     kubernetes.ClusterInterface
+    syncTarget    *workloadv1alpha1.SyncTarget
+    workspace     logicalcluster.Name
+    
+    // Component tracking
+    components    map[string]HealthChecker
+    componentsMu  sync.RWMutex
+    
+    // Health state
+    status        HealthStatus
+    lastReport    *HealthReport
+    startTime     time.Time
+    
+    // Heartbeat
+    heartbeater   *Heartbeater
+    
+    // Metrics
+    metrics       *MetricsCollector
+    
+    // Configuration
+    checkInterval time.Duration
+    
+    // Lifecycle
+    ctx           context.Context
+    cancel        context.CancelFunc
 }
 
-// NewResolver creates a new conflict resolver
-func NewResolver(defaultStrategy ResolutionStrategy) *Resolver {
-    r := &Resolver{
-        defaultStrategy: defaultStrategy,
-        strategies:      make(map[ResolutionStrategy]interfaces.ResolutionStrategy),
-        detector:        NewConflictDetector(),
+// HealthChecker interface for component health checks
+type HealthChecker interface {
+    Name() string
+    Check(ctx context.Context) *ComponentHealth
+}
+
+// NewMonitor creates a new health monitor
+func NewMonitor(
+    kcpClient kubernetes.ClusterInterface,
+    syncTarget *workloadv1alpha1.SyncTarget,
+    workspace logicalcluster.Name,
+) *Monitor {
+    ctx, cancel := context.WithCancel(context.Background())
+    
+    return &Monitor{
+        kcpClient:     kcpClient,
+        syncTarget:    syncTarget,
+        workspace:     workspace,
+        components:    make(map[string]HealthChecker),
+        status:        HealthStatusUnknown,
+        startTime:     time.Now(),
+        checkInterval: 30 * time.Second,
+        metrics:       NewMetricsCollector(),
+        ctx:           ctx,
+        cancel:        cancel,
+    }
+}
+
+// Start begins health monitoring
+func (m *Monitor) Start(ctx context.Context) error {
+    logger := klog.FromContext(ctx)
+    logger.Info("Starting health monitor")
+    
+    // Initialize heartbeater
+    m.heartbeater = NewHeartbeater(
+        m.kcpClient,
+        m.syncTarget,
+        m.workspace,
+        HeartbeatConfig{
+            Interval:         10 * time.Second,
+            Timeout:          30 * time.Second,
+            FailureThreshold: 3,
+            LeaseNamespace:   m.syncTarget.Namespace,
+            LeaseName:        fmt.Sprintf("%s-heartbeat", m.syncTarget.Name),
+        },
+    )
+    
+    // Start heartbeat
+    if err := m.heartbeater.Start(ctx); err != nil {
+        return fmt.Errorf("failed to start heartbeat: %w", err)
     }
     
-    // Register default strategies
-    r.strategies[KCPWins] = &KCPWinsStrategy{}
-    r.strategies[DownstreamWins] = &DownstreamWinsStrategy{}
-    r.strategies[Merge] = &MergeStrategy{}
-    r.strategies[Manual] = &ManualStrategy{}
+    // Start health check loop
+    go m.healthCheckLoop(ctx)
     
-    return r
+    // Start metrics collection
+    go m.metrics.Start(ctx)
+    
+    logger.Info("Health monitor started")
+    return nil
 }
 
-// ResolveConflict attempts to resolve a synchronization conflict
-func (r *Resolver) ResolveConflict(ctx context.Context, kcp, downstream *unstructured.Unstructured) (*ResolutionResult, error) {
+// RegisterComponent registers a component for health checking
+func (m *Monitor) RegisterComponent(checker HealthChecker) {
+    m.componentsMu.Lock()
+    defer m.componentsMu.Unlock()
+    
+    m.components[checker.Name()] = checker
+    klog.V(4).Info("Registered health check", "component", checker.Name())
+}
+
+// healthCheckLoop periodically checks component health
+func (m *Monitor) healthCheckLoop(ctx context.Context) {
+    ticker := time.NewTicker(m.checkInterval)
+    defer ticker.Stop()
+    
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case <-ticker.C:
+            m.performHealthChecks(ctx)
+        }
+    }
+}
+
+// performHealthChecks checks all components
+func (m *Monitor) performHealthChecks(ctx context.Context) {
     logger := klog.FromContext(ctx)
     
-    // Detect conflicts
-    conflict := r.detector.DetectConflict(kcp, downstream)
-    if conflict == nil {
-        return &ResolutionResult{Resolved: true}, nil
+    m.componentsMu.RLock()
+    checkers := make([]HealthChecker, 0, len(m.components))
+    for _, checker := range m.components {
+        checkers = append(checkers, checker)
+    }
+    m.componentsMu.RUnlock()
+    
+    // Perform checks in parallel
+    results := make(map[string]*ComponentHealth)
+    var wg sync.WaitGroup
+    var mu sync.Mutex
+    
+    for _, checker := range checkers {
+        wg.Add(1)
+        go func(c HealthChecker) {
+            defer wg.Done()
+            
+            // Add timeout to check
+            checkCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+            defer cancel()
+            
+            health := c.Check(checkCtx)
+            
+            mu.Lock()
+            results[c.Name()] = health
+            mu.Unlock()
+        }(checker)
     }
     
-    logger.V(2).Info("Conflict detected", 
-        "type", conflict.Type,
-        "severity", conflict.Severity,
-        "resource", fmt.Sprintf("%s/%s", conflict.Namespace, conflict.Name))
+    wg.Wait()
     
-    // Select resolution strategy
-    strategy := r.selectStrategy(conflict)
+    // Aggregate status
+    status := m.aggregateStatus(results)
     
-    // Apply resolution strategy
-    resolver, exists := r.strategies[strategy]
-    if !exists {
-        return nil, fmt.Errorf("unknown resolution strategy: %s", strategy)
+    // Create report
+    report := &HealthReport{
+        Status:         status,
+        Components:     results,
+        LastHeartbeat:  &metav1.Time{Time: time.Now()},
+        Uptime:         time.Since(m.startTime),
+        Version:        "v1alpha1",
+        
+        // Collect metrics
+        SyncRate:       m.metrics.GetSyncRate(),
+        ErrorRate:      m.metrics.GetErrorRate(),
+        QueueDepth:     m.metrics.GetQueueDepth(),
+        Latency:        m.metrics.GetLatency(),
+        
+        // Runtime metrics
+        MemoryUsage:    m.getMemoryUsage(),
+        CPUUsage:       m.getCPUUsage(),
+        GoroutineCount: runtime.NumGoroutine(),
     }
     
-    result, err := resolver.Resolve(ctx, kcp, downstream, conflict)
-    if err != nil {
-        logger.Error(err, "Failed to resolve conflict", "strategy", strategy)
-        return nil, err
+    m.lastReport = report
+    m.status = status
+    
+    // Update sync target status
+    if err := m.updateSyncTargetStatus(ctx, report); err != nil {
+        logger.Error(err, "Failed to update sync target status")
     }
     
-    result.Strategy = strategy
-    
-    if result.Resolved {
-        logger.V(2).Info("Conflict resolved", "strategy", strategy)
-    } else {
-        logger.Warning("Conflict requires manual resolution", "conflicts", result.Conflicts)
-    }
-    
-    return result, nil
+    logger.V(4).Info("Health check completed", "status", status)
 }
 
-// selectStrategy chooses the appropriate resolution strategy
-func (r *Resolver) selectStrategy(conflict *Conflict) ResolutionStrategy {
-    // Critical conflicts require manual resolution
-    if conflict.Severity == CriticalSeverity {
-        return Manual
+// aggregateStatus determines overall health from component statuses
+func (m *Monitor) aggregateStatus(components map[string]*ComponentHealth) HealthStatus {
+    if len(components) == 0 {
+        return HealthStatusUnknown
     }
     
-    // Use type-specific strategies
-    switch conflict.Type {
-    case DeletedConflict:
-        return KCPWins // Recreate if deleted downstream
-    case OwnershipConflict:
-        return Manual // Ownership conflicts need investigation
-    case VersionConflict:
-        if conflict.Severity == HighSeverity {
-            return Manual
+    unhealthyCount := 0
+    degradedCount := 0
+    
+    for _, health := range components {
+        switch health.Status {
+        case HealthStatusUnhealthy:
+            unhealthyCount++
+        case HealthStatusDegraded:
+            degradedCount++
         }
-        return r.defaultStrategy
-    default:
-        return r.defaultStrategy
     }
-}
-```
-
-### Step 4: Implement Resolution Strategies
-Create `strategies.go` with:
-
-1. **KCP Wins Strategy**:
-```go
-type KCPWinsStrategy struct{}
-
-func (s *KCPWinsStrategy) Resolve(ctx context.Context, kcp, downstream *unstructured.Unstructured, conflict *Conflict) (*ResolutionResult, error) {
-    // KCP version takes precedence
-    merged := kcp.DeepCopy()
     
-    // Preserve downstream-only fields
-    preserveDownstreamOnlyFields(downstream, merged)
+    // Determine overall status
+    if unhealthyCount > 0 {
+        return HealthStatusUnhealthy
+    }
+    if degradedCount > len(components)/2 {
+        return HealthStatusDegraded
+    }
+    if degradedCount > 0 {
+        return HealthStatusDegraded
+    }
     
-    return &ResolutionResult{
-        Resolved: true,
-        Merged:   merged,
-    }, nil
+    return HealthStatusHealthy
+}
+
+// GetHealth returns current health status
+func (m *Monitor) GetHealth() HealthStatus {
+    return m.status
+}
+
+// GetReport returns the latest health report
+func (m *Monitor) GetReport() *HealthReport {
+    return m.lastReport
+}
+
+// LivenessProbe implements liveness check
+func (m *Monitor) LivenessProbe() error {
+    if m.status == HealthStatusUnhealthy {
+        return fmt.Errorf("syncer is unhealthy")
+    }
+    return nil
+}
+
+// ReadinessProbe implements readiness check
+func (m *Monitor) ReadinessProbe() error {
+    if m.status != HealthStatusHealthy {
+        return fmt.Errorf("syncer is not ready: %s", m.status)
+    }
+    return nil
 }
 ```
 
-2. **Downstream Wins Strategy**:
-   - Preserve downstream changes
-   - Update KCP metadata
-   - Mark for upstream sync
+### Step 4: Implement Heartbeat Manager
+Create `heartbeat.go` with:
 
-3. **Merge Strategy**:
-   - Three-way merge
-   - Field-level merging
-   - Conflict markers for unresolvable fields
+1. **Heartbeater struct**:
+   - Lease-based heartbeat
+   - Regular heartbeat sending
+   - Failure detection
 
-4. **Manual Strategy**:
-   - Mark resource for manual review
-   - Add conflict annotations
-   - Pause sync for resource
+2. **Heartbeat loop**:
+   - Send heartbeat messages
+   - Update lease
+   - Track failures
+   - Trigger alerts
 
-### Step 5: Implement Conflict Detection
-Create `detection.go` with:
+3. **Lease management**:
+   - Create/update lease
+   - Handle lease conflicts
+   - Graceful takeover
 
-1. **ConflictDetector struct**:
+### Step 5: Implement Health Checks
+Create `checks.go` with:
+
+1. **Connection health check**:
 ```go
-type ConflictDetector struct {
-    ignoreFields []string
+type ConnectionHealthCheck struct {
+    manager *tunnel.Manager
+}
+
+func (c *ConnectionHealthCheck) Check(ctx context.Context) *ComponentHealth {
+    health := &ComponentHealth{
+        Name:      "websocket-connection",
+        LastCheck: time.Now(),
+    }
+    
+    if c.manager.IsConnected() {
+        health.Status = HealthStatusHealthy
+        health.Message = "Connected"
+    } else {
+        health.Status = HealthStatusUnhealthy
+        health.Message = "Disconnected"
+        health.Error = c.manager.LastError()
+    }
+    
+    return health
 }
 ```
 
-2. **DetectConflict method**:
-   - Compare resource versions
-   - Check for semantic differences
-   - Identify conflicting fields
-   - Assess conflict severity
+2. **Sync engine health check**:
+   - Queue depth check
+   - Processing rate
+   - Error rate
 
-3. **Field comparison**:
-   - Deep equality check
-   - Ignore server-managed fields
-   - Detect meaningful changes
+3. **Resource health check**:
+   - Memory usage
+   - CPU usage
+   - Goroutine count
 
-### Step 6: Add Advanced Features
+### Step 6: Implement Metrics Collection
+Create `metrics.go` with:
 
-1. **Conflict history**:
-   - Track resolution history
-   - Learn from patterns
-   - Suggest resolutions
+1. **Prometheus metrics**:
+   - Health status gauge
+   - Component status
+   - Heartbeat counter
+   - Check duration
 
-2. **Custom strategies**:
-   - Plugin architecture
-   - Resource-specific strategies
-   - User-defined rules
-
-3. **Notifications**:
-   - Alert on critical conflicts
-   - Resolution reports
-   - Audit logging
+2. **Metric aggregation**:
+   - Calculate rates
+   - Track trends
+   - Detect anomalies
 
 ### Step 7: Add Comprehensive Tests
 Create test files covering:
 
-1. **Detection tests**:
-   - Version conflicts
-   - Field conflicts
-   - Severity assessment
-
-2. **Resolution tests**:
-   - Each strategy
-   - Complex scenarios
+1. **Health aggregation**:
+   - Various component states
+   - Status calculation
    - Edge cases
+
+2. **Heartbeat**:
+   - Regular heartbeat
+   - Failure detection
+   - Recovery
+
+3. **Health checks**:
+   - Component checks
+   - Timeout handling
+   - Error scenarios
 
 ## Testing Requirements
 
 ### Unit Tests:
-- Conflict detection accuracy
-- Each resolution strategy
-- Strategy selection logic
-- Field preservation
-- Error handling
+- Health status aggregation
+- Component registration
+- Heartbeat logic
+- Metrics collection
+- Probe methods
 
 ### Integration Tests:
-- Real resource conflicts
-- Multiple conflict types
-- Resolution chains
-- Performance under load
+- Full health monitoring
+- Heartbeat with lease
+- Status updates
+- Metric export
 
 ## Validation Checklist
 
-- [ ] All conflict types detected correctly
-- [ ] Resolution strategies work as expected
-- [ ] Field preservation maintains integrity
-- [ ] Manual conflicts properly marked
+- [ ] Health checks run periodically
+- [ ] Status aggregates correctly
+- [ ] Heartbeat maintains lease
+- [ ] Metrics are collected
+- [ ] Probes work correctly
+- [ ] Status updates to KCP
 - [ ] Comprehensive logging
-- [ ] Metrics for conflict tracking
-- [ ] Tests achieve >75% coverage
+- [ ] Prometheus metrics exposed
+- [ ] Tests achieve >70% coverage
 - [ ] Code follows KCP patterns
 - [ ] Feature flags integrated
-- [ ] Under 500 lines (excluding tests)
+- [ ] Under 450 lines (excluding tests)
 
 ## Common Pitfalls to Avoid
 
-1. **Don't lose data** - always preserve important fields
-2. **Avoid infinite loops** - detect resolution cycles
-3. **Handle edge cases** - nil values, missing fields
-4. **Document decisions** - log why strategies were chosen
-5. **Maintain consistency** - ensure resolved state is valid
+1. **Don't block health checks** - use timeouts
+2. **Cache health results** - avoid excessive checking
+3. **Handle check failures** - don't crash on errors
+4. **Clean up resources** - prevent leaks
+5. **Rate limit updates** - don't flood KCP
 
 ## Integration Notes
 
 This component:
-- Is used by Wave 2 downstream core
-- Coordinates with Wave 2 applier
-- May trigger Wave 3 upstream sync
-- Reports conflicts for monitoring
+- Monitors all Wave 1-3 components
+- Uses Wave 4 WebSocket for heartbeat
+- Updates SyncTarget status
+- Provides Kubernetes probes
 
 Should provide:
-- Multiple resolution strategies
-- Extensible strategy system
-- Detailed conflict information
-- Resolution metrics
+- HTTP health endpoints
+- Prometheus metrics endpoint
+- Detailed health reports
+- Component registration API
 
 ## Success Criteria
 
 The implementation is complete when:
-1. Conflicts are accurately detected
-2. Multiple resolution strategies work
-3. Field preservation maintains data integrity
-4. Manual conflicts are properly handled
+1. Health status accurately reflects system state
+2. Heartbeat keeps lease alive
+3. Metrics are collected and exported
+4. Probes work for Kubernetes
 5. All tests pass
-6. Can resolve 95% of conflicts automatically
+6. Can monitor 10+ components efficiently
