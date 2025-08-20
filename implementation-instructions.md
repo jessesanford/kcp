@@ -1,192 +1,260 @@
-# Implementation Instructions: Wave2b-03 - Transformation & Tests
+# Implementation Instructions: Sync Engine Core
 
-## 🎯 Objective
-Copy transformation logic and comprehensive tests from wave2b-virtual-to-be-split (~499 lines)
+## Branch: `feature/phase7-syncer-impl/p7w1-sync-engine`
 
-## 📋 Prerequisites
-- Wave2b-01 virtual workspace foundation must be complete
-- Source files available in `/workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/`
+## Overview
+This branch implements the core synchronization engine that manages the lifecycle of resource synchronization between KCP and physical clusters. The sync engine is the heart of the syncer, coordinating all synchronization activities through a work queue pattern.
 
-## ⚠️ CRITICAL: Implementation Approach
-**YOU MUST COPY EXISTING FILES** - The to-be-split branch HAS full implementation ready to copy.
-- Cherry-pick Wave2b-01 first: `git cherry-pick <Wave2b-01-commit-hash>`
-- COPY files from `/workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/`
-- Exact files: `transformation.go` (222 lines) and `virtual_workspace_test.go` (277 lines)
-- Total: 499 lines exactly
+**Target Size**: ~750 lines  
+**Complexity**: High  
+**Priority**: Critical (blocks all other Wave 2-4 efforts)
 
-## 🔨 Implementation Tasks
+## Dependencies
+- **Phase 5 APIs**: Uses syncer interfaces from `pkg/apis/syncer/v1alpha1`
+- **Phase 6 Infrastructure**: Leverages virtual workspace and controller patterns
+- **External**: None - this is the foundational component
 
-### 1. Copy `pkg/virtual/syncer/transformation.go` (222 lines - ACTUAL COUNT)
+## Files to Create
 
-**Source Location:**
+### 1. Core Engine Implementation (~350 lines)
+**File**: `pkg/reconciler/workload/syncer/engine/engine.go`
+- Main sync engine struct and initialization
+- Work queue management
+- Resource syncer registration
+- Event handling from informers
+- Status tracking and reporting
+
+### 2. Resource Syncer (~200 lines)
+**File**: `pkg/reconciler/workload/syncer/engine/resource_syncer.go`
+- Individual resource type synchronization
+- Bi-directional sync coordination
+- Resource-specific logic handling
+- Cache management per resource type
+
+### 3. Sync Item Types (~50 lines)
+**File**: `pkg/reconciler/workload/syncer/engine/types.go`
+- SyncItem struct definition
+- SyncStatus struct
+- Engine configuration types
+- Helper type definitions
+
+### 4. Engine Tests (~150 lines)
+**File**: `pkg/reconciler/workload/syncer/engine/engine_test.go`
+- Unit tests for engine lifecycle
+- Work queue processing tests
+- Resource syncer registration tests
+- Mock implementations
+
+## Step-by-Step Implementation Guide
+
+### Step 1: Create Package Structure
 ```bash
-/workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/transformation.go
+mkdir -p pkg/reconciler/workload/syncer/engine
 ```
 
-**Key Components:**
-- `Transformer` interface definition
-- `SyncTargetTransformer` struct
-- `VirtualToPhysical()` conversion method
-- `PhysicalToVirtual()` conversion method
-- Helper functions for name/namespace mapping
-
-**Copy Command:**
-```bash
-cp /workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/transformation.go \
-   pkg/virtual/syncer/transformation.go
-```
-
-### 2. Copy `pkg/virtual/syncer/virtual_workspace_test.go` (277 lines - ACTUAL COUNT)
-
-**Source Location:**
-```bash
-/workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/virtual_workspace_test.go
-```
-
-**Test Coverage Areas:**
-- Virtual workspace creation
-- Discovery mechanism
-- Authentication flows
-- Storage CRUD operations
-- Bidirectional transformation
-- Error handling scenarios
-
-**Copy Command:**
-```bash
-cp /workspaces/kcp-worktrees/phase2/wave2b-virtual-to-be-split/pkg/virtual/syncer/virtual_workspace_test.go \
-   pkg/virtual/syncer/virtual_workspace_test.go
-```
-
-## 📝 Critical Transformation Logic
-
-### Virtual to Physical Conversion
+### Step 2: Define Types
+Create `types.go` with:
 ```go
-func (t *SyncTargetTransformer) VirtualToPhysical(virtual runtime.Object) (runtime.Object, error) {
-    // 1. Type assertion for SyncTarget
-    // 2. Create ConfigMap representation
-    // 3. Transform spec to ConfigMap data
-    // 4. Add workspace labels
-    // 5. Return physical object
+package engine
+
+import (
+    "k8s.io/apimachinery/pkg/runtime/schema"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+// SyncItem represents a work item in the sync queue
+type SyncItem struct {
+    GVR       schema.GroupVersionResource
+    Key       string      // namespace/name
+    Action    string      // add, update, delete, status
+    Object    interface{} // The actual object
+    Retries   int
+    Timestamp metav1.Time
+}
+
+// SyncStatus tracks synchronization state
+type SyncStatus struct {
+    Connected        bool
+    LastSyncTime     *metav1.Time
+    SyncedResources  map[schema.GroupVersionResource]int
+    PendingResources map[schema.GroupVersionResource]int
+    FailedResources  map[schema.GroupVersionResource]int
+    ErrorMessage     string
+}
+
+// EngineConfig holds engine configuration
+type EngineConfig struct {
+    WorkerCount       int
+    ResyncPeriod      time.Duration
+    MaxRetries        int
+    RateLimitPerSec   int
+    QueueDepth        int
+    EnableProfiling   bool
 }
 ```
 
-**Key Transformations:**
-- Name mapping: `virtual-name` → `synctarget-physical-name`
-- Namespace: None (cluster-scoped) → workspace-specific namespace
-- Data encoding: SyncTarget spec → ConfigMap data fields
-- Label injection: Add `kcp.io/workspace` label
+### Step 3: Implement Core Engine
+Create `engine.go` with the following structure:
 
-### Physical to Virtual Conversion
+1. **Engine struct definition**:
+   - KCP and downstream clients
+   - Informer factories
+   - Resource syncers map
+   - Work queue
+   - Transformation pipeline reference
+   - Filter chain
+   - Status tracking
+
+2. **NewEngine constructor**:
+   - Initialize clients
+   - Create work queue with rate limiting
+   - Setup informer factories
+   - Initialize resource syncer map
+   - Configure default transformers and filters
+
+3. **Start method**:
+   - Start informer factories
+   - Wait for cache sync
+   - Start worker goroutines
+   - Begin status reporting
+
+4. **setupResourceSyncer method**:
+   - Create informer for resource type
+   - Add event handlers (add/update/delete)
+   - Register resource syncer
+   - Configure bi-directional sync
+
+5. **Work queue processing**:
+   - processNextWorkItem method
+   - Handle retries with exponential backoff
+   - Update status counters
+   - Log processing results
+
+### Step 4: Implement Resource Syncer
+Create `resource_syncer.go` with:
+
+1. **ResourceSyncer struct**:
+   - GVR identification
+   - Engine reference
+   - KCP and downstream informers
+   - Transformation hooks
+
+2. **ApplyToDownstream method**:
+   - Get object from KCP
+   - Apply transformations
+   - Check filters
+   - Create/update in downstream
+
+3. **DeleteFromDownstream method**:
+   - Verify deletion is allowed
+   - Remove from downstream
+   - Clean up any resources
+
+4. **SyncStatusToKCP method**:
+   - Extract status from downstream
+   - Transform if needed
+   - Patch to KCP object
+
+### Step 5: Add Test Coverage
+Create comprehensive tests in `engine_test.go`:
+
+1. **Engine lifecycle tests**:
+   - Test engine creation
+   - Test start/stop
+   - Test graceful shutdown
+
+2. **Resource syncer tests**:
+   - Test syncer registration
+   - Test event handling
+   - Test queue processing
+
+3. **Mock implementations**:
+   - Mock KCP client
+   - Mock downstream client
+   - Mock transformers
+
+### Step 6: Integration Points
+
+#### With Phase 5 Interfaces:
 ```go
-func (t *SyncTargetTransformer) PhysicalToVirtual(physical runtime.Object) (runtime.Object, error) {
-    // 1. Type assertion for ConfigMap
-    // 2. Create SyncTarget representation
-    // 3. Transform ConfigMap data to spec
-    // 4. Derive status from annotations
-    // 5. Return virtual object
+import (
+    syncerv1alpha1 "github.com/kcp-dev/kcp/pkg/apis/syncer/v1alpha1"
+    "github.com/kcp-dev/kcp/pkg/syncer/interfaces"
+)
+```
+
+#### With Phase 6 Controllers:
+- Use controller patterns from Phase 6
+- Integrate with virtual workspace APIs
+- Leverage existing reconciliation helpers
+
+### Step 7: Feature Flag Integration
+```go
+if features.TMCEnabled() && features.SyncEngineEnabled() {
+    // Enable sync engine
 }
 ```
 
-**Key Transformations:**
-- Name unmapping: `synctarget-physical-name` → `virtual-name`
-- Data decoding: ConfigMap data → SyncTarget spec
-- Status derivation: ConfigMap annotations → SyncTarget status
-- Workspace validation: Ensure correct workspace isolation
+## Testing Requirements
 
-## ✅ Validation Steps
+### Unit Tests:
+- Engine initialization and lifecycle
+- Work queue operations
+- Resource syncer registration
+- Event handler logic
+- Status tracking
+- Error handling and retries
 
-1. **File Verification**
-   ```bash
-   # Verify files copied correctly
-   ls -la pkg/virtual/syncer/transformation.go
-   ls -la pkg/virtual/syncer/virtual_workspace_test.go
-   
-   # Check line counts
-   wc -l pkg/virtual/syncer/transformation.go  # Should be 222 lines
-   wc -l pkg/virtual/syncer/virtual_workspace_test.go  # Should be 277 lines
-   ```
+### Integration Tests:
+- End-to-end sync flow
+- Multiple resource types
+- Conflict scenarios
+- Connection loss/recovery
 
-2. **Run Tests**
-   ```bash
-   go test ./pkg/virtual/syncer/... -v
-   ```
-   All tests should pass
+## Validation Checklist
 
-3. **Test Round-Trip Transformation**
-   ```bash
-   go test -run TestTransformation ./pkg/virtual/syncer/... -v
-   ```
-   Verify bidirectional transformation preserves data
+- [ ] All imports resolve correctly
+- [ ] Interfaces from Phase 5 are properly implemented
+- [ ] Work queue uses proper Kubernetes patterns
+- [ ] Informers are correctly configured
+- [ ] Event handlers don't block
+- [ ] Proper error handling throughout
+- [ ] Comprehensive logging with appropriate levels
+- [ ] Metrics exposed for monitoring
+- [ ] Status is accurately tracked and reported
+- [ ] Resource cleanup on shutdown
+- [ ] Tests achieve >70% coverage
+- [ ] Code follows KCP patterns
+- [ ] Feature flags properly integrated
+- [ ] Under 750 lines (excluding tests and generated code)
 
-4. **Line Count Verification**
-   ```bash
-   /workspaces/kcp-shared-tools/tmc-pr-line-counter.sh -c $(git branch --show-current)
-   ```
-   Target: ~499 lines
+## Common Pitfalls to Avoid
 
-## 🔄 Commit Structure
+1. **Don't block in event handlers** - enqueue work items instead
+2. **Handle cache sync failures** - don't proceed if caches aren't ready
+3. **Implement proper backoff** - avoid overwhelming the API server
+4. **Clean up resources** - ensure proper shutdown handling
+5. **Don't lose work items** - handle queue shutdown gracefully
 
-```bash
-# Commit 1: Add transformation logic
-git add pkg/virtual/syncer/transformation.go
-git commit -s -S -m "feat(virtual): add resource transformation for virtual workspace
+## Integration Notes
 
-- Implement bidirectional transformation
-- Handle virtual to physical conversion
-- Map status between representations
-- Ensure workspace isolation in transformations"
+This engine will be consumed by:
+- Wave 2: Downstream synchronization components
+- Wave 3: Upstream status synchronization
+- Wave 4: WebSocket connection management
 
-# Commit 2: Add comprehensive tests
-git add pkg/virtual/syncer/virtual_workspace_test.go
-git commit -s -S -m "test: add comprehensive tests for virtual workspace
+The engine should expose:
+- Registration methods for transformers and filters
+- Status query interface
+- Metrics for monitoring
+- Health check endpoints
 
-- Test virtual workspace creation
-- Validate discovery mechanism
-- Test authentication flows
-- Verify storage operations
-- Test transformation logic"
-```
+## Success Criteria
 
-## ⚠️ Important Reminders
-
-- **DO NOT** modify transformation logic unless fixing imports
-- **DO** ensure round-trip transformation works
-- **DO** verify no data loss in conversion
-- **DO** maintain workspace isolation
-- **DO NOT** exceed 499 lines total
-- **DO** ensure >80% test coverage
-
-## 🧪 Test Execution Guide
-
-### Run Specific Test Suites
-```bash
-# Test workspace creation
-go test -run TestVirtualWorkspaceCreation ./pkg/virtual/syncer/...
-
-# Test discovery
-go test -run TestDiscoveryMechanism ./pkg/virtual/syncer/...
-
-# Test authentication
-go test -run TestAuthentication ./pkg/virtual/syncer/...
-
-# Test storage operations
-go test -run TestStorageOperations ./pkg/virtual/syncer/...
-
-# Test transformation
-go test -run TestTransformation ./pkg/virtual/syncer/...
-```
-
-### Coverage Report
-```bash
-go test -cover ./pkg/virtual/syncer/...
-```
-
-## 🎯 Success Metrics
-
-- [ ] Both files copied successfully
-- [ ] All tests pass
-- [ ] Transformation is bidirectional
-- [ ] No data loss in round-trip
-- [ ] Test coverage >80%
-- [ ] Exactly 499 lines of code
-- [ ] Virtual workspace fully functional
+The implementation is complete when:
+1. Engine can start and connect to both KCP and downstream
+2. Resources are discovered and syncers created
+3. Work items are processed from the queue
+4. Status is tracked and reportable
+5. All tests pass
+6. Can handle at least 100 resources without performance issues
