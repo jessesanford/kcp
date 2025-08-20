@@ -19,8 +19,6 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-
-	conditionsv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
 )
 
 // GroupVersionSpec represents an API group version for negotiation
@@ -142,7 +140,7 @@ type NegotiatedAPIResourceStatus struct {
 
 	// Conditions represent the current observed conditions of the negotiation
 	// +optional
-	Conditions conditionsv1alpha1.Conditions `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // NegotiationPhase represents the phase of API negotiation.

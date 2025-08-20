@@ -21,7 +21,7 @@ limitations under the License.
 package v1alpha1
 
 import (
-	conditionsv1alpha1 "github.com/kcp-dev/kcp/sdk/apis/third_party/conditions/apis/conditions/v1alpha1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
@@ -225,7 +225,7 @@ func (in *NegotiatedAPIResourceStatus) DeepCopyInto(out *NegotiatedAPIResourceSt
 	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
-		*out = make(conditionsv1alpha1.Conditions, len(*in))
+		*out = make([]v1.Condition, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
