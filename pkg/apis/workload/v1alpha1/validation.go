@@ -107,6 +107,21 @@ func validateSyncTargetSpec(spec *SyncTargetSpec, fldPath *field.Path) field.Err
 		}
 	}
 
+	// Validate connection if specified
+	if spec.Connection != nil {
+		allErrs = append(allErrs, validateSyncTargetConnection(spec.Connection, fldPath.Child("connection"))...)
+	}
+
+	// Validate credentials if specified
+	if spec.Credentials != nil {
+		allErrs = append(allErrs, validateSyncTargetCredentials(spec.Credentials, fldPath.Child("credentials"))...)
+	}
+
+	// Validate capabilities if specified
+	if spec.Capabilities != nil {
+		allErrs = append(allErrs, validateSyncTargetCapabilities(spec.Capabilities, fldPath.Child("capabilities"))...)
+	}
+
 	return allErrs
 }
 
@@ -251,6 +266,172 @@ func validateVirtualWorkspace(vw *VirtualWorkspace, fldPath *field.Path) field.E
 		if _, err := url.Parse(vw.URL); err != nil {
 			allErrs = append(allErrs, field.Invalid(fldPath.Child("url"),
 				vw.URL, fmt.Sprintf("virtual workspace URL is invalid: %v", err)))
+		}
+	}
+
+	return allErrs
+}
+
+// validateSyncTargetConnection validates a SyncTarget connection
+func validateSyncTargetConnection(conn *SyncTargetConnection, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Validate URL
+	if conn.URL == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("url"), "connection URL is required"))
+	} else {
+		parsedURL, err := url.Parse(conn.URL)
+		if err != nil {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("url"),
+				conn.URL, fmt.Sprintf("invalid URL format: %v", err)))
+		} else if parsedURL.Scheme == "" || parsedURL.Host == "" {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("url"),
+				conn.URL, "URL must have scheme and host"))
+		}
+	}
+
+	// Validate server name if provided (should be valid DNS name)
+	if conn.ServerName != "" {
+		if errs := validation.IsDNS1123Subdomain(conn.ServerName); len(errs) > 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("serverName"),
+				conn.ServerName, fmt.Sprintf("server name must be a valid DNS name: %s", strings.Join(errs, ", "))))
+		}
+	}
+
+	return allErrs
+}
+
+// validateSyncTargetCredentials validates SyncTarget credentials
+func validateSyncTargetCredentials(creds *SyncTargetCredentials, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Validate auth type
+	if creds.Type == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("type"), "authentication type is required"))
+	} else {
+		switch creds.Type {
+		case SyncTargetAuthTypeToken:
+			if creds.Token == nil {
+				allErrs = append(allErrs, field.Required(fldPath.Child("token"), "token credentials are required for token auth"))
+			} else {
+				allErrs = append(allErrs, validateTokenCredentials(creds.Token, fldPath.Child("token"))...)
+			}
+		case SyncTargetAuthTypeCertificate:
+			if creds.Certificate == nil {
+				allErrs = append(allErrs, field.Required(fldPath.Child("certificate"), "certificate credentials are required for certificate auth"))
+			} else {
+				allErrs = append(allErrs, validateCertificateCredentials(creds.Certificate, fldPath.Child("certificate"))...)
+			}
+		case SyncTargetAuthTypeServiceAccount:
+			if creds.ServiceAccount == nil {
+				allErrs = append(allErrs, field.Required(fldPath.Child("serviceAccount"), "service account credentials are required for service account auth"))
+			} else {
+				allErrs = append(allErrs, validateServiceAccountCredentials(creds.ServiceAccount, fldPath.Child("serviceAccount"))...)
+			}
+		default:
+			allErrs = append(allErrs, field.NotSupported(fldPath.Child("type"),
+				creds.Type, []string{string(SyncTargetAuthTypeToken), string(SyncTargetAuthTypeCertificate), string(SyncTargetAuthTypeServiceAccount)}))
+		}
+	}
+
+	return allErrs
+}
+
+// validateTokenCredentials validates token-based credentials
+func validateTokenCredentials(token *TokenCredentials, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if token.Value == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("value"), "token value is required"))
+	}
+
+	return allErrs
+}
+
+// validateCertificateCredentials validates certificate-based credentials
+func validateCertificateCredentials(cert *CertificateCredentials, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if len(cert.ClientCert) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("clientCert"), "client certificate is required"))
+	}
+
+	if len(cert.ClientKey) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath.Child("clientKey"), "client key is required"))
+	}
+
+	return allErrs
+}
+
+// validateServiceAccountCredentials validates service account-based credentials
+func validateServiceAccountCredentials(sa *ServiceAccountCredentials, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if sa.Namespace == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("namespace"), "service account namespace is required"))
+	} else {
+		if errs := validation.IsDNS1123Label(sa.Namespace); len(errs) > 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("namespace"),
+				sa.Namespace, fmt.Sprintf("namespace must be a valid DNS label: %s", strings.Join(errs, ", "))))
+		}
+	}
+
+	if sa.Name == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("name"), "service account name is required"))
+	} else {
+		if errs := validation.IsDNS1123Label(sa.Name); len(errs) > 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("name"),
+				sa.Name, fmt.Sprintf("name must be a valid DNS label: %s", strings.Join(errs, ", "))))
+		}
+	}
+
+	return allErrs
+}
+
+// validateSyncTargetCapabilities validates SyncTarget capabilities
+func validateSyncTargetCapabilities(caps *SyncTargetCapabilities, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	// Validate max workloads if specified
+	if caps.MaxWorkloads != nil && *caps.MaxWorkloads < 0 {
+		allErrs = append(allErrs, field.Invalid(fldPath.Child("maxWorkloads"),
+			*caps.MaxWorkloads, "maxWorkloads must be non-negative"))
+	}
+
+	// Validate supported resource types
+	for i, resourceType := range caps.SupportedResourceTypes {
+		resourcePath := fldPath.Child("supportedResourceTypes").Index(i)
+		allErrs = append(allErrs, validateResourceTypeSupport(&resourceType, resourcePath)...)
+	}
+
+	// Validate features (should be non-empty strings)
+	for i, feature := range caps.Features {
+		if feature == "" {
+			allErrs = append(allErrs, field.Required(fldPath.Child("features").Index(i),
+				"feature name cannot be empty"))
+		}
+	}
+
+	return allErrs
+}
+
+// validateResourceTypeSupport validates a resource type support entry
+func validateResourceTypeSupport(rts *ResourceTypeSupport, fldPath *field.Path) field.ErrorList {
+	allErrs := field.ErrorList{}
+
+	if rts.Version == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("version"), "version is required"))
+	}
+
+	if rts.Kind == "" {
+		allErrs = append(allErrs, field.Required(fldPath.Child("kind"), "kind is required"))
+	}
+
+	// Validate group if provided (should be valid DNS subdomain or empty)
+	if rts.Group != "" {
+		if errs := validation.IsDNS1123Subdomain(rts.Group); len(errs) > 0 {
+			allErrs = append(allErrs, field.Invalid(fldPath.Child("group"),
+				rts.Group, fmt.Sprintf("group must be a valid DNS subdomain: %s", strings.Join(errs, ", "))))
 		}
 	}
 
